@@ -23,7 +23,8 @@ targets:
       - name: Build Counter Bundle
         script: |
           export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-          cd "$SRCROOT/../CounterAppJS"
+          cd "$SRCROOT/JS"
+          pnpm install --frozen-lockfile
           pnpm build
         outputFiles:
           - $(SRCROOT)/App/Resources/counter.bundle.js
@@ -32,6 +33,8 @@ targets:
           set -euo pipefail
           ditto "$SRCROOT/App/Resources/counter.bundle.js" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/counter.bundle.js"
           ditto "$SRCROOT/App/Project" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Project"
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Project/tsconfig.json
     sources:
       - path: App
         type: syncedFolder

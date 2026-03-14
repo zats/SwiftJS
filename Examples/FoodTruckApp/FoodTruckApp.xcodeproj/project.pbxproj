@@ -145,7 +145,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\ncd \"$SRCROOT/../FoodTruckAppJS\"\npnpm install --frozen-lockfile\npnpm build\n";
+			shellScript = "export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\ncd \"$SRCROOT/JS\"\npnpm install --frozen-lockfile\npnpm build\n";
 		};
 		F61925D1D1635C6E44D4310E /* Copy TSX Project */ = {
 			isa = PBXShellScriptBuildPhase;

@@ -1,6 +1,6 @@
 "use strict";
 (() => {
-  // ../CounterApp/App/Project/src/swiftjs/index.ts
+  // ../App/Project/src/swiftjs/index.ts
   function runtime() {
     if (!globalThis.__swiftjsRuntime) {
       throw new Error("swiftjs runtime bridge is missing");
@@ -23,7 +23,7 @@
   var Divider = hostComponent("Divider");
   var Button = hostComponent("Button");
 
-  // ../CounterApp/App/Project/src/theme.ts
+  // ../App/Project/src/theme.ts
   var spacing = {
     compact: 8,
     section: 20,
@@ -32,14 +32,14 @@
     resetTop: 20
   };
 
-  // ../CounterApp/App/Project/src/swiftjs/jsx-runtime.ts
+  // ../App/Project/src/swiftjs/jsx-runtime.ts
   var Fragment2 = globalThis.__swiftjsRuntime?.Fragment ?? Symbol.for("swiftjs.fragment");
   function jsx(type, props) {
     return createElement(type, props);
   }
   var jsxs = jsx;
 
-  // ../CounterApp/App/Project/src/CounterActions.tsx
+  // ../App/Project/src/CounterActions.tsx
   function CounterActions(props) {
     return /* @__PURE__ */ jsxs(HStack, { id: "counter-actions", spacing: spacing.buttonRow, children: [
       /* @__PURE__ */ jsx(
@@ -74,7 +74,7 @@
     ] });
   }
 
-  // ../CounterApp/App/Project/src/ContentView.tsx
+  // ../App/Project/src/ContentView.tsx
   function ContentView() {
     const [counter, setCounter] = useState(0);
     return /* @__PURE__ */ jsxs(VStack, { id: "counter-root", spacing: spacing.section, padding: spacing.screenPadding, children: [
@@ -157,7 +157,7 @@
     ] });
   }
 
-  // ../CounterApp/App/Project/src/main.tsx
+  // ../App/Project/src/main.tsx
   mount(ContentView);
 })();
 //# sourceMappingURL=counter.bundle.js.map

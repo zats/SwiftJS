@@ -19,7 +19,7 @@ targets:
       - name: Build Food Truck Bundle
         script: |
           export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-          cd "$SRCROOT/../FoodTruckAppJS"
+          cd "$SRCROOT/JS"
           pnpm install --frozen-lockfile
           pnpm build
         outputFiles:

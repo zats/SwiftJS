@@ -1,6 +1,6 @@
 "use strict";
 (() => {
-  // ../FoodTruckApp/App/Project/src/swiftjs/index.ts
+  // ../App/Project/src/swiftjs/index.ts
   function runtime() {
     if (!globalThis.__swiftjsRuntime) {
       throw new Error("swiftjs runtime bridge is missing");
@@ -23,14 +23,14 @@
   var Divider = hostComponent("Divider");
   var Button = hostComponent("Button");
 
-  // ../FoodTruckApp/App/Project/src/swiftjs/jsx-runtime.ts
+  // ../App/Project/src/swiftjs/jsx-runtime.ts
   var Fragment2 = globalThis.__swiftjsRuntime?.Fragment ?? Symbol.for("swiftjs.fragment");
   function jsx(type, props) {
     return createElement(type, props);
   }
   var jsxs = jsx;
 
-  // ../FoodTruckApp/App/Project/src/ContentView.tsx
+  // ../App/Project/src/ContentView.tsx
   var heroHeight = 158;
   var panelSpacing = 18;
   var sections = [
@@ -88,7 +88,7 @@
     ] });
   }
 
-  // ../FoodTruckApp/App/Project/src/main.tsx
+  // ../App/Project/src/main.tsx
   mount(ContentView);
 })();
 //# sourceMappingURL=food-truck.bundle.js.map
