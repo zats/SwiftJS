@@ -1,0 +1,391 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 70;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		08A5891079278B0627EECC52 /* SwiftJS in Frameworks */ = {isa = PBXBuildFile; productRef = 41C053A18287F85376A41AFE /* SwiftJS */; };
+		C9DE83DFE3BDDF3357E9DFC6 /* EsbuildKit in Frameworks */ = {isa = PBXBuildFile; productRef = A62F124BBA8A04147A0F9D93 /* EsbuildKit */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		53B7F9C28C8BD2270E0CADCC /* esbuild-swift */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "esbuild-swift"; path = "../../../esbuild-swift"; sourceTree = SOURCE_ROOT; };
+		9D06BFB95E0269CB9E1CD716 /* CounterApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CounterApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B28972A9442C339C11E9EF40 /* SwiftJS */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SwiftJS; path = ../..; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		FDDB09B88D1D96E07F1689B3 /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = App; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BDE534E147194D3AC42ADD82 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				08A5891079278B0627EECC52 /* SwiftJS in Frameworks */,
+				C9DE83DFE3BDDF3357E9DFC6 /* EsbuildKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		79077CB87B15CD5B056551FE /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				53B7F9C28C8BD2270E0CADCC /* esbuild-swift */,
+				B28972A9442C339C11E9EF40 /* SwiftJS */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		91C0E33BEDE2E530350B68C8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9D06BFB95E0269CB9E1CD716 /* CounterApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B86E33DC287DA7AC92DD5972 = {
+			isa = PBXGroup;
+			children = (
+				FDDB09B88D1D96E07F1689B3 /* App */,
+				79077CB87B15CD5B056551FE /* Packages */,
+				91C0E33BEDE2E530350B68C8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		010B0A238A076EB26DD23BB1 /* CounterApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B7140C4C9BEE130CB4BA6DAD /* Build configuration list for PBXNativeTarget "CounterApp" */;
+			buildPhases = (
+				C46A3B9D670C6B37DC180A7D /* Build Counter Bundle */,
+				BDC8718763C499BF36B08049 /* Copy TSX Project */,
+				29206CB1A0ECB217F5F98845 /* Sources */,
+				BDE534E147194D3AC42ADD82 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				FDDB09B88D1D96E07F1689B3 /* App */,
+			);
+			name = CounterApp;
+			packageProductDependencies = (
+				41C053A18287F85376A41AFE /* SwiftJS */,
+				A62F124BBA8A04147A0F9D93 /* EsbuildKit */,
+			);
+			productName = CounterApp;
+			productReference = 9D06BFB95E0269CB9E1CD716 /* CounterApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CF1FACE8C7C58FDD63D46C13 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					010B0A238A076EB26DD23BB1 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 7851C38F90AFE0DC30E065D2 /* Build configuration list for PBXProject "CounterApp" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B86E33DC287DA7AC92DD5972;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				3129BE5CF93DB6E7ABCA9F71 /* XCLocalSwiftPackageReference "../../../esbuild-swift" */,
+				7A17A7DCA8A414F89C61F2AA /* XCLocalSwiftPackageReference "../.." */,
+			);
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				010B0A238A076EB26DD23BB1 /* CounterApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		BDC8718763C499BF36B08049 /* Copy TSX Project */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy TSX Project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\nditto \"$SRCROOT/App/Resources/counter.bundle.js\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/counter.bundle.js\"\nditto \"$SRCROOT/App/Project\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Project\"\n";
+		};
+		C46A3B9D670C6B37DC180A7D /* Build Counter Bundle */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Counter Bundle";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/App/Resources/counter.bundle.js",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\ncd \"$SRCROOT/../CounterAppJS\"\npnpm build\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		29206CB1A0ECB217F5F98845 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		796BD0ACD6614E951D434587 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "\"App\"";
+				DEVELOPMENT_TEAM = 5KE88HWMKJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.swiftjs.counterapp;
+				PRODUCT_NAME = CounterApp;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		836270C59FCC6D96A607D822 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "\"App\"";
+				DEVELOPMENT_TEAM = 5KE88HWMKJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.swiftjs.counterapp;
+				PRODUCT_NAME = CounterApp;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B4EC29AAFF2F22C740DBFB9F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		E81AA16697771FD928AEC5D5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7851C38F90AFE0DC30E065D2 /* Build configuration list for PBXProject "CounterApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E81AA16697771FD928AEC5D5 /* Debug */,
+				B4EC29AAFF2F22C740DBFB9F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B7140C4C9BEE130CB4BA6DAD /* Build configuration list for PBXNativeTarget "CounterApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				796BD0ACD6614E951D434587 /* Debug */,
+				836270C59FCC6D96A607D822 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		3129BE5CF93DB6E7ABCA9F71 /* XCLocalSwiftPackageReference "../../../esbuild-swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../../esbuild-swift";
+		};
+		7A17A7DCA8A414F89C61F2AA /* XCLocalSwiftPackageReference "../.." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		41C053A18287F85376A41AFE /* SwiftJS */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftJS;
+		};
+		A62F124BBA8A04147A0F9D93 /* EsbuildKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = EsbuildKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = CF1FACE8C7C58FDD63D46C13 /* Project object */;
+}
