@@ -105,6 +105,80 @@ public enum ImageSource: Equatable, Sendable {
     case asset(String)
 }
 
+public enum CustomHostValue: Equatable, Sendable, Decodable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+
+        if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else {
+            self = .string(try container.decode(String.self))
+        }
+    }
+}
+
+public struct CustomHostContext: Equatable, Sendable {
+    public let id: NodeID
+    public let name: String
+    public let values: [String: CustomHostValue]
+    public let slots: [String: ViewNode]
+
+    public init(id: NodeID, name: String, values: [String: CustomHostValue], slots: [String: ViewNode]) {
+        self.id = id
+        self.name = name
+        self.values = values
+        self.slots = slots
+    }
+
+    public func stringValue(forKey key: String) -> String? {
+        guard case let .string(value)? = values[key] else {
+            return nil
+        }
+
+        return value
+    }
+
+    public func numberValue(forKey key: String) -> Double? {
+        guard case let .number(value)? = values[key] else {
+            return nil
+        }
+
+        return value
+    }
+
+    public func boolValue(forKey key: String) -> Bool? {
+        guard case let .bool(value)? = values[key] else {
+            return nil
+        }
+
+        return value
+    }
+
+    public func slot(named name: String) -> ViewNode? {
+        slots[name]
+    }
+}
+
+public struct CustomHostRegistry {
+    public typealias Renderer = @MainActor (CustomHostContext, @escaping (SurfaceEvent) -> Void) -> AnyView
+
+    private let renderers: [String: Renderer]
+
+    public init(renderers: [String: Renderer] = [:]) {
+        self.renderers = renderers
+    }
+
+    public func renderer(named name: String) -> Renderer? {
+        renderers[name]
+    }
+}
+
 public struct ViewModifiers: Equatable, Sendable {
     public var alignment: ContentAlignment
     public var padding: Double?
@@ -258,12 +332,12 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
-    case widthThreshold(
+    case custom(
         id: NodeID,
-        threshold: Double,
+        name: String,
         modifiers: ViewModifiers,
-        compact: ViewNode,
-        regular: ViewNode
+        values: [String: CustomHostValue],
+        slots: [String: ViewNode]
     )
     case list(
         id: NodeID,
@@ -323,7 +397,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .flowLayout(id, _, _, _, _, _),
              let .gridRow(id, _, _, _),
              let .scrollView(id, _, _, _),
-             let .widthThreshold(id, _, _, _, _),
+             let .custom(id, _, _, _, _),
              let .list(id, _, _),
              let .section(id, _, _, _),
              let .navigationSplitView(id, _, _, _),
@@ -346,7 +420,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .flowLayout(_, _, _, _, modifiers, _),
              let .gridRow(_, _, modifiers, _),
              let .scrollView(_, _, modifiers, _),
-             let .widthThreshold(_, _, modifiers, _, _),
+             let .custom(_, _, modifiers, _, _),
              let .list(_, modifiers, _),
              let .section(_, _, modifiers, _),
              let .navigationSplitView(_, modifiers, _, _),
@@ -417,14 +491,16 @@ public enum JSScriptSource {
 public struct SurfaceView: View {
     private let root: ViewNode
     private let onEvent: (SurfaceEvent) -> Void
+    private let customHostRegistry: CustomHostRegistry
 
-    public init(root: ViewNode, onEvent: @escaping (SurfaceEvent) -> Void) {
+    public init(root: ViewNode, onEvent: @escaping (SurfaceEvent) -> Void, customHostRegistry: CustomHostRegistry = .init()) {
         self.root = root
         self.onEvent = onEvent
+        self.customHostRegistry = customHostRegistry
     }
 
     public var body: some View {
-        RenderNodeView(node: root, onEvent: onEvent)
+        RenderNodeView(node: root, onEvent: onEvent, customHostRegistry: customHostRegistry)
     }
 }
 
@@ -438,7 +514,7 @@ public struct JSSurfaceView: View {
     public var body: some View {
         Group {
             if let rootNode = runtime.rootNode {
-                SurfaceView(root: rootNode, onEvent: runtime.dispatch)
+                SurfaceView(root: rootNode, onEvent: runtime.dispatch, customHostRegistry: runtime.customHostRegistry)
             } else if let errorMessage = runtime.errorMessage {
                 ContentUnavailableView("SwiftJS Error", systemImage: "exclamationmark.triangle", description: Text(errorMessage))
             } else {
@@ -455,14 +531,16 @@ public struct JSSurfaceView: View {
 public final class JSSurfaceRuntime {
     public private(set) var rootNode: ViewNode?
     public private(set) var errorMessage: String?
+    public let customHostRegistry: CustomHostRegistry
 
     private let source: JSScriptSource
     private var context: JSContext
     private let decoder = JSONDecoder()
     private var didStart = false
 
-    public init(source: JSScriptSource) {
+    public init(source: JSScriptSource, customHostRegistry: CustomHostRegistry = .init()) {
         self.source = source
+        self.customHostRegistry = customHostRegistry
         self.context = Self.makeContext()
         installBridge()
     }
@@ -592,6 +670,7 @@ public final class JSSurfaceRuntime {
 private struct RenderNodeView: View {
     let node: ViewNode
     let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
     #if canImport(UIKit)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
@@ -610,7 +689,7 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 ZStack(alignment: alignment.swiftUIAlignment) {
                     ForEach(children) { child in
-                        RenderNodeView(node: child, onEvent: onEvent)
+                        RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                     }
                 }
             )
@@ -630,9 +709,9 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 scrollView(axis: axis, children: children)
             )
-        case let .widthThreshold(_, threshold, _, compact, regular):
+        case let .custom(id, name, _, values, slots):
             applyCommonModifiers(
-                widthThresholdView(threshold: threshold, compact: compact, regular: regular)
+                customView(id: id, name: name, values: values, slots: slots)
             )
         case let .list(_, modifiers, children):
             listView(children: children, modifiers: modifiers)
@@ -674,7 +753,7 @@ private struct RenderNodeView: View {
             GridRow {
                 VStack(alignment: alignment.swiftUIHorizontalAlignment, spacing: 12) {
                     ForEach(children) { child in
-                        RenderNodeView(node: child, onEvent: onEvent)
+                        RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -683,14 +762,14 @@ private struct RenderNodeView: View {
         } else {
             GridRow {
                 ForEach(children) { child in
-                    RenderNodeView(node: child, onEvent: onEvent)
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 }
             }
         }
         #else
         GridRow {
             ForEach(children) { child in
-                RenderNodeView(node: child, onEvent: onEvent)
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
         }
         #endif
@@ -702,7 +781,7 @@ private struct RenderNodeView: View {
         if horizontalSizeClass == .compact, children.allSatisfy(\.isCompactVerticalGridRow) {
             VStack(alignment: .leading, spacing: verticalSpacing) {
                 ForEach(children.flatMap(\.gridRowChildren)) { child in
-                    RenderNodeView(node: child, onEvent: onEvent)
+            RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -712,10 +791,10 @@ private struct RenderNodeView: View {
             Grid(horizontalSpacing: horizontalSpacing, verticalSpacing: verticalSpacing) {
                 ForEach(children) { child in
                     if child.isGridRow {
-                        RenderNodeView(node: child, onEvent: onEvent)
+                        RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                     } else {
                         GridRow {
-                            RenderNodeView(node: child, onEvent: onEvent)
+                            RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                                 .gridCellColumns(maxColumns)
                         }
                     }
@@ -728,10 +807,10 @@ private struct RenderNodeView: View {
         Grid(horizontalSpacing: horizontalSpacing, verticalSpacing: verticalSpacing) {
             ForEach(children) { child in
                 if child.isGridRow {
-                    RenderNodeView(node: child, onEvent: onEvent)
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 } else {
                     GridRow {
-                        RenderNodeView(node: child, onEvent: onEvent)
+                        RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                             .gridCellColumns(maxColumns)
                     }
                 }
@@ -747,16 +826,17 @@ private struct RenderNodeView: View {
             lineSpacing: lineSpacing
         ) {
             ForEach(children) { child in
-                RenderNodeView(node: child, onEvent: onEvent)
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
         }
     }
 
-    private func widthThresholdView(threshold: Double, compact: ViewNode, regular: ViewNode) -> some View {
-        GeometryReader { geometry in
-            let selectedNode = geometry.size.width <= CGFloat(threshold) ? compact : regular
-            RenderNodeView(node: selectedNode, onEvent: onEvent)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    @ViewBuilder
+    private func customView(id: NodeID, name: String, values: [String: CustomHostValue], slots: [String: ViewNode]) -> some View {
+        if let renderer = customHostRegistry.renderer(named: name) {
+            renderer(CustomHostContext(id: id, name: name, values: values, slots: slots), onEvent)
+        } else {
+            Text("Missing custom host: \(name)")
         }
     }
 
@@ -766,7 +846,7 @@ private struct RenderNodeView: View {
             ScrollView(axis.swiftUIAxisSet) {
                 HStack(spacing: 0) {
                     ForEach(children) { child in
-                        RenderNodeView(node: child, onEvent: onEvent)
+                        RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                     }
                 }
             }
@@ -775,7 +855,7 @@ private struct RenderNodeView: View {
                 ScrollView(axis.swiftUIAxisSet) {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(children) { child in
-                            RenderNodeView(node: child, onEvent: onEvent)
+                            RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                         }
                     }
                     .frame(width: geometry.size.width, alignment: .leading)
@@ -813,7 +893,7 @@ private struct RenderNodeView: View {
                 Text(title)
             } else {
                 ForEach(children) { child in
-                    RenderNodeView(node: child, onEvent: onEvent)
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 }
             }
         }
@@ -869,23 +949,23 @@ private struct RenderNodeView: View {
         if let title, !title.isEmpty {
             Section(title) {
                 ForEach(children) { child in
-                    RenderNodeView(node: child, onEvent: onEvent)
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 }
             }
         } else {
             Section {
                 ForEach(children) { child in
-                    RenderNodeView(node: child, onEvent: onEvent)
+                        RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                    }
                 }
             }
         }
-    }
 
     @ViewBuilder
     private func listView(children: [ViewNode], modifiers: ViewModifiers) -> some View {
         let list = List {
             ForEach(children) { child in
-                RenderNodeView(node: child, onEvent: onEvent)
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
         }
 
@@ -941,7 +1021,7 @@ private struct RenderNodeView: View {
 
     @ViewBuilder
     private func stackItemView(_ child: ViewNode, axis: AxisKind, distribution: StackDistribution, alignment: ContentAlignment) -> some View {
-        let rendered = RenderNodeView(node: child, onEvent: onEvent)
+        let rendered = RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
 
         switch (axis, distribution) {
         case (.horizontal, .fillEqually):
@@ -957,19 +1037,19 @@ private struct RenderNodeView: View {
     private func navigationSplitView(sidebar: ViewNode, detail: ViewNode) -> some View {
         #if canImport(UIKit)
         if horizontalSizeClass == .compact {
-            CompactNavigationSplitHost(sidebar: sidebar, detail: detail, onEvent: onEvent)
+            CompactNavigationSplitHost(sidebar: sidebar, detail: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
         } else {
             NavigationSplitView {
-                RenderNodeView(node: sidebar, onEvent: onEvent)
+                RenderNodeView(node: sidebar, onEvent: onEvent, customHostRegistry: customHostRegistry)
             } detail: {
-                RenderNodeView(node: detail, onEvent: onEvent)
+                RenderNodeView(node: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
         }
         #else
         NavigationSplitView {
-            RenderNodeView(node: sidebar, onEvent: onEvent)
+            RenderNodeView(node: sidebar, onEvent: onEvent, customHostRegistry: customHostRegistry)
         } detail: {
-            RenderNodeView(node: detail, onEvent: onEvent)
+            RenderNodeView(node: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
         }
         #endif
     }
@@ -1077,14 +1157,15 @@ private struct CompactNavigationSplitHost: View {
     let sidebar: ViewNode
     let detail: ViewNode
     let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
 
     @State private var isShowingDetail = true
 
     var body: some View {
         NavigationStack {
-            RenderNodeView(node: sidebar, onEvent: onEvent)
+            RenderNodeView(node: sidebar, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 .navigationDestination(isPresented: $isShowingDetail) {
-                    RenderNodeView(node: detail, onEvent: onEvent)
+                    RenderNodeView(node: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 }
         }
         .onAppear {
@@ -1265,12 +1346,14 @@ private final class HostNode: Decodable {
     let name: String?
     let title: String?
     let event: String?
-    let threshold: Double?
+    let customName: String?
+    let customValues: [String: CustomHostValue]?
     let children: [HostNode]?
     let sidebar: HostNode?
     let detail: HostNode?
     let compact: HostNode?
     let regular: HostNode?
+    let customSlots: [String: HostNode]?
 
     func makeViewNode() throws -> ViewNode {
         let modifiers = makeModifiers()
@@ -1332,17 +1415,17 @@ private final class HostNode: Decodable {
                 modifiers: modifiers,
                 children: try mapChildren()
             )
-        case .widthThreshold:
-            guard let threshold else {
-                throw JSSurfaceError.invalidTree("WidthThreshold node '\(id)' is missing a threshold")
+        case .custom:
+            guard let customName else {
+                throw JSSurfaceError.invalidTree("Custom node '\(id)' is missing a name")
             }
 
-            return .widthThreshold(
+            return .custom(
                 id: NodeID(id),
-                threshold: threshold,
+                name: customName,
                 modifiers: modifiers,
-                compact: try mapSlot(compact, name: "compact"),
-                regular: try mapSlot(regular, name: "regular")
+                values: customValues ?? [:],
+                slots: try mapCustomSlots()
             )
         case .list:
             return .list(
@@ -1451,6 +1534,16 @@ private final class HostNode: Decodable {
         return try node.makeViewNode()
     }
 
+    private func mapCustomSlots() throws -> [String: ViewNode] {
+        var result: [String: ViewNode] = [:]
+
+        for (key, value) in customSlots ?? [:] {
+            result[key] = try value.makeViewNode()
+        }
+
+        return result
+    }
+
     private func makeModifiers() -> ViewModifiers {
         ViewModifiers(
             alignment: alignment ?? .center,
@@ -1497,7 +1590,7 @@ private enum HostComponentType: String, Decodable {
     case flowLayout = "FlowLayout"
     case gridRow = "GridRow"
     case scrollView = "ScrollView"
-    case widthThreshold = "WidthThreshold"
+    case custom = "Custom"
     case list = "List"
     case section = "Section"
     case navigationSplitView = "NavigationSplitView"

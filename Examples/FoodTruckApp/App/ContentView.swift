@@ -3,7 +3,8 @@ import SwiftJS
 
 struct ContentView: View {
     @State private var runtime = JSSurfaceRuntime(
-        source: .bundleResource(name: "food-truck.bundle", extension: "js", bundle: .main)
+        source: .bundleResource(name: "food-truck.bundle", extension: "js", bundle: .main),
+        customHostRegistry: FoodTruckCustomHosts.makeRegistry()
     )
 
     var body: some View {

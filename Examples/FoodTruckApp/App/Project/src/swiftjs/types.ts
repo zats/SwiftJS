@@ -84,12 +84,6 @@ export type ScrollViewProps = ViewProps & {
   axis?: AxisValue
 }
 
-export type WidthThresholdProps = ViewProps & {
-  threshold: number
-  compact: unknown
-  regular: unknown
-}
-
 export type SectionProps = ViewProps & {
   title?: string
 }

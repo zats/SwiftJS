@@ -15,7 +15,6 @@ import type {
   StackDistribution,
   StackProps,
   TextProps,
-  WidthThresholdProps,
 } from "./types"
 
 export type {
@@ -49,7 +48,6 @@ export type {
   SymbolRenderingMode,
   TextProps,
   ViewProps,
-  WidthThresholdProps,
 } from "./types"
 
 export type Runtime = {
@@ -96,7 +94,6 @@ export const Grid = hostComponent<GridProps>("Grid")
 export const GridRow = hostComponent<GridRowProps>("GridRow")
 export const FlowLayout = hostComponent<FlowLayoutProps>("FlowLayout")
 export const ScrollView = hostComponent<ScrollViewProps>("ScrollView")
-export const WidthThreshold = hostComponent<WidthThresholdProps>("WidthThreshold")
 export const List = hostComponent<ListProps>("List")
 export const Section = hostComponent<SectionProps>("Section")
 export const NavigationSplitView = hostComponent<NavigationSplitViewProps>("NavigationSplitView")

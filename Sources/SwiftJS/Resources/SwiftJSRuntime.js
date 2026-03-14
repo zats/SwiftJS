@@ -173,10 +173,14 @@
         node.axis = typeof props.axis === "string" ? props.axis : "vertical"
         node.children = hostChildren(children)
         return node
-      case "WidthThreshold":
-        node.threshold = numericProp(props.threshold, 0)
-        node.compact = serializeSlot(props.compact, path + ".compact", "compact")
-        node.regular = serializeSlot(props.regular, path + ".regular", "regular")
+      case "Custom":
+        if (typeof props.name !== "string" || props.name.length === 0) {
+          throw new Error("Custom requires a name prop")
+        }
+
+        node.customName = props.name
+        node.customValues = serializeCustomValues(props.values)
+        node.customSlots = serializeCustomSlots(props.slots, path)
         return node
       case "List":
         node.children = hostChildren(children)
@@ -384,6 +388,40 @@
     }
 
     return node
+  }
+
+  function serializeCustomValues(values) {
+    if (!values || typeof values !== "object") {
+      return undefined
+    }
+
+    const result = {}
+
+    Object.keys(values).forEach(function (key) {
+      const value = values[key]
+
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        result[key] = value
+      } else {
+        throw new Error("Custom values only support string, number, and boolean")
+      }
+    })
+
+    return Object.keys(result).length > 0 ? result : undefined
+  }
+
+  function serializeCustomSlots(slots, path) {
+    if (!slots || typeof slots !== "object") {
+      return undefined
+    }
+
+    const result = {}
+
+    Object.keys(slots).forEach(function (key) {
+      result[key] = serializeSlot(slots[key], path + "." + key, key)
+    })
+
+    return result
   }
 
   function normalizeFont(font) {

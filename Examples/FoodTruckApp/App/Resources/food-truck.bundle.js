@@ -23,7 +23,6 @@
   var GridRow = hostComponent("GridRow");
   var FlowLayout = hostComponent("FlowLayout");
   var ScrollView = hostComponent("ScrollView");
-  var WidthThreshold = hostComponent("WidthThreshold");
   var List = hostComponent("List");
   var Section = hostComponent("Section");
   var NavigationSplitView = hostComponent("NavigationSplitView");
@@ -442,6 +441,42 @@
     ] });
   }
 
+  // ../App/Project/src/Brand/BrandHeader.tsx
+  function BrandHeader(props) {
+    const scale = props.size === "reduced" ? 0.5 : 1;
+    const visibleHeight = 200 * scale;
+    const bleedingHeight = 400 * scale;
+    return /* @__PURE__ */ jsx(VStack, { id: "brand-header-root", frame: { height: visibleHeight }, children: /* @__PURE__ */ jsx(
+      VStack,
+      {
+        id: "brand-header-canvas",
+        background: "teal",
+        frame: { height: bleedingHeight },
+        paddingTop: -200 * scale
+      }
+    ) });
+  }
+
+  // ../App/Project/src/General/WidthThresholdReader.tsx
+  function WidthThresholdReader(props) {
+    const widthThreshold = props.widthThreshold ?? 400;
+    const content = Array.isArray(props.children) ? props.children[0] : props.children;
+    if (typeof content !== "function") {
+      throw new Error("WidthThresholdReader requires a render function child");
+    }
+    return createElement("Custom", {
+      id: props.id,
+      name: "WidthThresholdReader",
+      values: {
+        widthThreshold
+      },
+      slots: {
+        compact: content({ width: widthThreshold - 1, isCompact: true }),
+        regular: content({ width: widthThreshold + 1, isCompact: false })
+      }
+    });
+  }
+
   // ../App/Project/src/Truck/Cards/CardNavigationHeader.tsx
   function CardNavigationHeader(props) {
     return /* @__PURE__ */ jsxs(HStack, { id: props.id, spacing: 0, children: [
@@ -635,19 +670,15 @@
 
   // ../App/Project/src/Truck/TruckView.tsx
   function TruckView(props) {
-    return /* @__PURE__ */ jsx(
-      WidthThreshold,
-      {
-        id: "truck-width-threshold",
-        threshold: 520,
-        compact: /* @__PURE__ */ jsx(TruckContent, { onSelect: props.onSelect, compact: true }),
-        regular: /* @__PURE__ */ jsx(TruckContent, { onSelect: props.onSelect, compact: false })
-      }
-    );
+    return /* @__PURE__ */ jsx(WidthThresholdReader, { id: "truck-width-threshold", widthThreshold: 520, children: (proxy) => /* @__PURE__ */ jsx(TruckContent, { onSelect: props.onSelect, isCompact: proxy.isCompact }) });
   }
   function TruckContent(props) {
+    const orders2 = /* @__PURE__ */ jsx(TruckOrdersCard, { onSelect: props.onSelect });
+    const weather = /* @__PURE__ */ jsx(TruckWeatherCard, { onSelect: props.onSelect });
+    const donuts = /* @__PURE__ */ jsx(TruckDonutsCard, { onSelect: props.onSelect });
+    const socialFeed = /* @__PURE__ */ jsx(TruckSocialFeedCard, { onSelect: props.onSelect });
     return /* @__PURE__ */ jsx(ScrollView, { id: "truck-view", navigationTitle: "Truck", background: "systemGroupedBackground", children: /* @__PURE__ */ jsxs(VStack, { id: "truck-stack", spacing: 16, children: [
-      /* @__PURE__ */ jsx(BrandHeader, {}),
+      /* @__PURE__ */ jsx(BrandHeader, { animated: false }),
       /* @__PURE__ */ jsx(
         Grid,
         {
@@ -657,27 +688,24 @@
           fixedSize: { horizontal: false, vertical: true },
           padding: 16,
           frame: { maxWidth: 1200 },
-          children: props.compact ? /* @__PURE__ */ jsxs(Fragment2, { children: [
-            /* @__PURE__ */ jsx(TruckOrdersCard, { onSelect: props.onSelect }),
-            /* @__PURE__ */ jsx(TruckWeatherCard, { onSelect: props.onSelect }),
-            /* @__PURE__ */ jsx(TruckDonutsCard, { onSelect: props.onSelect }),
-            /* @__PURE__ */ jsx(TruckSocialFeedCard, { onSelect: props.onSelect })
+          children: props.isCompact ? /* @__PURE__ */ jsxs(Fragment2, { children: [
+            orders2,
+            weather,
+            donuts,
+            socialFeed
           ] }) : /* @__PURE__ */ jsxs(Fragment2, { children: [
             /* @__PURE__ */ jsxs(GridRow, { id: "truck-grid-row-1", children: [
-              /* @__PURE__ */ jsx(TruckOrdersCard, { onSelect: props.onSelect }),
-              /* @__PURE__ */ jsx(TruckWeatherCard, { onSelect: props.onSelect })
+              orders2,
+              weather
             ] }),
             /* @__PURE__ */ jsxs(GridRow, { id: "truck-grid-row-2", children: [
-              /* @__PURE__ */ jsx(TruckDonutsCard, { onSelect: props.onSelect }),
-              /* @__PURE__ */ jsx(TruckSocialFeedCard, { onSelect: props.onSelect })
+              donuts,
+              socialFeed
             ] })
           ] })
         }
       )
     ] }) });
-  }
-  function BrandHeader() {
-    return /* @__PURE__ */ jsx(Image, { id: "truck-hero", name: "header/Static", frame: { height: 205 }, imageContentMode: "fill" });
   }
 
   // ../App/Project/src/Navigation/DetailColumn.tsx
