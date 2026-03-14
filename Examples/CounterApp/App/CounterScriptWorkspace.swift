@@ -6,6 +6,7 @@ enum CounterScriptWorkspace {
     static let projectDirectoryName = "CounterProject"
     static let entryPoint = "src/main.tsx"
     static let editableSourceRelativePath = "src/ContentView.tsx"
+    static let typesSourceRelativePath = "src/swiftjs/types.ts"
 
     struct Workspace: Sendable {
         let projectURL: URL
@@ -39,6 +40,10 @@ enum CounterScriptWorkspace {
 
     static func bundledSource() throws -> String {
         try loadSource(at: try bundledSourceURL())
+    }
+
+    static func loadTypesSource(in workspace: Workspace) throws -> String {
+        try loadSource(at: workspace.projectURL.appendingPathComponent(typesSourceRelativePath, isDirectory: false))
     }
 
     static func loadSource(at url: URL) throws -> String {

@@ -9,9 +9,11 @@
 /* Begin PBXBuildFile section */
 		08A5891079278B0627EECC52 /* SwiftJS in Frameworks */ = {isa = PBXBuildFile; productRef = 41C053A18287F85376A41AFE /* SwiftJS */; };
 		C9DE83DFE3BDDF3357E9DFC6 /* EsbuildKit in Frameworks */ = {isa = PBXBuildFile; productRef = A62F124BBA8A04147A0F9D93 /* EsbuildKit */; };
+		DAEFD22602D3904B391A4585 /* OpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = D1752C5F436222A2084DBDD0 /* OpenAI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1E1796A2B1936EA2AF4195D8 /* OpenAI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = OpenAI; path = ../../Vendor/OpenAI; sourceTree = SOURCE_ROOT; };
 		53B7F9C28C8BD2270E0CADCC /* esbuild-swift */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "esbuild-swift"; path = "../../../esbuild-swift"; sourceTree = SOURCE_ROOT; };
 		9D06BFB95E0269CB9E1CD716 /* CounterApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CounterApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B28972A9442C339C11E9EF40 /* SwiftJS */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SwiftJS; path = ../..; sourceTree = SOURCE_ROOT; };
@@ -28,6 +30,7 @@
 			files = (
 				08A5891079278B0627EECC52 /* SwiftJS in Frameworks */,
 				C9DE83DFE3BDDF3357E9DFC6 /* EsbuildKit in Frameworks */,
+				DAEFD22602D3904B391A4585 /* OpenAI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -38,6 +41,7 @@
 			isa = PBXGroup;
 			children = (
 				53B7F9C28C8BD2270E0CADCC /* esbuild-swift */,
+				1E1796A2B1936EA2AF4195D8 /* OpenAI */,
 				B28972A9442C339C11E9EF40 /* SwiftJS */,
 			);
 			name = Packages;
@@ -83,6 +87,7 @@
 			packageProductDependencies = (
 				41C053A18287F85376A41AFE /* SwiftJS */,
 				A62F124BBA8A04147A0F9D93 /* EsbuildKit */,
+				D1752C5F436222A2084DBDD0 /* OpenAI */,
 			);
 			productName = CounterApp;
 			productReference = 9D06BFB95E0269CB9E1CD716 /* CounterApp.app */;
@@ -114,6 +119,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3129BE5CF93DB6E7ABCA9F71 /* XCLocalSwiftPackageReference "../../../esbuild-swift" */,
+				13F2C06493FA06070DE3B013 /* XCLocalSwiftPackageReference "../../Vendor/OpenAI" */,
 				7A17A7DCA8A414F89C61F2AA /* XCLocalSwiftPackageReference "../.." */,
 			);
 			projectDirPath = "";
@@ -366,6 +372,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		13F2C06493FA06070DE3B013 /* XCLocalSwiftPackageReference "../../Vendor/OpenAI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../Vendor/OpenAI;
+		};
 		3129BE5CF93DB6E7ABCA9F71 /* XCLocalSwiftPackageReference "../../../esbuild-swift" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "../../../esbuild-swift";
@@ -384,6 +394,10 @@
 		A62F124BBA8A04147A0F9D93 /* EsbuildKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = EsbuildKit;
+		};
+		D1752C5F436222A2084DBDD0 /* OpenAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OpenAI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

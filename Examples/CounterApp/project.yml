@@ -12,6 +12,8 @@ packages:
     path: ../..
   EsbuildKit:
     path: ../../../esbuild-swift
+  OpenAI:
+    path: ../../Vendor/OpenAI
 
 targets:
   CounterApp:
@@ -36,6 +38,7 @@ targets:
     dependencies:
       - package: SwiftJS
       - package: EsbuildKit
+      - package: OpenAI
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.swiftjs.counterapp
