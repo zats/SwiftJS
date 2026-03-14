@@ -144,16 +144,74 @@
 
     switch (type) {
       case "VStack":
-        node.spacing = numericProp(props.spacing, 16)
+      case "HStack":
+        node.alignment = typeof props.alignment === "string" ? props.alignment : "center"
+        node.distribution = typeof props.distribution === "string" ? props.distribution : "natural"
+        node.spacing = numericProp(props.spacing, type === "VStack" ? 16 : 12)
         node.children = hostChildren(children)
         return node
-      case "HStack":
-        node.spacing = numericProp(props.spacing, 12)
+      case "Grid":
+        node.horizontalSpacing = numericProp(props.horizontalSpacing, 12)
+        node.verticalSpacing = numericProp(props.verticalSpacing, 12)
         node.children = hostChildren(children)
+        return node
+      case "FlowLayout":
+        node.alignment = typeof props.alignment === "string" ? props.alignment : "center"
+        node.spacing = numericProp(props.spacing, 8)
+        node.lineSpacing = numericProp(props.lineSpacing, numericProp(props.spacing, 8))
+        node.children = hostChildren(children)
+        return node
+      case "GridRow":
+        node.alignment = typeof props.alignment === "string" ? props.alignment : "center"
+        node.children = hostChildren(children)
+        return node
+      case "ZStack":
+        node.alignment = typeof props.alignment === "string" ? props.alignment : "center"
+        node.children = hostChildren(children)
+        return node
+      case "ScrollView":
+        node.axis = typeof props.axis === "string" ? props.axis : "vertical"
+        node.children = hostChildren(children)
+        return node
+      case "WidthThreshold":
+        node.threshold = numericProp(props.threshold, 0)
+        node.compact = serializeSlot(props.compact, path + ".compact", "compact")
+        node.regular = serializeSlot(props.regular, path + ".regular", "regular")
+        return node
+      case "List":
+        node.children = hostChildren(children)
+        return node
+      case "Section":
+        node.title = typeof props.title === "string" ? props.title : undefined
+        node.children = hostChildren(children)
+        return node
+      case "NavigationSplitView":
+        node.sidebar = serializeSlot(props.sidebar, path + ".sidebar", "sidebar")
+        node.detail = serializeSlot(props.detail, path + ".detail", "detail")
+        return node
+      case "Spacer":
         return node
       case "Text":
         node.value = textValue(props.children)
         return node
+      case "Label":
+        if (typeof props.title !== "string") {
+          throw new Error("Label requires a title prop")
+        }
+
+        node.title = props.title
+
+        if (typeof props.systemName === "string") {
+          node.systemName = props.systemName
+          return node
+        }
+
+        if (typeof props.name === "string") {
+          node.name = props.name
+          return node
+        }
+
+        throw new Error("Label requires a systemName or name prop")
       case "Image":
         if (typeof props.systemName === "string") {
           node.systemName = props.systemName
@@ -170,6 +228,7 @@
         return node
       case "Button":
         node.title = textValue(props.children)
+        node.children = hostChildren(children)
         node.event = registerHandler(props.action, id + ":action")
         return node
       default:
@@ -181,6 +240,10 @@
     const node = {
       type: type,
       id: id
+    }
+
+    if (typeof props.alignment === "string") {
+      node.alignment = props.alignment
     }
 
     if (typeof props.padding === "number") {
@@ -199,6 +262,26 @@
       node.frameHeight = props.frame.height
     }
 
+    if (props.frame && typeof props.frame.minWidth === "number") {
+      node.frameMinWidth = props.frame.minWidth
+    }
+
+    if (props.frame && typeof props.frame.minHeight === "number") {
+      node.frameMinHeight = props.frame.minHeight
+    }
+
+    if (props.frame && typeof props.frame.maxWidth === "number") {
+      node.frameMaxWidthValue = props.frame.maxWidth
+    } else if (props.frame && props.frame.maxWidth === "infinity") {
+      node.frameMaxWidth = true
+    }
+
+    if (props.frame && typeof props.frame.maxHeight === "number") {
+      node.frameMaxHeightValue = props.frame.maxHeight
+    } else if (props.frame && props.frame.maxHeight === "infinity") {
+      node.frameMaxHeight = true
+    }
+
     if (typeof props.background === "string") {
       node.background = props.background
     }
@@ -209,6 +292,50 @@
 
     if (typeof props.cornerRadius === "number") {
       node.cornerRadius = props.cornerRadius
+    }
+
+    if (typeof props.navigationTitle === "string") {
+      node.navigationTitle = props.navigationTitle
+    }
+
+    if (typeof props.listStyle === "string") {
+      node.listStyle = props.listStyle
+    }
+
+    if (typeof props.imageContentMode === "string") {
+      node.imageContentMode = props.imageContentMode
+    }
+
+    if (typeof props.aspectRatio === "number") {
+      node.aspectRatio = props.aspectRatio
+      node.aspectRatioContentMode = "fit"
+    } else if (props.aspectRatio && typeof props.aspectRatio === "object") {
+      if (typeof props.aspectRatio.value === "number") {
+        node.aspectRatio = props.aspectRatio.value
+      }
+
+      if (typeof props.aspectRatio.contentMode === "string") {
+        node.aspectRatioContentMode = props.aspectRatio.contentMode
+      } else if ("value" in props.aspectRatio) {
+        node.aspectRatioContentMode = "fit"
+      }
+    }
+
+    if (props.fixedSize === true) {
+      node.fixedSizeHorizontal = true
+      node.fixedSizeVertical = true
+    } else if (props.fixedSize && typeof props.fixedSize === "object") {
+      if (props.fixedSize.horizontal === true) {
+        node.fixedSizeHorizontal = true
+      }
+
+      if (props.fixedSize.vertical === true) {
+        node.fixedSizeVertical = true
+      }
+    }
+
+    if (props.compactVertical === true) {
+      node.compactVertical = true
     }
 
     if (typeof props.onAppear === "function") {
@@ -272,6 +399,36 @@
     }
 
     return {}
+  }
+
+  function serializeSlot(value, path, name) {
+    const resolved = resolveElement(value, path)
+
+    if (resolved && typeof resolved === "object" && !Array.isArray(resolved)) {
+      return resolved
+    }
+
+    if (Array.isArray(resolved)) {
+      const nodes = resolved.filter(function (child) {
+        return typeof child === "object" && child !== null
+      })
+
+      if (nodes.length === 1) {
+        return nodes[0]
+      }
+
+      if (nodes.length > 1) {
+        return {
+          type: "VStack",
+          id: autoID(path),
+          alignment: "leading",
+          spacing: 0,
+          children: nodes
+        }
+      }
+    }
+
+    throw new Error("NavigationSplitView requires a " + name + " slot")
   }
 
   function currentHookSlot(name) {

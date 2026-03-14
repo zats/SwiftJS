@@ -9,6 +9,9 @@ await esbuild.build({
   entryPoints: [path.join(projectRoot, "src/main.tsx")],
   bundle: true,
   outfile: path.join(root, "../App/Resources/food-truck.bundle.js"),
+  alias: {
+    swiftjs: path.join(projectRoot, "src/swiftjs"),
+  },
   format: "iife",
   platform: "browser",
   target: "es2020",

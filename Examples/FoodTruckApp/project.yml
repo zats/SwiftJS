@@ -17,6 +17,7 @@ targets:
     platform: iOS
     preBuildScripts:
       - name: Build Food Truck Bundle
+        basedOnDependencyAnalysis: false
         script: |
           export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
           cd "$SRCROOT/JS"
@@ -25,6 +26,7 @@ targets:
         outputFiles:
           - $(SRCROOT)/App/Resources/food-truck.bundle.js
       - name: Copy TSX Project
+        basedOnDependencyAnalysis: false
         script: |
           set -euo pipefail
           ditto "$SRCROOT/App/Resources/food-truck.bundle.js" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/food-truck.bundle.js"

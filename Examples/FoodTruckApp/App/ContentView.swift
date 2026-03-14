@@ -7,11 +7,9 @@ struct ContentView: View {
     )
 
     var body: some View {
-        NavigationStack {
-            JSSurfaceView(runtime: runtime)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemGroupedBackground))
-        }
+        JSSurfaceView(runtime: runtime)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemGroupedBackground))
     }
 }
 
