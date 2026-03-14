@@ -155,11 +155,17 @@
         node.value = textValue(props.children)
         return node
       case "Image":
-        if (typeof props.systemName !== "string") {
-          throw new Error("Image requires a systemName prop")
+        if (typeof props.systemName === "string") {
+          node.systemName = props.systemName
+          return node
         }
-        node.systemName = props.systemName
-        return node
+
+        if (typeof props.name === "string") {
+          node.name = props.name
+          return node
+        }
+
+        throw new Error("Image requires a systemName or name prop")
       case "Divider":
         return node
       case "Button":

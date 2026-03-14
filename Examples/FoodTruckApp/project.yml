@@ -1,0 +1,58 @@
+name: FoodTruckApp
+
+options:
+  minimumXcodeGenVersion: 2.38.0
+  projectFormat: xcode16_0
+  deploymentTarget:
+    iOS: "18.0"
+  defaultSourceDirectoryType: syncedFolder
+
+packages:
+  SwiftJS:
+    path: ../..
+
+targets:
+  FoodTruckApp:
+    type: application
+    platform: iOS
+    preBuildScripts:
+      - name: Build Food Truck Bundle
+        script: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          cd "$SRCROOT/../FoodTruckAppJS"
+          pnpm install --frozen-lockfile
+          pnpm build
+        outputFiles:
+          - $(SRCROOT)/App/Resources/food-truck.bundle.js
+      - name: Copy TSX Project
+        script: |
+          set -euo pipefail
+          ditto "$SRCROOT/App/Resources/food-truck.bundle.js" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/food-truck.bundle.js"
+          ditto "$SRCROOT/App/Project" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Project"
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Project/tsconfig.json
+    sources:
+      - path: App
+        type: syncedFolder
+    dependencies:
+      - package: SwiftJS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.swiftjs.foodtruckapp
+        PRODUCT_NAME: FoodTruckApp
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: 6.0
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        DEVELOPMENT_ASSET_PATHS: "\"App\""
+
+schemes:
+  FoodTruckApp:
+    build:
+      targets:
+        FoodTruckApp: all
+    run:
+      config: Debug

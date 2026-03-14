@@ -62,6 +62,11 @@ public enum ButtonBorderShape: String, Codable, Equatable, Sendable {
     case circle
 }
 
+public enum ImageSource: Equatable, Sendable {
+    case system(String)
+    case asset(String)
+}
+
 public struct ViewModifiers: Equatable, Sendable {
     public var padding: Double?
     public var paddingTop: Double?
@@ -140,7 +145,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
     )
     case image(
         id: NodeID,
-        systemName: String,
+        source: ImageSource,
         modifiers: ViewModifiers
     )
     case divider(
@@ -400,9 +405,9 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 textView(value, modifiers: modifiers)
             )
-        case let .image(_, systemName, modifiers):
+        case let .image(_, source, modifiers):
             applyCommonModifiers(
-                imageView(systemName, modifiers: modifiers)
+                imageView(source, modifiers: modifiers)
             )
         case .divider:
             applyCommonModifiers(Divider())
@@ -448,9 +453,18 @@ private struct RenderNodeView: View {
         }
     }
 
-    private func imageView(_ systemName: String, modifiers: ViewModifiers) -> some View {
-        Image(systemName: systemName)
-            .modifier(NodeAppearanceModifier(modifiers: modifiers))
+    @ViewBuilder
+    private func imageView(_ source: ImageSource, modifiers: ViewModifiers) -> some View {
+        switch source {
+        case let .system(systemName):
+            Image(systemName: systemName)
+                .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        case let .asset(name):
+            Image(name)
+                .resizable()
+                .scaledToFit()
+                .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        }
     }
 
     private func applyCommonModifiers<Content: View>(_ content: Content) -> some View {
@@ -572,6 +586,7 @@ private struct HostNode: Decodable {
     let onAppearEvent: String?
     let value: String?
     let systemName: String?
+    let name: String?
     let title: String?
     let event: String?
     let children: [HostNode]?
@@ -605,13 +620,18 @@ private struct HostNode: Decodable {
                 modifiers: modifiers
             )
         case .image:
-            guard let systemName else {
-                throw JSSurfaceError.invalidTree("Image node '\(id)' is missing a systemName")
+            let source: ImageSource
+            if let systemName {
+                source = .system(systemName)
+            } else if let name {
+                source = .asset(name)
+            } else {
+                throw JSSurfaceError.invalidTree("Image node '\(id)' is missing an image name")
             }
 
             return .image(
                 id: NodeID(id),
-                systemName: systemName,
+                source: source,
                 modifiers: modifiers
             )
         case .divider:

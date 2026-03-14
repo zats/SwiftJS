@@ -7,4 +7,4 @@ DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
-Examples/CounterAppJS/node_modules/
+Examples/*JS/node_modules/
