@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 70;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -16,7 +16,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		63E83E8F69F92A8DA4A0E111 /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = App; sourceTree = "<group>"; };
+		63E83E8F69F92A8DA4A0E111 /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +73,7 @@
 			buildPhases = (
 				DDAAF8CF7A3CE99CF2518A91 /* Build Food Truck Bundle */,
 				F61925D1D1635C6E44D4310E /* Copy TSX Project */,
+				66D6FEF20958B105868FF5E0 /* Compile Asset Catalog */,
 				F4B23AF17FCFED86C94E143E /* Sources */,
 				AF684CD557123211A2C7A65D /* Frameworks */,
 			);
@@ -110,6 +119,7 @@
 			packageReferences = (
 				A52B7D849642976F185EC415 /* XCLocalSwiftPackageReference "../.." */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -119,6 +129,26 @@
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		66D6FEF20958B105868FF5E0 /* Compile Asset Catalog */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Compile Asset Catalog";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Assets.car",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\nxcrun actool \"$SRCROOT/App/Assets.xcassets\" \\\n  --compile \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\" \\\n  --platform \"$PLATFORM_NAME\" \\\n  --minimum-deployment-target \"$IPHONEOS_DEPLOYMENT_TARGET\" \\\n  --app-icon AppIcon \\\n  --accent-color AccentColor \\\n  --output-partial-info-plist \"$TARGET_TEMP_DIR/assetcatalog_generated_info.plist\" \\\n  --target-device iphone \\\n  --target-device ipad\n";
+		};
 		DDAAF8CF7A3CE99CF2518A91 /* Build Food Truck Bundle */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;

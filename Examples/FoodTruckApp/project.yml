@@ -33,6 +33,21 @@ targets:
           ditto "$SRCROOT/App/Project" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Project"
         outputFiles:
           - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Project/tsconfig.json
+      - name: Compile Asset Catalog
+        basedOnDependencyAnalysis: false
+        script: |
+          set -euo pipefail
+          xcrun actool "$SRCROOT/App/Assets.xcassets" \
+            --compile "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH" \
+            --platform "$PLATFORM_NAME" \
+            --minimum-deployment-target "$IPHONEOS_DEPLOYMENT_TARGET" \
+            --app-icon AppIcon \
+            --accent-color AccentColor \
+            --output-partial-info-plist "$TARGET_TEMP_DIR/assetcatalog_generated_info.plist" \
+            --target-device iphone \
+            --target-device ipad
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Assets.car
     sources:
       - path: App
         type: syncedFolder

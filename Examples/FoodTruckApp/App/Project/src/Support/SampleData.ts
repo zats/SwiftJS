@@ -24,7 +24,7 @@ export type Order = {
   id: string
   customer: string
   city: string
-  donuts: number
+  donuts: DonutRecipe[]
   total: string
   status: OrderStatus
 }
@@ -113,12 +113,54 @@ export const donutCatalog: DonutRecipe[] = [
 ]
 
 export const orders: Order[] = [
-  { id: "Order #4021", customer: "Mina R.", city: "San Francisco", donuts: 12, total: "$118", status: "New" },
-  { id: "Order #4020", customer: "A. Chen", city: "Cupertino", donuts: 8, total: "$72", status: "New" },
-  { id: "Order #4017", customer: "Studio Lune", city: "New York", donuts: 18, total: "$164", status: "Preparing" },
-  { id: "Order #4015", customer: "River Team", city: "San Francisco", donuts: 6, total: "$54", status: "Preparing" },
-  { id: "Order #4012", customer: "Nora W.", city: "Cupertino", donuts: 10, total: "$92", status: "Ready" },
-  { id: "Order #4008", customer: "Beacon Labs", city: "New York", donuts: 20, total: "$188", status: "Completed" },
+  {
+    id: "Order #4021",
+    customer: "Mina R.",
+    city: "San Francisco",
+    donuts: [donutCatalog[1], donutCatalog[4], donutCatalog[0]],
+    total: "$118",
+    status: "New",
+  },
+  {
+    id: "Order #4020",
+    customer: "A. Chen",
+    city: "Cupertino",
+    donuts: [donutCatalog[3], donutCatalog[2]],
+    total: "$72",
+    status: "New",
+  },
+  {
+    id: "Order #4017",
+    customer: "Studio Lune",
+    city: "New York",
+    donuts: [donutCatalog[4], donutCatalog[1], donutCatalog[2]],
+    total: "$164",
+    status: "Preparing",
+  },
+  {
+    id: "Order #4015",
+    customer: "River Team",
+    city: "San Francisco",
+    donuts: [donutCatalog[0]],
+    total: "$54",
+    status: "Preparing",
+  },
+  {
+    id: "Order #4012",
+    customer: "Nora W.",
+    city: "Cupertino",
+    donuts: [donutCatalog[2], donutCatalog[3]],
+    total: "$92",
+    status: "Ready",
+  },
+  {
+    id: "Order #4008",
+    customer: "Beacon Labs",
+    city: "New York",
+    donuts: [donutCatalog[1], donutCatalog[0], donutCatalog[4], donutCatalog[2]],
+    total: "$188",
+    status: "Completed",
+  },
 ]
 
 export const socialPosts = [

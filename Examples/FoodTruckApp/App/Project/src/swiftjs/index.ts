@@ -1,14 +1,22 @@
 import type {
   AspectRatioValue,
   ButtonProps,
+  CustomValue,
+  CustomLayoutProps,
   DividerProps,
+  GeometryReaderProps,
   FlowLayoutProps,
   GridProps,
   GridRowProps,
+  ImageInterpolation,
   ImageProps,
+  LayoutBounds,
+  LayoutPlacement,
+  LayoutSubview,
   LabelProps,
   ListProps,
   NavigationSplitViewProps,
+  ProposedViewSize,
   ScrollViewProps,
   SectionProps,
   SpacerProps,
@@ -25,7 +33,11 @@ export type {
   ButtonStyle,
   ColorValue,
   ContentAlignment,
+  CustomValue,
+  CustomLayoutProps,
   DividerProps,
+  GeometryProxy,
+  GeometryReaderProps,
   FontValue,
   FontWeight,
   FlowLayoutProps,
@@ -34,12 +46,17 @@ export type {
   GlassEffectValue,
   GridProps,
   GridRowProps,
+  ImageInterpolation,
   ImageContentMode,
   ImageProps,
+  LayoutBounds,
+  LayoutPlacement,
+  LayoutSubview,
   LabelProps,
   ListProps,
   ListStyle,
   NavigationSplitViewProps,
+  ProposedViewSize,
   ScrollViewProps,
   SectionProps,
   SpacerProps,
@@ -53,7 +70,10 @@ export type {
 export type Runtime = {
   Fragment: symbol
   createElement: (type: unknown, props?: Record<string, unknown>, ...children: unknown[]) => unknown
+  hasLayoutHandler: (id: string) => boolean
+  measureLayout: (id: string, proposalJSON: string, subviewCount: number) => string
   mount: (component: () => unknown) => void
+  placeLayoutSubviews: (id: string, boundsJSON: string, proposalJSON: string, subviewCount: number) => string
   useEffect: (effect: () => void | (() => void), deps?: unknown[]) => void
   useRef: <Value>(initialValue: Value) => { current: Value }
   useState: <Value>(
@@ -93,7 +113,9 @@ export const ZStack = hostComponent<StackProps>("ZStack")
 export const Grid = hostComponent<GridProps>("Grid")
 export const GridRow = hostComponent<GridRowProps>("GridRow")
 export const FlowLayout = hostComponent<FlowLayoutProps>("FlowLayout")
+export const CustomLayout = hostComponent<CustomLayoutProps>("CustomLayout")
 export const ScrollView = hostComponent<ScrollViewProps>("ScrollView")
+export const GeometryReader = hostComponent<GeometryReaderProps>("GeometryReader")
 export const List = hostComponent<ListProps>("List")
 export const Section = hostComponent<SectionProps>("Section")
 export const NavigationSplitView = hostComponent<NavigationSplitViewProps>("NavigationSplitView")

@@ -18,6 +18,7 @@ export type AxisValue = "vertical" | "horizontal"
 export type StackDistribution = "natural" | "fillEqually"
 export type ListStyle = "automatic" | "plain" | "insetGrouped" | "sidebar"
 export type ImageContentMode = "fit" | "fill"
+export type ImageInterpolation = "none" | "low" | "medium" | "high"
 export type FixedSizeValue = boolean | { horizontal?: boolean; vertical?: boolean }
 export type AspectRatioValue = number | { value?: number; contentMode?: ImageContentMode }
 export type FontValue =
@@ -42,6 +43,7 @@ export type FrameValue = {
 
 export type ViewProps = {
   id?: string
+  viewID?: string | number | boolean
   children?: unknown
   padding?: number
   paddingTop?: number
@@ -84,8 +86,55 @@ export type ScrollViewProps = ViewProps & {
   axis?: AxisValue
 }
 
+export type GeometrySize = {
+  width: number
+  height: number
+}
+
+export type GeometryProxy = {
+  size: GeometrySize
+}
+
+export type GeometryReaderProps = ViewProps & {
+  children: ((proxy: GeometryProxy) => unknown) | Array<(proxy: GeometryProxy) => unknown>
+}
+
 export type SectionProps = ViewProps & {
   title?: string
+}
+
+export type CustomValue = string | number | boolean | CustomValue[] | { [key: string]: CustomValue }
+
+export type ProposedViewSize = {
+  width?: number
+  height?: number
+  replacingUnspecifiedDimensions: (replacement: { width: number; height: number }) => { width: number; height: number }
+}
+
+export type LayoutBounds = {
+  minX: number
+  minY: number
+  width: number
+  height: number
+}
+
+export type LayoutSubview = {
+  sizeThatFits: (proposal: { width?: number; height?: number }) => { width?: number; height?: number }
+}
+
+export type LayoutPlacement = {
+  x: number
+  y: number
+  anchor: ContentAlignment
+  width?: number
+  height?: number
+}
+
+export type CustomLayoutProps = ViewProps & {
+  name: string
+  values?: Record<string, CustomValue>
+  sizeThatFits?: (proposal: ProposedViewSize, subviews: LayoutSubview[]) => { width?: number; height?: number }
+  placeSubviews?: (bounds: LayoutBounds, proposal: ProposedViewSize, subviews: LayoutSubview[]) => LayoutPlacement[]
 }
 
 export type NavigationSplitViewProps = ViewProps & {
@@ -107,6 +156,7 @@ export type ButtonProps = ViewProps & {
 export type ImageProps = ViewProps & {
   systemName?: string
   name?: string
+  interpolation?: ImageInterpolation
   font?: FontValue
   fontWeight?: FontWeight
 }

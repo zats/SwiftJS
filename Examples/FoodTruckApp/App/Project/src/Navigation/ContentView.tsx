@@ -8,7 +8,6 @@ export function ContentView() {
 
   return (
     <NavigationSplitView
-      id="food-truck-root"
       sidebar={<Sidebar selection={selection} onSelect={setSelection} />}
       detail={<DetailColumn selection={selection} onSelect={setSelection} />}
     />

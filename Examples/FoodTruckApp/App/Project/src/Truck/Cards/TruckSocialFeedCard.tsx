@@ -1,21 +1,16 @@
-import { FlowLayout, Text, VStack } from "../../swiftjs"
+import { FlowLayout, Label, Text, VStack } from "../../swiftjs"
 import { trendingTopics } from "../../Support/SampleData"
 import type { Panel } from "../../Support/SampleData"
 import { CardNavigationHeader } from "./CardNavigationHeader"
 
 export function TruckSocialFeedCard(props: { onSelect: (panel: Panel) => void }) {
   return (
-    <VStack id="truck-social-feed-card" alignment="leading" spacing={12} padding={10} background="white" cornerRadius={20}>
-      <CardNavigationHeader
-        id="truck-social-feed-card-header"
-        panel="socialFeed"
-        title="Social Feed"
-        systemName="text.bubble"
-        onSelect={() => props.onSelect("socialFeed")}
-      />
+    <VStack alignment="leading" spacing={12} padding={10} background="white" cornerRadius={20}>
+      <CardNavigationHeader onSelect={() => props.onSelect("socialFeed")}>
+        <Label title="Social Feed" systemName="text.bubble" font="headline" fontWeight="semibold" foregroundColor="indigo" />
+      </CardNavigationHeader>
 
       <FlowLayout
-        id="truck-social-tags"
         alignment="center"
         spacing={8}
         lineSpacing={8}
@@ -26,13 +21,13 @@ export function TruckSocialFeedCard(props: { onSelect: (panel: Panel) => void })
         frame={{ maxWidth: "infinity", minHeight: 180 }}
       >
         {trendingTopics.map((topic) => (
-          <Text key={topic} id={`chip-${topic}`} font="footnote" padding={8} background="quaternarySystemFill" cornerRadius={12}>
+          <Text key={topic} font="footnote" padding={8} background="quaternarySystemFill" cornerRadius={12}>
             {topic}
           </Text>
         ))}
       </FlowLayout>
 
-      <Text id="truck-social-feed-caption" font="footnote" foregroundColor="secondary">
+      <Text font="footnote" foregroundColor="secondary">
         Trending Topics
       </Text>
     </VStack>

@@ -1,8 +1,7 @@
-import { HStack, Image, Spacer, Text, VStack } from "../../swiftjs"
-import { donutCatalog, orders } from "../../Support/SampleData"
-import type { DonutRecipe, Order } from "../../Support/SampleData"
+import { CustomLayout, HStack, Image, Label, Spacer, Text, VStack } from "../../swiftjs"
+import { DonutStackView } from "../../Donut/DonutStackView"
+import { orders } from "../../Support/SampleData"
 import type { Panel } from "../../Support/SampleData"
-import { DonutPreview } from "../../Support/DonutComponents"
 import { CardNavigationHeader } from "./CardNavigationHeader"
 
 export function TruckOrdersCard(props: { onSelect: (panel: Panel) => void }) {
@@ -10,94 +9,48 @@ export function TruckOrdersCard(props: { onSelect: (panel: Panel) => void }) {
   const footerOrder = orders[orders.length - 1]
 
   return (
-    <VStack id="truck-orders-card" alignment="leading" spacing={12} padding={10} background="white" cornerRadius={20}>
-      <CardNavigationHeader
-        id="truck-orders-card-header"
-        panel="orders"
-        title="New Orders"
-        systemName="shippingbox"
-        onSelect={() => props.onSelect("orders")}
-      />
+    <VStack alignment="leading" spacing={12} padding={10} background="white" cornerRadius={20}>
+      <CardNavigationHeader onSelect={() => props.onSelect("orders")}>
+        <Label title="New Orders" systemName="shippingbox" font="headline" fontWeight="semibold" foregroundColor="indigo" />
+      </CardNavigationHeader>
 
-      <HeroSquareTilingLayout id="truck-orders-card-media">
-        {cardOrders.map((order, index) => (
-          <OrderPreviewTile
+      <HeroSquareTilingLayout aspectRatio={2} frame={{ maxWidth: "infinity", maxHeight: 250 }}>
+        {cardOrders.map((order) => (
+          <DonutStackView
             key={order.id}
-            order={order}
-            recipe={donutCatalog[index % donutCatalog.length]}
-            prominent={index === 0}
+            donuts={order.donuts}
+            padding={6}
+            background="tertiarySystemFill"
+            cornerRadius={10}
+            aspectRatio={{ value: 1, contentMode: "fit" }}
           />
         ))}
       </HeroSquareTilingLayout>
 
-      <HStack id="truck-orders-card-footer" spacing={8} frame={{ maxWidth: "infinity" }}>
-        <Spacer id="truck-orders-card-footer-leading" />
-        <Text id="truck-orders-card-order-id" font="subheadline" foregroundColor="secondary">
+      <HStack spacing={8} frame={{ maxWidth: "infinity" }}>
+        <Spacer />
+        <Text font="subheadline" foregroundColor="secondary">
           {footerOrder.id}
         </Text>
-        <Image id="truck-orders-card-order-icon" name="donut" frame={{ width: 14, height: 14 }} />
-        <Text id="truck-orders-card-order-total" font="subheadline" foregroundColor="secondary">
+        <Image name="donut" frame={{ width: 14, height: 14 }} />
+        <Text font="subheadline" foregroundColor="secondary">
           {footerOrder.total}
         </Text>
-        <Spacer id="truck-orders-card-footer-trailing" />
+        <Spacer />
       </HStack>
     </VStack>
   )
 }
 
-function HeroSquareTilingLayout(props: { id: string; spacing?: number; children?: unknown }) {
-  const spacing = props.spacing ?? 10
-  const [hero, tile1, tile2, tile3, tile4] = flattenChildren(props.children)
-
+function HeroSquareTilingLayout(props: { spacing?: number; aspectRatio?: number; frame?: { maxWidth?: number | "infinity"; maxHeight?: number } ; children?: unknown }) {
   return (
-    <VStack id={props.id} frame={{ maxWidth: "infinity", maxHeight: 250 }} aspectRatio={{ value: 2, contentMode: "fit" }}>
-      <HStack id={`${props.id}-content`} spacing={spacing} distribution="fillEqually">
-        <VStack id={`${props.id}-hero`} aspectRatio={{ value: 1, contentMode: "fit" }}>
-          {hero}
-        </VStack>
-        <VStack id={`${props.id}-tiles`} spacing={spacing} distribution="fillEqually">
-          <HStack id={`${props.id}-tiles-top`} spacing={spacing} distribution="fillEqually">
-            <VStack id={`${props.id}-tiles-top-left`} aspectRatio={{ value: 1, contentMode: "fit" }}>
-              {tile1}
-            </VStack>
-            <VStack id={`${props.id}-tiles-top-right`} aspectRatio={{ value: 1, contentMode: "fit" }}>
-              {tile2}
-            </VStack>
-          </HStack>
-          <HStack id={`${props.id}-tiles-bottom`} spacing={spacing} distribution="fillEqually">
-            <VStack id={`${props.id}-tiles-bottom-left`} aspectRatio={{ value: 1, contentMode: "fit" }}>
-              {tile3}
-            </VStack>
-            <VStack id={`${props.id}-tiles-bottom-right`} aspectRatio={{ value: 1, contentMode: "fit" }}>
-              {tile4}
-            </VStack>
-          </HStack>
-        </VStack>
-      </HStack>
-    </VStack>
-  )
-}
-
-function flattenChildren(children: unknown): unknown[] {
-  if (!Array.isArray(children)) {
-    return children === undefined || children === null || children === false ? [] : [children]
-  }
-
-  return children.flatMap((child) => flattenChildren(child))
-}
-
-function OrderPreviewTile(props: { order: Order; recipe: DonutRecipe; prominent?: boolean }) {
-  return (
-    <VStack
-      id={`order-tile-${props.order.id}`}
-      alignment="center"
-      spacing={0}
-      padding={6}
-      background="tertiarySystemFill"
-      cornerRadius={10}
-      aspectRatio={{ value: 1, contentMode: "fit" }}
+    <CustomLayout
+      name="HeroSquareTilingLayout"
+      values={{ spacing: props.spacing ?? 10 }}
+      aspectRatio={props.aspectRatio}
+      frame={props.frame}
     >
-      <DonutPreview recipe={props.recipe} size={props.prominent ? "featured" : "mini"} />
-    </VStack>
+      {props.children}
+    </CustomLayout>
   )
 }

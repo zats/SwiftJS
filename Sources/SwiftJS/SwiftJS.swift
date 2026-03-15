@@ -100,15 +100,24 @@ public enum ImageContentMode: String, Codable, Equatable, Sendable {
     case fill
 }
 
+public enum ImageInterpolation: String, Codable, Equatable, Sendable {
+    case none
+    case low
+    case medium
+    case high
+}
+
 public enum ImageSource: Equatable, Sendable {
     case system(String)
     case asset(String)
 }
 
-public enum CustomHostValue: Equatable, Sendable, Decodable {
+public enum CustomHostValue: Equatable, Sendable, Codable {
     case string(String)
     case number(Double)
     case bool(Bool)
+    case array([CustomHostValue])
+    case object([String: CustomHostValue])
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -117,8 +126,29 @@ public enum CustomHostValue: Equatable, Sendable, Decodable {
             self = .bool(value)
         } else if let value = try? container.decode(Double.self) {
             self = .number(value)
+        } else if let value = try? container.decode([CustomHostValue].self) {
+            self = .array(value)
+        } else if let value = try? container.decode([String: CustomHostValue].self) {
+            self = .object(value)
         } else {
             self = .string(try container.decode(String.self))
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+
+        switch self {
+        case let .string(value):
+            try container.encode(value)
+        case let .number(value):
+            try container.encode(value)
+        case let .bool(value):
+            try container.encode(value)
+        case let .array(value):
+            try container.encode(value)
+        case let .object(value):
+            try container.encode(value)
         }
     }
 }
@@ -127,12 +157,14 @@ public struct CustomHostContext: Equatable, Sendable {
     public let id: NodeID
     public let name: String
     public let values: [String: CustomHostValue]
+    public let children: [ViewNode]
     public let slots: [String: ViewNode]
 
-    public init(id: NodeID, name: String, values: [String: CustomHostValue], slots: [String: ViewNode]) {
+    public init(id: NodeID, name: String, values: [String: CustomHostValue], children: [ViewNode], slots: [String: ViewNode]) {
         self.id = id
         self.name = name
         self.values = values
+        self.children = children
         self.slots = slots
     }
 
@@ -160,27 +192,82 @@ public struct CustomHostContext: Equatable, Sendable {
         return value
     }
 
+    public func decodeValue<Value: Decodable>(forKey key: String, as type: Value.Type) -> Value? {
+        guard let value = values[key] else {
+            return nil
+        }
+
+        do {
+            let data = try JSONEncoder().encode(value)
+            return try JSONDecoder().decode(Value.self, from: data)
+        } catch {
+            return nil
+        }
+    }
+
     public func slot(named name: String) -> ViewNode? {
         slots[name]
     }
 }
 
 public struct CustomHostRegistry {
-    public typealias Renderer = @MainActor (CustomHostContext, @escaping (SurfaceEvent) -> Void) -> AnyView
+    public typealias Renderer = @MainActor (CustomHostContext, @escaping (SurfaceEvent) -> Void, CustomHostRegistry) -> AnyView
+    public typealias LayoutRenderer = @MainActor (CustomHostContext) -> AnyLayout
 
     private let renderers: [String: Renderer]
+    private let layouts: [String: LayoutRenderer]
+    fileprivate let javaScriptLayoutBridge: JavaScriptLayoutBridge?
+    fileprivate let geometryReaderBridge: GeometryReaderBridge?
 
-    public init(renderers: [String: Renderer] = [:]) {
+    public init(renderers: [String: Renderer] = [:], layouts: [String: LayoutRenderer] = [:]) {
         self.renderers = renderers
+        self.layouts = layouts
+        self.javaScriptLayoutBridge = nil
+        self.geometryReaderBridge = nil
+    }
+
+    fileprivate init(
+        renderers: [String: Renderer],
+        layouts: [String: LayoutRenderer],
+        javaScriptLayoutBridge: JavaScriptLayoutBridge?,
+        geometryReaderBridge: GeometryReaderBridge?
+    ) {
+        self.renderers = renderers
+        self.layouts = layouts
+        self.javaScriptLayoutBridge = javaScriptLayoutBridge
+        self.geometryReaderBridge = geometryReaderBridge
     }
 
     public func renderer(named name: String) -> Renderer? {
         renderers[name]
     }
+
+    public func layout(named name: String) -> LayoutRenderer? {
+        layouts[name]
+    }
+
+    fileprivate func withJavaScriptLayoutBridge(_ bridge: JavaScriptLayoutBridge) -> Self {
+        Self(
+            renderers: renderers,
+            layouts: layouts,
+            javaScriptLayoutBridge: bridge,
+            geometryReaderBridge: geometryReaderBridge
+        )
+    }
+
+    fileprivate func withGeometryReaderBridge(_ bridge: GeometryReaderBridge) -> Self {
+        Self(
+            renderers: renderers,
+            layouts: layouts,
+            javaScriptLayoutBridge: javaScriptLayoutBridge,
+            geometryReaderBridge: bridge
+        )
+    }
 }
 
 public struct ViewModifiers: Equatable, Sendable {
     public var alignment: ContentAlignment
+    public var viewIdentity: CustomHostValue?
     public var padding: Double?
     public var paddingTop: Double?
     public var frameMinWidth: Double?
@@ -206,6 +293,7 @@ public struct ViewModifiers: Equatable, Sendable {
     public var navigationTitle: String?
     public var listStyle: ListStyleKind?
     public var imageContentMode: ImageContentMode?
+    public var imageInterpolation: ImageInterpolation?
     public var aspectRatio: Double?
     public var aspectRatioContentMode: ImageContentMode?
     public var fixedSizeHorizontal: Bool
@@ -215,6 +303,7 @@ public struct ViewModifiers: Equatable, Sendable {
 
     public init(
         alignment: ContentAlignment = .center,
+        viewIdentity: CustomHostValue? = nil,
         padding: Double? = nil,
         paddingTop: Double? = nil,
         frameMinWidth: Double? = nil,
@@ -240,6 +329,7 @@ public struct ViewModifiers: Equatable, Sendable {
         navigationTitle: String? = nil,
         listStyle: ListStyleKind? = nil,
         imageContentMode: ImageContentMode? = nil,
+        imageInterpolation: ImageInterpolation? = nil,
         aspectRatio: Double? = nil,
         aspectRatioContentMode: ImageContentMode? = nil,
         fixedSizeHorizontal: Bool = false,
@@ -248,6 +338,7 @@ public struct ViewModifiers: Equatable, Sendable {
         onAppearEvent: SurfaceEvent? = nil
     ) {
         self.alignment = alignment
+        self.viewIdentity = viewIdentity
         self.padding = padding
         self.paddingTop = paddingTop
         self.frameMinWidth = frameMinWidth
@@ -273,6 +364,7 @@ public struct ViewModifiers: Equatable, Sendable {
         self.navigationTitle = navigationTitle
         self.listStyle = listStyle
         self.imageContentMode = imageContentMode
+        self.imageInterpolation = imageInterpolation
         self.aspectRatio = aspectRatio
         self.aspectRatioContentMode = aspectRatioContentMode
         self.fixedSizeHorizontal = fixedSizeHorizontal
@@ -332,12 +424,24 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
+    case geometryReader(
+        id: NodeID,
+        modifiers: ViewModifiers
+    )
     case custom(
         id: NodeID,
         name: String,
         modifiers: ViewModifiers,
         values: [String: CustomHostValue],
+        children: [ViewNode],
         slots: [String: ViewNode]
+    )
+    case customLayout(
+        id: NodeID,
+        name: String,
+        modifiers: ViewModifiers,
+        values: [String: CustomHostValue],
+        children: [ViewNode]
     )
     case list(
         id: NodeID,
@@ -397,7 +501,9 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .flowLayout(id, _, _, _, _, _),
              let .gridRow(id, _, _, _),
              let .scrollView(id, _, _, _),
-             let .custom(id, _, _, _, _),
+             let .geometryReader(id, _),
+             let .custom(id, _, _, _, _, _),
+             let .customLayout(id, _, _, _, _),
              let .list(id, _, _),
              let .section(id, _, _, _),
              let .navigationSplitView(id, _, _, _),
@@ -420,7 +526,9 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .flowLayout(_, _, _, _, modifiers, _),
              let .gridRow(_, _, modifiers, _),
              let .scrollView(_, _, modifiers, _),
-             let .custom(_, _, modifiers, _, _),
+             let .geometryReader(_, modifiers),
+             let .custom(_, _, modifiers, _, _, _),
+             let .customLayout(_, _, modifiers, _, _),
              let .list(_, modifiers, _),
              let .section(_, _, modifiers, _),
              let .navigationSplitView(_, modifiers, _, _),
@@ -531,18 +639,22 @@ public struct JSSurfaceView: View {
 public final class JSSurfaceRuntime {
     public private(set) var rootNode: ViewNode?
     public private(set) var errorMessage: String?
-    public let customHostRegistry: CustomHostRegistry
+    public private(set) var customHostRegistry: CustomHostRegistry
 
     private let source: JSScriptSource
     private var context: JSContext
     private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
     private var didStart = false
+    private var activeLayoutMeasurementStack: [(Int, ProposedViewSize) -> CGSize] = []
 
     public init(source: JSScriptSource, customHostRegistry: CustomHostRegistry = .init()) {
         self.source = source
         self.customHostRegistry = customHostRegistry
         self.context = Self.makeContext()
         installBridge()
+        installGeometryReaderBridge()
+        installJavaScriptLayoutBridge()
     }
 
     public func start() {
@@ -582,6 +694,8 @@ public final class JSSurfaceRuntime {
         didStart = false
         context = Self.makeContext()
         installBridge()
+        installGeometryReaderBridge()
+        installJavaScriptLayoutBridge()
         start()
     }
 
@@ -613,6 +727,52 @@ public final class JSSurfaceRuntime {
         context.setObject(commit, forKeyedSubscript: "__swiftjs_commit" as NSString)
         context.setObject(report, forKeyedSubscript: "__swiftjs_reportError" as NSString)
         context.setObject(console, forKeyedSubscript: "console" as NSString)
+    }
+
+    private func installGeometryReaderBridge() {
+        customHostRegistry = customHostRegistry.withGeometryReaderBridge(
+            GeometryReaderBridge(
+                hasHandler: { [weak self] id in
+                    self?.hasGeometryReaderHandler(id: id) ?? false
+                },
+                render: { [weak self] id, size in
+                    self?.callJavaScriptGeometryReader(id: id, size: size)
+                }
+            )
+        )
+    }
+
+    private func installJavaScriptLayoutBridge() {
+        customHostRegistry = customHostRegistry.withJavaScriptLayoutBridge(
+            JavaScriptLayoutBridge(
+                hasLayoutHandler: { [weak self] id in
+                    self?.hasJavaScriptLayoutHandler(id: id) ?? false
+                },
+                sizeThatFits: { [weak self] id, proposal, subviewCount, measureSubview in
+                    self?.callJavaScriptLayoutSizeThatFits(
+                        id: id,
+                        proposal: proposal,
+                        subviewCount: subviewCount,
+                        measureSubview: measureSubview
+                    )
+                },
+                placeSubviews: { [weak self] id, bounds, proposal, subviewCount, measureSubview in
+                    self?.callJavaScriptLayoutPlaceSubviews(
+                        id: id,
+                        bounds: bounds,
+                        proposal: proposal,
+                        subviewCount: subviewCount,
+                        measureSubview: measureSubview
+                    )
+                }
+            )
+        )
+
+        let subviewSizeThatFits: @convention(block) (Int, String) -> String = { [weak self] index, proposalJSON in
+            self?.javaScriptLayoutSubviewSizeThatFits(index: index, proposalJSON: proposalJSON) ?? #"{"width":0,"height":0}"#
+        }
+
+        context.setObject(subviewSizeThatFits, forKeyedSubscript: "__swiftjs_layout_subviewSizeThatFits" as NSString)
     }
 
     private static func makeContext() -> JSContext {
@@ -665,6 +825,152 @@ public final class JSSurfaceRuntime {
         let message = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
         errorMessage = message
     }
+
+    private func hasJavaScriptLayoutHandler(id: NodeID) -> Bool {
+        context.exception = nil
+        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
+        let function = runtime?.objectForKeyedSubscript("hasLayoutHandler")
+        let result = function?.call(withArguments: [id.rawValue])
+
+        if let exception = context.exception?.toString(), !exception.isEmpty {
+            errorMessage = exception
+            return false
+        }
+
+        return result?.toBool() ?? false
+    }
+
+    private func hasGeometryReaderHandler(id: NodeID) -> Bool {
+        context.exception = nil
+        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
+        let function = runtime?.objectForKeyedSubscript("hasGeometryReaderHandler")
+        let result = function?.call(withArguments: [id.rawValue])
+
+        if let exception = context.exception?.toString(), !exception.isEmpty {
+            errorMessage = exception
+            return false
+        }
+
+        return result?.toBool() ?? false
+    }
+
+    private func callJavaScriptGeometryReader(id: NodeID, size: CGSize) -> ViewNode? {
+        callJavaScriptLayout(
+            functionName: "renderGeometryReader",
+            arguments: [
+                id.rawValue,
+                encodeJSONObject(JavaScriptLayoutSize(size)) ?? "{}"
+            ],
+            decode: HostNode.self
+        ).flatMap { hostNode in
+            do {
+                return try hostNode.makeViewNode()
+            } catch {
+                report(error)
+                return nil
+            }
+        }
+    }
+
+    private func callJavaScriptLayoutSizeThatFits(
+        id: NodeID,
+        proposal: ProposedViewSize,
+        subviewCount: Int,
+        measureSubview: @escaping (Int, ProposedViewSize) -> CGSize
+    ) -> CGSize? {
+        callWithLayoutMeasurementContext(measureSubview) {
+            callJavaScriptLayout(
+                functionName: "measureLayout",
+                arguments: [
+                    id.rawValue,
+                    encodeJSONObject(JavaScriptLayoutSize(proposal)) ?? "{}",
+                    subviewCount
+                ],
+                decode: JavaScriptLayoutSize.self
+            )?.cgSize
+        }
+    }
+
+    private func callJavaScriptLayoutPlaceSubviews(
+        id: NodeID,
+        bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviewCount: Int,
+        measureSubview: @escaping (Int, ProposedViewSize) -> CGSize
+    ) -> [JavaScriptSubviewPlacement]? {
+        callWithLayoutMeasurementContext(measureSubview) {
+            callJavaScriptLayout(
+                functionName: "placeLayoutSubviews",
+                arguments: [
+                    id.rawValue,
+                    encodeJSONObject(JavaScriptLayoutBounds(bounds)) ?? "{}",
+                    encodeJSONObject(JavaScriptLayoutSize(proposal)) ?? "{}",
+                    subviewCount
+                ],
+                decode: [JavaScriptSubviewPlacement].self
+            )
+        }
+    }
+
+    private func javaScriptLayoutSubviewSizeThatFits(index: Int, proposalJSON: String) -> String {
+        guard let measureSubview = activeLayoutMeasurementStack.last else {
+            return #"{"width":0,"height":0}"#
+        }
+
+        do {
+            let proposal = try decoder.decode(JavaScriptLayoutSize.self, from: Data(proposalJSON.utf8))
+            let size = measureSubview(index, proposal.proposedViewSize)
+            return encodeJSONObject(JavaScriptLayoutSize(size)) ?? #"{"width":0,"height":0}"#
+        } catch {
+            return #"{"width":0,"height":0}"#
+        }
+    }
+
+    private func callWithLayoutMeasurementContext<Value>(
+        _ measureSubview: @escaping (Int, ProposedViewSize) -> CGSize,
+        perform: () -> Value
+    ) -> Value {
+        activeLayoutMeasurementStack.append(measureSubview)
+        defer { _ = activeLayoutMeasurementStack.popLast() }
+        return perform()
+    }
+
+    private func callJavaScriptLayout<Response: Decodable>(
+        functionName: String,
+        arguments: [Any],
+        decode: Response.Type
+    ) -> Response? {
+        context.exception = nil
+        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
+        let function = runtime?.objectForKeyedSubscript(functionName)
+        let result = function?.call(withArguments: arguments)
+
+        if let exception = context.exception?.toString(), !exception.isEmpty {
+            errorMessage = exception
+            return nil
+        }
+
+        guard let json = result?.toString(), !json.isEmpty else {
+            return nil
+        }
+
+        do {
+            return try decoder.decode(Response.self, from: Data(json.utf8))
+        } catch {
+            report(error)
+            return nil
+        }
+    }
+
+    private func encodeJSONObject<Value: Encodable>(_ value: Value) -> String? {
+        do {
+            let data = try encoder.encode(value)
+            return String(data: data, encoding: .utf8)
+        } catch {
+            report(error)
+            return nil
+        }
+    }
 }
 
 private struct RenderNodeView: View {
@@ -709,9 +1015,17 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 scrollView(axis: axis, children: children)
             )
-        case let .custom(id, name, _, values, slots):
+        case let .geometryReader(id, _):
             applyCommonModifiers(
-                customView(id: id, name: name, values: values, slots: slots)
+                geometryReaderView(id: id)
+            )
+        case let .custom(id, name, _, values, children, slots):
+            applyCommonModifiers(
+                customView(id: id, name: name, values: values, children: children, slots: slots)
+            )
+        case let .customLayout(id, name, _, values, children):
+            applyCommonModifiers(
+                customLayoutView(id: id, name: name, values: values, children: children)
             )
         case let .list(_, modifiers, children):
             listView(children: children, modifiers: modifiers)
@@ -832,11 +1146,69 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func customView(id: NodeID, name: String, values: [String: CustomHostValue], slots: [String: ViewNode]) -> some View {
+    private func customView(id: NodeID, name: String, values: [String: CustomHostValue], children: [ViewNode], slots: [String: ViewNode]) -> some View {
         if let renderer = customHostRegistry.renderer(named: name) {
-            renderer(CustomHostContext(id: id, name: name, values: values, slots: slots), onEvent)
+            renderer(
+                CustomHostContext(
+                    id: id,
+                    name: name,
+                    values: values,
+                    children: children,
+                    slots: slots
+                ),
+                onEvent,
+                customHostRegistry
+            )
         } else {
             Text("Missing custom host: \(name)")
+        }
+    }
+
+    @ViewBuilder
+    private func geometryReaderView(id: NodeID) -> some View {
+        if let geometryReaderBridge = customHostRegistry.geometryReaderBridge, geometryReaderBridge.hasHandler(id) {
+            GeometryReader { geometry in
+                if let node = geometryReaderBridge.render(id, geometry.size) {
+                    RenderNodeView(node: node, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                        .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+                } else {
+                    Color.clear
+                }
+            }
+        } else {
+            Text("Missing GeometryReader handler: \(id.rawValue)")
+        }
+    }
+
+    @ViewBuilder
+    private func customLayoutView(id: NodeID, name: String, values: [String: CustomHostValue], children: [ViewNode]) -> some View {
+        if let javaScriptLayoutBridge = customHostRegistry.javaScriptLayoutBridge, javaScriptLayoutBridge.hasLayoutHandler(id) {
+            SwiftJSJavaScriptLayout(
+                id: id,
+                bridge: javaScriptLayoutBridge
+            ) {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
+        } else if let makeLayout = customHostRegistry.layout(named: name) {
+            let layout = makeLayout(
+                CustomHostContext(
+                    id: id,
+                    name: name,
+                    values: values,
+                    children: children,
+                    slots: [:]
+                )
+            )
+
+            layout {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
+        } else {
+            Text("Missing custom layout: \(name)")
         }
     }
 
@@ -875,10 +1247,11 @@ private struct RenderNodeView: View {
         case let .system(systemName):
             Label(title, systemImage: systemName)
                 .modifier(NodeAppearanceModifier(modifiers: modifiers))
-        case .asset:
-            HStack(spacing: 8) {
-                imageView(source, modifiers: modifiers)
+        case let .asset(name):
+            Label {
                 Text(title)
+            } icon: {
+                Image(name)
             }
             .modifier(NodeAppearanceModifier(modifiers: modifiers))
         }
@@ -926,10 +1299,10 @@ private struct RenderNodeView: View {
     private func imageView(_ source: ImageSource, modifiers: ViewModifiers) -> some View {
         switch source {
         case let .system(systemName):
-            Image(systemName: systemName)
+            interpolationStyled(Image(systemName: systemName), interpolation: modifiers.imageInterpolation?.swiftUIImageInterpolation)
                 .modifier(NodeAppearanceModifier(modifiers: modifiers))
         case let .asset(name):
-            let image = Image(name).resizable()
+            let image = interpolationStyled(Image(name).resizable(), interpolation: modifiers.imageInterpolation?.swiftUIImageInterpolation)
 
             switch modifiers.imageContentMode ?? .fit {
             case .fit:
@@ -941,6 +1314,15 @@ private struct RenderNodeView: View {
                     .scaledToFill()
                     .modifier(NodeAppearanceModifier(modifiers: modifiers))
             }
+        }
+    }
+
+    @ViewBuilder
+    private func interpolationStyled(_ image: Image, interpolation: SwiftUI.Image.Interpolation?) -> some View {
+        if let interpolation {
+            image.interpolation(interpolation)
+        } else {
+            image
         }
     }
 
@@ -1153,6 +1535,127 @@ private struct SwiftJSFlowLayout: Layout {
     }
 }
 
+private struct JavaScriptLayoutSize: Codable {
+    let width: Double?
+    let height: Double?
+
+    init(width: Double?, height: Double?) {
+        self.width = width
+        self.height = height
+    }
+
+    init(_ proposal: ProposedViewSize) {
+        self.width = proposal.width.map(Double.init)
+        self.height = proposal.height.map(Double.init)
+    }
+
+    init(_ size: CGSize) {
+        self.width = size.width
+        self.height = size.height
+    }
+
+    var proposedViewSize: ProposedViewSize {
+        let proposedWidth = width.map { CGFloat($0) }
+        let proposedHeight = height.map { CGFloat($0) }
+        return ProposedViewSize(width: proposedWidth, height: proposedHeight)
+    }
+
+    var cgSize: CGSize {
+        CGSize(width: width ?? 0, height: height ?? 0)
+    }
+}
+
+private struct JavaScriptLayoutBounds: Codable {
+    let minX: Double
+    let minY: Double
+    let width: Double
+    let height: Double
+
+    init(_ rect: CGRect) {
+        self.minX = rect.minX
+        self.minY = rect.minY
+        self.width = rect.width
+        self.height = rect.height
+    }
+}
+
+private struct JavaScriptSubviewPlacement: Codable {
+    let x: Double
+    let y: Double
+    let anchor: ContentAlignment
+    let width: Double?
+    let height: Double?
+}
+
+private final class JavaScriptLayoutBridge: @unchecked Sendable {
+    let hasLayoutHandler: (_ id: NodeID) -> Bool
+    let sizeThatFits: (_ id: NodeID, _ proposal: ProposedViewSize, _ subviewCount: Int, _ measureSubview: @escaping (Int, ProposedViewSize) -> CGSize) -> CGSize?
+    let placeSubviews: (_ id: NodeID, _ bounds: CGRect, _ proposal: ProposedViewSize, _ subviewCount: Int, _ measureSubview: @escaping (Int, ProposedViewSize) -> CGSize) -> [JavaScriptSubviewPlacement]?
+
+    init(
+        hasLayoutHandler: @escaping (_ id: NodeID) -> Bool,
+        sizeThatFits: @escaping (_ id: NodeID, _ proposal: ProposedViewSize, _ subviewCount: Int, _ measureSubview: @escaping (Int, ProposedViewSize) -> CGSize) -> CGSize?,
+        placeSubviews: @escaping (_ id: NodeID, _ bounds: CGRect, _ proposal: ProposedViewSize, _ subviewCount: Int, _ measureSubview: @escaping (Int, ProposedViewSize) -> CGSize) -> [JavaScriptSubviewPlacement]?
+    ) {
+        self.hasLayoutHandler = hasLayoutHandler
+        self.sizeThatFits = sizeThatFits
+        self.placeSubviews = placeSubviews
+    }
+}
+
+private final class GeometryReaderBridge: @unchecked Sendable {
+    let hasHandler: (_ id: NodeID) -> Bool
+    let render: (_ id: NodeID, _ size: CGSize) -> ViewNode?
+
+    init(
+        hasHandler: @escaping (_ id: NodeID) -> Bool,
+        render: @escaping (_ id: NodeID, _ size: CGSize) -> ViewNode?
+    ) {
+        self.hasHandler = hasHandler
+        self.render = render
+    }
+}
+
+private struct SwiftJSJavaScriptLayout: Layout {
+    let id: NodeID
+    let bridge: JavaScriptLayoutBridge
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Void) -> CGSize {
+        bridge.sizeThatFits(id, proposal, subviews.count) { index, proposedSize in
+            guard index >= 0, index < subviews.count else {
+                return .zero
+            }
+
+            return subviews[index].sizeThatFits(proposedSize)
+        } ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Void) {
+        let placements = bridge.placeSubviews(id, bounds, proposal, subviews.count) { index, proposedSize in
+            guard index >= 0, index < subviews.count else {
+                return .zero
+            }
+
+            return subviews[index].sizeThatFits(proposedSize)
+        } ?? []
+
+        for (index, placement) in placements.enumerated() {
+            guard index < subviews.count else {
+                break
+            }
+
+            let proposedWidth = placement.width.map { CGFloat($0) }
+            let proposedHeight = placement.height.map { CGFloat($0) }
+
+            subviews[index].place(
+                at: CGPoint(x: placement.x, y: placement.y),
+                anchor: placement.anchor.swiftUIUnitPoint,
+                proposal: ProposedViewSize(width: proposedWidth, height: proposedHeight)
+            )
+        }
+    }
+}
+
 private struct CompactNavigationSplitHost: View {
     let sidebar: ViewNode
     let detail: ViewNode
@@ -1238,13 +1741,14 @@ private struct CommonNodeModifier: ViewModifier {
         let styledBackground = backgroundStyled(laidOut)
         let styledGlass = glassStyled(styledBackground)
         let titled = titleStyled(styledGlass)
+        let identified = identityStyled(titled)
 
         if let onAppearEvent = modifiers.onAppearEvent {
-            titled.onAppear {
+            identified.onAppear {
                 onEvent(onAppearEvent)
             }
         } else {
-            titled
+            identified
         }
     }
 
@@ -1291,6 +1795,24 @@ private struct CommonNodeModifier: ViewModifier {
     }
 
     @ViewBuilder
+    private func identityStyled<Content: View>(_ content: Content) -> some View {
+        if let viewIdentity = modifiers.viewIdentity {
+            switch viewIdentity {
+            case let .string(value):
+                content.id(value)
+            case let .number(value):
+                content.id(value)
+            case let .bool(value):
+                content.id(value)
+            case .array, .object:
+                content
+            }
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
     private func aspectRatioStyled<Content: View>(_ content: Content, aspectRatio: CGFloat?) -> some View {
         if let aspectRatio {
             content.aspectRatio(aspectRatio, contentMode: modifiers.swiftUIAspectRatioContentMode)
@@ -1304,6 +1826,7 @@ private final class HostNode: Decodable {
     let type: HostComponentType
     let id: String
     let alignment: ContentAlignment?
+    let viewIdentity: CustomHostValue?
     let distribution: StackDistribution?
     let axis: AxisKind?
     let spacing: Double?
@@ -1335,6 +1858,7 @@ private final class HostNode: Decodable {
     let navigationTitle: String?
     let listStyle: ListStyleKind?
     let imageContentMode: ImageContentMode?
+    let imageInterpolation: ImageInterpolation?
     let aspectRatio: Double?
     let aspectRatioContentMode: ImageContentMode?
     let fixedSizeHorizontal: Bool?
@@ -1415,6 +1939,11 @@ private final class HostNode: Decodable {
                 modifiers: modifiers,
                 children: try mapChildren()
             )
+        case .geometryReader:
+            return .geometryReader(
+                id: NodeID(id),
+                modifiers: modifiers
+            )
         case .custom:
             guard let customName else {
                 throw JSSurfaceError.invalidTree("Custom node '\(id)' is missing a name")
@@ -1425,7 +1954,20 @@ private final class HostNode: Decodable {
                 name: customName,
                 modifiers: modifiers,
                 values: customValues ?? [:],
+                children: try mapChildren(),
                 slots: try mapCustomSlots()
+            )
+        case .customLayout:
+            guard let customName else {
+                throw JSSurfaceError.invalidTree("CustomLayout node '\(id)' is missing a name")
+            }
+
+            return .customLayout(
+                id: NodeID(id),
+                name: customName,
+                modifiers: modifiers,
+                values: customValues ?? [:],
+                children: try mapChildren()
             )
         case .list:
             return .list(
@@ -1547,6 +2089,7 @@ private final class HostNode: Decodable {
     private func makeModifiers() -> ViewModifiers {
         ViewModifiers(
             alignment: alignment ?? .center,
+            viewIdentity: viewIdentity,
             padding: padding,
             paddingTop: paddingTop,
             frameMinWidth: frameMinWidth,
@@ -1572,6 +2115,7 @@ private final class HostNode: Decodable {
             navigationTitle: navigationTitle,
             listStyle: listStyle,
             imageContentMode: imageContentMode,
+            imageInterpolation: imageInterpolation,
             aspectRatio: aspectRatio,
             aspectRatioContentMode: aspectRatioContentMode,
             fixedSizeHorizontal: fixedSizeHorizontal ?? false,
@@ -1590,7 +2134,9 @@ private enum HostComponentType: String, Decodable {
     case flowLayout = "FlowLayout"
     case gridRow = "GridRow"
     case scrollView = "ScrollView"
+    case geometryReader = "GeometryReader"
     case custom = "Custom"
+    case customLayout = "CustomLayout"
     case list = "List"
     case section = "Section"
     case navigationSplitView = "NavigationSplitView"
@@ -1789,7 +2335,45 @@ private extension ImageContentMode {
     }
 }
 
+private extension ImageInterpolation {
+    var swiftUIImageInterpolation: SwiftUI.Image.Interpolation {
+        switch self {
+        case .none:
+            return .none
+        case .low:
+            return .low
+        case .medium:
+            return .medium
+        case .high:
+            return .high
+        }
+    }
+}
+
 private extension ContentAlignment {
+    var swiftUIUnitPoint: UnitPoint {
+        switch self {
+        case .leading:
+            return .leading
+        case .center:
+            return .center
+        case .trailing:
+            return .trailing
+        case .top:
+            return .top
+        case .bottom:
+            return .bottom
+        case .topLeading:
+            return .topLeading
+        case .topTrailing:
+            return .topTrailing
+        case .bottomLeading:
+            return .bottomLeading
+        case .bottomTrailing:
+            return .bottomTrailing
+        }
+    }
+
     var swiftUIAlignment: Alignment {
         switch self {
         case .leading:

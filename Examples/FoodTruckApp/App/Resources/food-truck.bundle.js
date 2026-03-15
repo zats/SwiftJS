@@ -22,7 +22,9 @@
   var Grid = hostComponent("Grid");
   var GridRow = hostComponent("GridRow");
   var FlowLayout = hostComponent("FlowLayout");
+  var CustomLayout = hostComponent("CustomLayout");
   var ScrollView = hostComponent("ScrollView");
+  var GeometryReader = hostComponent("GeometryReader");
   var List = hostComponent("List");
   var Section = hostComponent("Section");
   var NavigationSplitView = hostComponent("NavigationSplitView");
@@ -95,12 +97,54 @@
     }
   ];
   var orders = [
-    { id: "Order #4021", customer: "Mina R.", city: "San Francisco", donuts: 12, total: "$118", status: "New" },
-    { id: "Order #4020", customer: "A. Chen", city: "Cupertino", donuts: 8, total: "$72", status: "New" },
-    { id: "Order #4017", customer: "Studio Lune", city: "New York", donuts: 18, total: "$164", status: "Preparing" },
-    { id: "Order #4015", customer: "River Team", city: "San Francisco", donuts: 6, total: "$54", status: "Preparing" },
-    { id: "Order #4012", customer: "Nora W.", city: "Cupertino", donuts: 10, total: "$92", status: "Ready" },
-    { id: "Order #4008", customer: "Beacon Labs", city: "New York", donuts: 20, total: "$188", status: "Completed" }
+    {
+      id: "Order #4021",
+      customer: "Mina R.",
+      city: "San Francisco",
+      donuts: [donutCatalog[1], donutCatalog[4], donutCatalog[0]],
+      total: "$118",
+      status: "New"
+    },
+    {
+      id: "Order #4020",
+      customer: "A. Chen",
+      city: "Cupertino",
+      donuts: [donutCatalog[3], donutCatalog[2]],
+      total: "$72",
+      status: "New"
+    },
+    {
+      id: "Order #4017",
+      customer: "Studio Lune",
+      city: "New York",
+      donuts: [donutCatalog[4], donutCatalog[1], donutCatalog[2]],
+      total: "$164",
+      status: "Preparing"
+    },
+    {
+      id: "Order #4015",
+      customer: "River Team",
+      city: "San Francisco",
+      donuts: [donutCatalog[0]],
+      total: "$54",
+      status: "Preparing"
+    },
+    {
+      id: "Order #4012",
+      customer: "Nora W.",
+      city: "Cupertino",
+      donuts: [donutCatalog[2], donutCatalog[3]],
+      total: "$92",
+      status: "Ready"
+    },
+    {
+      id: "Order #4008",
+      customer: "Beacon Labs",
+      city: "New York",
+      donuts: [donutCatalog[1], donutCatalog[0], donutCatalog[4], donutCatalog[2]],
+      total: "$188",
+      status: "Completed"
+    }
   ];
   var socialPosts = [
     { id: "post-1", title: "Today\u2019s route: Ocean Beach to SoMa", subtitle: "Warm donuts, black raspberry glaze, and a new citrus topping." },
@@ -205,46 +249,34 @@
 
   // ../App/Project/src/City/CityView.tsx
   function CityView(props) {
-    return /* @__PURE__ */ jsx(ScrollView, { id: `city-${props.city.id}`, navigationTitle: props.city.name, background: "systemGroupedBackground", children: /* @__PURE__ */ jsxs(VStack, { id: `city-stack-${props.city.id}`, alignment: "leading", spacing: 16, padding: 16, children: [
-      /* @__PURE__ */ jsxs(VStack, { id: `city-hero-${props.city.id}`, alignment: "trailing", spacing: 12, children: [
+    return /* @__PURE__ */ jsx(ScrollView, { navigationTitle: props.city.name, background: "systemGroupedBackground", children: /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 16, padding: 16, children: [
+      /* @__PURE__ */ jsxs(VStack, { alignment: "trailing", spacing: 12, children: [
         /* @__PURE__ */ jsx(
           Image,
           {
-            id: `city-hero-image-${props.city.id}`,
             name: "header/Static",
             frame: { height: 240 },
             imageContentMode: "fit",
             cornerRadius: 24
           }
         ),
-        /* @__PURE__ */ jsxs(
-          VStack,
-          {
-            id: `city-weather-card-${props.city.id}`,
-            alignment: "leading",
-            spacing: 4,
-            padding: 14,
-            background: "secondarySystemBackground",
-            cornerRadius: 18,
-            children: [
-              /* @__PURE__ */ jsx(Text, { id: `city-temp-${props.city.id}`, font: "title2", fontWeight: "bold", children: props.city.temperature }),
-              /* @__PURE__ */ jsx(Text, { id: `city-forecast-${props.city.id}`, font: "subheadline", foregroundColor: "secondary", children: props.city.forecast })
-            ]
-          }
-        )
+        /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 4, padding: 14, background: "secondarySystemBackground", cornerRadius: 18, children: [
+          /* @__PURE__ */ jsx(Text, { font: "title2", fontWeight: "bold", children: props.city.temperature }),
+          /* @__PURE__ */ jsx(Text, { font: "subheadline", foregroundColor: "secondary", children: props.city.forecast })
+        ] })
       ] }),
-      /* @__PURE__ */ jsxs(VStack, { id: `city-recommendation-card-${props.city.id}`, alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
-        /* @__PURE__ */ jsx(Text, { id: `city-rec-title-${props.city.id}`, font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: "Recommendation" }),
-        /* @__PURE__ */ jsx(Text, { id: `city-rec-${props.city.id}`, font: "body", foregroundColor: "secondary", children: props.city.recommendation })
+      /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+        /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: "Recommendation" }),
+        /* @__PURE__ */ jsx(Text, { font: "body", foregroundColor: "secondary", children: props.city.recommendation })
       ] }),
-      /* @__PURE__ */ jsxs(VStack, { id: `city-operations-card-${props.city.id}`, alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
-        /* @__PURE__ */ jsx(Text, { id: `city-ops-title-${props.city.id}`, font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: "Operations" }),
-        /* @__PURE__ */ jsxs(Text, { id: `city-clouds-${props.city.id}`, font: "subheadline", foregroundColor: "secondary", children: [
+      /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+        /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: "Operations" }),
+        /* @__PURE__ */ jsxs(Text, { font: "subheadline", foregroundColor: "secondary", children: [
           "Cloud cover is currently ",
           props.city.cloudCover,
           "."
         ] }),
-        /* @__PURE__ */ jsx(Text, { id: `city-stock-${props.city.id}`, font: "subheadline", foregroundColor: "secondary", children: "Popular donuts this week include Strawberry Sprinkles, Blue Sky, and Rainbow Rally." })
+        /* @__PURE__ */ jsx(Text, { font: "subheadline", foregroundColor: "secondary", children: "Popular donuts this week include Strawberry Sprinkles, Blue Sky, and Rainbow Rally." })
       ] })
     ] }) });
   }
@@ -266,23 +298,22 @@
     const dough = props.size === "full" ? props.recipe.dough.full : props.recipe.dough.thumb;
     const glaze = props.size === "full" ? props.recipe.glaze.full : props.recipe.glaze.thumb;
     const topping = props.size === "full" ? props.recipe.topping.full : props.recipe.topping.thumb;
-    return /* @__PURE__ */ jsxs(ZStack, { id: `preview-${props.recipe.id}-${props.size}`, frame: { width: imageSize, height: imageSize }, children: [
-      /* @__PURE__ */ jsx(Image, { id: `preview-dough-${props.recipe.id}-${props.size}`, name: dough, frame: { width: imageSize, height: imageSize } }),
-      /* @__PURE__ */ jsx(Image, { id: `preview-glaze-${props.recipe.id}-${props.size}`, name: glaze, frame: { width: imageSize, height: imageSize } }),
-      /* @__PURE__ */ jsx(Image, { id: `preview-topping-${props.recipe.id}-${props.size}`, name: topping, frame: { width: imageSize, height: imageSize } })
+    return /* @__PURE__ */ jsxs(ZStack, { frame: { width: imageSize, height: imageSize }, children: [
+      /* @__PURE__ */ jsx(Image, { name: dough, frame: { width: imageSize, height: imageSize } }),
+      /* @__PURE__ */ jsx(Image, { name: glaze, frame: { width: imageSize, height: imageSize } }),
+      /* @__PURE__ */ jsx(Image, { name: topping, frame: { width: imageSize, height: imageSize } })
     ] });
   }
   function DonutThumbnail(props) {
-    return /* @__PURE__ */ jsxs(VStack, { id: `thumb-${props.recipe.id}`, alignment: "center", spacing: 6, children: [
+    return /* @__PURE__ */ jsxs(VStack, { alignment: "center", spacing: 6, children: [
       /* @__PURE__ */ jsx(DonutPreview, { recipe: props.recipe, size: "thumb" }),
-      /* @__PURE__ */ jsx(Text, { id: `thumb-title-${props.recipe.id}`, font: "footnote", foregroundColor: "secondary", children: props.recipe.name })
+      /* @__PURE__ */ jsx(Text, { font: "footnote", foregroundColor: "secondary", children: props.recipe.name })
     ] });
   }
   function GalleryTile(props) {
     return /* @__PURE__ */ jsxs(
       VStack,
       {
-        id: `gallery-tile-${props.recipe.id}`,
         alignment: "center",
         spacing: 8,
         padding: 12,
@@ -290,22 +321,21 @@
         cornerRadius: 18,
         children: [
           /* @__PURE__ */ jsx(DonutPreview, { recipe: props.recipe, size: "thumb" }),
-          /* @__PURE__ */ jsx(Text, { id: `gallery-name-${props.recipe.id}`, font: "subheadline", fontWeight: "semibold", children: props.recipe.name }),
-          /* @__PURE__ */ jsx(Text, { id: `gallery-sales-${props.recipe.id}`, font: "footnote", foregroundColor: "secondary", children: props.recipe.sales })
+          /* @__PURE__ */ jsx(Text, { font: "subheadline", fontWeight: "semibold", children: props.recipe.name }),
+          /* @__PURE__ */ jsx(Text, { font: "footnote", foregroundColor: "secondary", children: props.recipe.sales })
         ]
       }
     );
   }
   function EditorSection(props) {
-    return /* @__PURE__ */ jsxs(VStack, { id: `editor-section-${props.title}`, alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
-      /* @__PURE__ */ jsxs(HStack, { id: `editor-section-header-${props.title}`, spacing: 8, children: [
-        /* @__PURE__ */ jsx(Image, { id: `editor-section-icon-${props.title}`, systemName: "slider.horizontal.3", foregroundColor: "indigo" }),
-        /* @__PURE__ */ jsx(Text, { id: `editor-section-title-${props.title}`, font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: props.title })
+    return /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+      /* @__PURE__ */ jsxs(HStack, { spacing: 8, children: [
+        /* @__PURE__ */ jsx(Image, { systemName: "slider.horizontal.3", foregroundColor: "indigo" }),
+        /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: props.title })
       ] }),
-      /* @__PURE__ */ jsx(HStack, { id: `editor-options-${props.title}`, spacing: 10, compactVertical: true, children: props.options.map((option, index) => /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsx(HStack, { spacing: 10, compactVertical: true, children: props.options.map((option, index) => /* @__PURE__ */ jsx(
         Button,
         {
-          id: `editor-option-${props.title}-${option.id}`,
           action: () => props.onSelect(index),
           buttonStyle: props.selectedIndex === index ? "borderedProminent" : "bordered",
           buttonBorderShape: "roundedRectangle",
@@ -324,17 +354,17 @@
     const dough = doughOptions[doughIndex];
     const glaze = glazeOptions[glazeIndex];
     const topping = toppingOptions[toppingIndex];
-    return /* @__PURE__ */ jsx(ScrollView, { id: "donut-editor-view", navigationTitle: "Donut Editor", background: "systemGroupedBackground", children: /* @__PURE__ */ jsxs(VStack, { id: "donut-editor-stack", alignment: "leading", spacing: 16, padding: 16, children: [
-      /* @__PURE__ */ jsxs(VStack, { id: "editor-preview-card", alignment: "center", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+    return /* @__PURE__ */ jsx(ScrollView, { navigationTitle: "Donut Editor", background: "systemGroupedBackground", children: /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 16, padding: 16, children: [
+      /* @__PURE__ */ jsxs(VStack, { alignment: "center", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
         /* @__PURE__ */ jsx(DonutPreview, { recipe: { id: "editor", name: "Custom", dough, glaze, topping, sales: "" }, size: "full" }),
-        /* @__PURE__ */ jsxs(Text, { id: "editor-preview-title", font: "title2", fontWeight: "bold", children: [
+        /* @__PURE__ */ jsxs(Text, { font: "title2", fontWeight: "bold", children: [
           dough.name,
           " / ",
           glaze.name,
           " / ",
           topping.name
         ] }),
-        /* @__PURE__ */ jsx(Text, { id: "editor-preview-copy", font: "subheadline", foregroundColor: "secondary", children: "This mirrors the original donut editor\u2019s layered composition using reusable `VStack`, `Image`, and `Button` bindings." })
+        /* @__PURE__ */ jsx(Text, { font: "subheadline", foregroundColor: "secondary", children: "This mirrors the original donut editor\u2019s layered composition using reusable `VStack`, `Image`, and `Button` bindings." })
       ] }),
       /* @__PURE__ */ jsx(EditorSection, { title: "Dough", options: doughOptions, selectedIndex: doughIndex, onSelect: setDoughIndex }),
       /* @__PURE__ */ jsx(EditorSection, { title: "Glaze", options: glazeOptions, selectedIndex: glazeIndex, onSelect: setGlazeIndex }),
@@ -344,23 +374,23 @@
 
   // ../App/Project/src/Donut/DonutGallery.tsx
   function DonutGallery(props) {
-    return /* @__PURE__ */ jsx(ScrollView, { id: "donut-gallery-view", navigationTitle: "Donuts", background: "systemGroupedBackground", children: /* @__PURE__ */ jsx(VStack, { id: "donut-gallery-stack", alignment: "leading", spacing: 16, padding: 16, children: /* @__PURE__ */ jsxs(VStack, { id: "donut-gallery-card", alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
-      /* @__PURE__ */ jsx(HStack, { id: "donut-gallery-header", spacing: 8, children: /* @__PURE__ */ jsx(Text, { id: "donut-gallery-title", font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: "Gallery" }) }),
-      /* @__PURE__ */ jsxs(VStack, { id: "donut-gallery-grid", alignment: "leading", spacing: 12, children: [
-        /* @__PURE__ */ jsx(HStack, { id: "gallery-row-1", spacing: 12, compactVertical: true, children: donutCatalog.slice(0, 3).map((donut) => /* @__PURE__ */ jsx(GalleryTile, { recipe: donut }, donut.id)) }),
-        /* @__PURE__ */ jsx(HStack, { id: "gallery-row-2", spacing: 12, compactVertical: true, children: donutCatalog.slice(2, 5).map((donut) => /* @__PURE__ */ jsx(GalleryTile, { recipe: donut }, donut.id)) })
+    return /* @__PURE__ */ jsx(ScrollView, { navigationTitle: "Donuts", background: "systemGroupedBackground", children: /* @__PURE__ */ jsx(VStack, { alignment: "leading", spacing: 16, padding: 16, children: /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+      /* @__PURE__ */ jsx(HStack, { spacing: 8, children: /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: "Gallery" }) }),
+      /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, children: [
+        /* @__PURE__ */ jsx(HStack, { spacing: 12, compactVertical: true, children: donutCatalog.slice(0, 3).map((donut) => /* @__PURE__ */ jsx(GalleryTile, { recipe: donut }, donut.id)) }),
+        /* @__PURE__ */ jsx(HStack, { spacing: 12, compactVertical: true, children: donutCatalog.slice(2, 5).map((donut) => /* @__PURE__ */ jsx(GalleryTile, { recipe: donut }, donut.id)) })
       ] })
     ] }) }) });
   }
 
   // ../App/Project/src/Donut/TopFiveDonutsView.tsx
   function TopFiveDonutsView() {
-    return /* @__PURE__ */ jsx(List, { id: "top-five-view", navigationTitle: "Top 5", listStyle: "insetGrouped", children: /* @__PURE__ */ jsx(Section, { id: "top-five-section", title: "Best Sellers", children: donutCatalog.map((donut, index) => /* @__PURE__ */ jsxs(HStack, { id: `top-five-${donut.id}`, spacing: 12, padding: 4, children: [
-      /* @__PURE__ */ jsx(Text, { id: `top-five-rank-${donut.id}`, font: "headline", fontWeight: "bold", children: index + 1 }),
+    return /* @__PURE__ */ jsx(List, { navigationTitle: "Top 5", listStyle: "insetGrouped", children: /* @__PURE__ */ jsx(Section, { title: "Best Sellers", children: donutCatalog.map((donut, index) => /* @__PURE__ */ jsxs(HStack, { spacing: 12, padding: 4, children: [
+      /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "bold", children: index + 1 }),
       /* @__PURE__ */ jsx(DonutThumbnail, { recipe: donut }),
-      /* @__PURE__ */ jsxs(VStack, { id: `top-five-copy-${donut.id}`, alignment: "leading", spacing: 2, children: [
-        /* @__PURE__ */ jsx(Text, { id: `top-five-name-${donut.id}`, font: "headline", fontWeight: "semibold", children: donut.name }),
-        /* @__PURE__ */ jsx(Text, { id: `top-five-sales-${donut.id}`, font: "subheadline", foregroundColor: "secondary", children: donut.sales })
+      /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 2, children: [
+        /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "semibold", children: donut.name }),
+        /* @__PURE__ */ jsx(Text, { font: "subheadline", foregroundColor: "secondary", children: donut.sales })
       ] })
     ] }, donut.id)) }) });
   }
@@ -368,23 +398,23 @@
   // ../App/Project/src/Orders/OrdersView.tsx
   function OrdersView() {
     const statuses = ["New", "Preparing", "Ready", "Completed"];
-    return /* @__PURE__ */ jsx(List, { id: "orders-view", navigationTitle: "Orders", listStyle: "insetGrouped", children: statuses.map((status) => {
+    return /* @__PURE__ */ jsx(List, { navigationTitle: "Orders", listStyle: "insetGrouped", children: statuses.map((status) => {
       const sectionOrders = orders.filter((order) => order.status === status);
       if (sectionOrders.length === 0) {
         return null;
       }
       return /* @__PURE__ */ jsx(Section, { id: `orders-section-${status}`, title: status, children: sectionOrders.map((order) => /* @__PURE__ */ jsxs(VStack, { id: `order-${order.id}`, alignment: "leading", spacing: 4, padding: 4, children: [
-        /* @__PURE__ */ jsxs(HStack, { id: `order-header-${order.id}`, spacing: 8, children: [
-          /* @__PURE__ */ jsx(Text, { id: `order-title-${order.id}`, font: "headline", fontWeight: "semibold", children: order.id }),
-          /* @__PURE__ */ jsx(Spacer, { id: `order-spacer-${order.id}` }),
-          /* @__PURE__ */ jsx(Text, { id: `order-total-${order.id}`, font: "subheadline", fontWeight: "bold", children: order.total })
+        /* @__PURE__ */ jsxs(HStack, { spacing: 8, children: [
+          /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "semibold", children: order.id }),
+          /* @__PURE__ */ jsx(Spacer, {}),
+          /* @__PURE__ */ jsx(Text, { font: "subheadline", fontWeight: "bold", children: order.total })
         ] }),
-        /* @__PURE__ */ jsxs(Text, { id: `order-subtitle-${order.id}`, font: "subheadline", foregroundColor: "secondary", children: [
+        /* @__PURE__ */ jsxs(Text, { font: "subheadline", foregroundColor: "secondary", children: [
           order.customer,
           " \xB7 ",
           order.city,
           " \xB7 ",
-          order.donuts,
+          order.donuts.length,
           " donuts"
         ] })
       ] }, order.id)) }, status);
@@ -393,23 +423,23 @@
 
   // ../App/Project/src/Truck/SalesHistoryView.tsx
   function SalesHistoryView() {
-    return /* @__PURE__ */ jsx(ScrollView, { id: "sales-history-view", navigationTitle: "Sales History", background: "systemGroupedBackground", children: /* @__PURE__ */ jsxs(VStack, { id: "sales-history-stack", alignment: "leading", spacing: 16, padding: 16, children: [
-      /* @__PURE__ */ jsxs(HStack, { id: "sales-stats", spacing: 12, compactVertical: true, children: [
-        /* @__PURE__ */ jsx(MetricCard, { id: "sales-week", label: "This Week", value: "$18.4K" }),
-        /* @__PURE__ */ jsx(MetricCard, { id: "sales-yesterday", label: "Yesterday", value: "$2.7K" }),
-        /* @__PURE__ */ jsx(MetricCard, { id: "sales-orders", label: "Orders", value: "148" })
+    return /* @__PURE__ */ jsx(ScrollView, { navigationTitle: "Sales History", background: "systemGroupedBackground", children: /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 16, padding: 16, children: [
+      /* @__PURE__ */ jsxs(HStack, { spacing: 12, compactVertical: true, children: [
+        /* @__PURE__ */ jsx(MetricCard, { label: "This Week", value: "$18.4K" }),
+        /* @__PURE__ */ jsx(MetricCard, { label: "Yesterday", value: "$2.7K" }),
+        /* @__PURE__ */ jsx(MetricCard, { label: "Orders", value: "148" })
       ] }),
-      /* @__PURE__ */ jsxs(VStack, { id: "sales-top-donuts-card", alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
-        /* @__PURE__ */ jsx(HStack, { id: "sales-top-donuts-header", spacing: 8, children: /* @__PURE__ */ jsx(Text, { id: "sales-top-donuts-title", font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: "Top Donuts" }) }),
-        /* @__PURE__ */ jsx(VStack, { id: "sales-top-donuts", alignment: "leading", spacing: 10, children: donutCatalog.map((donut, index) => /* @__PURE__ */ jsxs(HStack, { id: `sales-top-${donut.id}`, spacing: 10, children: [
-          /* @__PURE__ */ jsxs(Text, { id: `sales-rank-${donut.id}`, font: "headline", fontWeight: "bold", children: [
+      /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+        /* @__PURE__ */ jsx(HStack, { spacing: 8, children: /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: "Top Donuts" }) }),
+        /* @__PURE__ */ jsx(VStack, { alignment: "leading", spacing: 10, children: donutCatalog.map((donut, index) => /* @__PURE__ */ jsxs(HStack, { spacing: 10, children: [
+          /* @__PURE__ */ jsxs(Text, { font: "headline", fontWeight: "bold", children: [
             index + 1,
             "."
           ] }),
           /* @__PURE__ */ jsx(DonutThumbnail, { recipe: donut }),
-          /* @__PURE__ */ jsxs(VStack, { id: `sales-copy-${donut.id}`, alignment: "leading", spacing: 2, children: [
-            /* @__PURE__ */ jsx(Text, { id: `sales-name-${donut.id}`, font: "headline", fontWeight: "semibold", children: donut.name }),
-            /* @__PURE__ */ jsxs(Text, { id: `sales-value-${donut.id}`, font: "subheadline", foregroundColor: "secondary", children: [
+          /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 2, children: [
+            /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "semibold", children: donut.name }),
+            /* @__PURE__ */ jsxs(Text, { font: "subheadline", foregroundColor: "secondary", children: [
               "Weekly sales ",
               donut.sales
             ] })
@@ -419,42 +449,62 @@
     ] }) });
   }
   function MetricCard(props) {
-    return /* @__PURE__ */ jsxs(VStack, { id: props.id, alignment: "leading", spacing: 6, padding: 14, background: "secondarySystemBackground", cornerRadius: 18, children: [
-      /* @__PURE__ */ jsx(Text, { id: `${props.id}-value`, font: "title2", fontWeight: "bold", children: props.value }),
-      /* @__PURE__ */ jsx(Text, { id: `${props.id}-label`, font: "subheadline", foregroundColor: "secondary", children: props.label })
+    return /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 6, padding: 14, background: "secondarySystemBackground", cornerRadius: 18, children: [
+      /* @__PURE__ */ jsx(Text, { font: "title2", fontWeight: "bold", children: props.value }),
+      /* @__PURE__ */ jsx(Text, { font: "subheadline", foregroundColor: "secondary", children: props.label })
     ] });
   }
 
   // ../App/Project/src/Truck/SocialFeedView.tsx
   function SocialFeedView() {
-    return /* @__PURE__ */ jsxs(List, { id: "social-feed-view", navigationTitle: "Social Feed", listStyle: "insetGrouped", children: [
-      /* @__PURE__ */ jsx(Section, { id: "social-plus-section", children: /* @__PURE__ */ jsxs(VStack, { id: "social-plus-card", alignment: "center", spacing: 6, padding: 18, background: "indigo", cornerRadius: 18, children: [
-        /* @__PURE__ */ jsx(Text, { id: "social-plus-title", font: "title2", fontWeight: "bold", foregroundColor: "white", children: "Get Social Feed+" }),
-        /* @__PURE__ */ jsx(Text, { id: "social-plus-copy", font: "subheadline", foregroundColor: "white", children: "The premium social-feed experience from the original sample, recreated as portable SwiftJS UI." }),
-        /* @__PURE__ */ jsx(Button, { id: "social-plus-button", action: () => {
+    return /* @__PURE__ */ jsxs(List, { navigationTitle: "Social Feed", listStyle: "insetGrouped", children: [
+      /* @__PURE__ */ jsx(Section, { children: /* @__PURE__ */ jsxs(VStack, { alignment: "center", spacing: 6, padding: 18, background: "indigo", cornerRadius: 18, children: [
+        /* @__PURE__ */ jsx(Text, { font: "title2", fontWeight: "bold", foregroundColor: "white", children: "Get Social Feed+" }),
+        /* @__PURE__ */ jsx(Text, { font: "subheadline", foregroundColor: "white", children: "The premium social-feed experience from the original sample, recreated as portable SwiftJS UI." }),
+        /* @__PURE__ */ jsx(Button, { action: () => {
         }, buttonStyle: "borderedProminent", buttonBorderShape: "roundedRectangle", children: "Learn More" })
       ] }) }),
-      /* @__PURE__ */ jsx(Section, { id: "social-posts", title: "Posts", children: socialPosts.map((post) => /* @__PURE__ */ jsxs(VStack, { id: post.id, alignment: "leading", spacing: 4, padding: 4, children: [
-        /* @__PURE__ */ jsx(Text, { id: `${post.id}-title`, font: "headline", fontWeight: "semibold", children: post.title }),
-        /* @__PURE__ */ jsx(Text, { id: `${post.id}-subtitle`, font: "subheadline", foregroundColor: "secondary", children: post.subtitle })
+      /* @__PURE__ */ jsx(Section, { title: "Posts", children: socialPosts.map((post) => /* @__PURE__ */ jsxs(VStack, { id: post.id, alignment: "leading", spacing: 4, padding: 4, children: [
+        /* @__PURE__ */ jsx(Text, { font: "headline", fontWeight: "semibold", children: post.title }),
+        /* @__PURE__ */ jsx(Text, { font: "subheadline", foregroundColor: "secondary", children: post.subtitle })
       ] }, post.id)) })
     ] });
   }
 
+  // ../App/Project/src/General/CustomHost.tsx
+  function normalizeChildren(children) {
+    if (!Array.isArray(children)) {
+      return children === void 0 || children === null || children === false ? [] : [children];
+    }
+    return children.flatMap((child) => normalizeChildren(child));
+  }
+  function CustomHost(props) {
+    const { id, name, values, slots, children, ...rest } = props;
+    return createElement(
+      "Custom",
+      {
+        ...rest,
+        id,
+        name,
+        values,
+        slots
+      },
+      ...normalizeChildren(children)
+    );
+  }
+
   // ../App/Project/src/Brand/BrandHeader.tsx
   function BrandHeader(props) {
-    const scale = props.size === "reduced" ? 0.5 : 1;
-    const visibleHeight = 200 * scale;
-    const bleedingHeight = 400 * scale;
-    return /* @__PURE__ */ jsx(VStack, { id: "brand-header-root", frame: { height: visibleHeight }, children: /* @__PURE__ */ jsx(
-      VStack,
+    return /* @__PURE__ */ jsx(
+      CustomHost,
       {
-        id: "brand-header-canvas",
-        background: "teal",
-        frame: { height: bleedingHeight },
-        paddingTop: -200 * scale
+        name: "BrandHeader",
+        values: {
+          animated: props.animated ?? true,
+          size: props.size ?? "standard"
+        }
       }
-    ) });
+    );
   }
 
   // ../App/Project/src/General/WidthThresholdReader.tsx
@@ -464,148 +514,319 @@
     if (typeof content !== "function") {
       throw new Error("WidthThresholdReader requires a render function child");
     }
-    return createElement("Custom", {
-      id: props.id,
-      name: "WidthThresholdReader",
-      values: {
-        widthThreshold
-      },
-      slots: {
-        compact: content({ width: widthThreshold - 1, isCompact: true }),
-        regular: content({ width: widthThreshold + 1, isCompact: false })
+    return /* @__PURE__ */ jsx(
+      CustomHost,
+      {
+        name: "WidthThresholdReader",
+        values: {
+          widthThreshold
+        },
+        slots: {
+          compact: content({ width: widthThreshold - 1, isCompact: true }),
+          regular: content({ width: widthThreshold + 1, isCompact: false })
+        }
       }
-    });
+    );
+  }
+
+  // ../App/Project/src/Donut/DonutView.tsx
+  var donutThumbnailSize = 128;
+  var DonutLayer = {
+    dough: 1 << 1,
+    glaze: 1 << 2,
+    topping: 1 << 3,
+    all: 1 << 1 | 1 << 2 | 1 << 3
+  };
+  function DonutView(props) {
+    const visibleLayers = props.visibleLayers ?? DonutLayer.all;
+    return /* @__PURE__ */ jsx(GeometryReader, { children: (proxy) => {
+      const useThumbnail = Math.min(proxy.size.width, proxy.size.height) <= donutThumbnailSize;
+      return /* @__PURE__ */ jsxs(
+        ZStack,
+        {
+          aspectRatio: { value: 1, contentMode: "fit" },
+          frame: { maxWidth: "infinity", maxHeight: "infinity" },
+          children: [
+            (visibleLayers & DonutLayer.dough) !== 0 ? /* @__PURE__ */ jsx(
+              Image,
+              {
+                viewID: props.donut.dough.id,
+                name: useThumbnail ? props.donut.dough.thumb : props.donut.dough.full,
+                imageContentMode: "fit",
+                interpolation: "medium"
+              }
+            ) : null,
+            (visibleLayers & DonutLayer.glaze) !== 0 ? /* @__PURE__ */ jsx(
+              Image,
+              {
+                viewID: props.donut.glaze.id,
+                name: useThumbnail ? props.donut.glaze.thumb : props.donut.glaze.full,
+                imageContentMode: "fit",
+                interpolation: "medium"
+              }
+            ) : null,
+            (visibleLayers & DonutLayer.topping) !== 0 ? /* @__PURE__ */ jsx(
+              Image,
+              {
+                viewID: props.donut.topping.id,
+                name: useThumbnail ? props.donut.topping.thumb : props.donut.topping.full,
+                imageContentMode: "fit",
+                interpolation: "medium"
+              }
+            ) : null
+          ]
+        }
+      );
+    } });
   }
 
   // ../App/Project/src/Truck/Cards/CardNavigationHeader.tsx
   function CardNavigationHeader(props) {
-    return /* @__PURE__ */ jsxs(HStack, { id: props.id, spacing: 0, children: [
-      /* @__PURE__ */ jsx(Button, { id: `${props.id}-button`, action: props.onSelect, buttonStyle: "plain", children: /* @__PURE__ */ jsxs(HStack, { id: `${props.id}-label`, spacing: 8, children: [
-        props.assetName ? /* @__PURE__ */ jsx(Image, { id: `${props.id}-asset`, name: props.assetName, frame: { width: 18, height: 18 } }) : /* @__PURE__ */ jsx(Image, { id: `${props.id}-icon`, systemName: props.systemName ?? "circle", foregroundColor: "indigo" }),
-        /* @__PURE__ */ jsx(Text, { id: `${props.id}-title`, font: "headline", fontWeight: "semibold", foregroundColor: "indigo", children: props.title })
-      ] }) }),
-      /* @__PURE__ */ jsx(Spacer, { id: `${props.id}-spacer` }),
-      props.navigationLabel ? /* @__PURE__ */ jsx(Button, { id: `${props.id}-action`, action: props.onSelect, buttonStyle: "plain", children: /* @__PURE__ */ jsxs(HStack, { id: `${props.id}-action-label`, spacing: 4, children: [
-        /* @__PURE__ */ jsx(Text, { id: `${props.id}-action-text`, font: "subheadline", fontWeight: "semibold", foregroundColor: "indigo", children: props.navigationLabel }),
-        /* @__PURE__ */ jsx(Image, { id: `${props.id}-action-icon`, systemName: "chevron.right", foregroundColor: "indigo" })
-      ] }) }) : null
+    return /* @__PURE__ */ jsxs(HStack, { spacing: 0, children: [
+      /* @__PURE__ */ jsx(Button, { action: props.onSelect, buttonStyle: "plain", children: props.children }),
+      /* @__PURE__ */ jsx(Spacer, {})
     ] });
   }
 
   // ../App/Project/src/Truck/Cards/TruckDonutsCard.tsx
+  var defaultAxesSize = {
+    width: Number.MAX_VALUE,
+    height: Number.MAX_VALUE
+  };
   function TruckDonutsCard(props) {
-    return /* @__PURE__ */ jsxs(VStack, { id: "truck-donuts-card", alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
-      /* @__PURE__ */ jsx(
-        CardNavigationHeader,
-        {
-          id: "truck-donuts-card-header",
-          panel: "donuts",
-          title: "Donuts",
-          assetName: "donut",
-          onSelect: () => props.onSelect("donuts")
-        }
-      ),
-      /* @__PURE__ */ jsxs(VStack, { id: "truck-donuts-card-content", alignment: "leading", spacing: 10, frame: { minHeight: 180 }, children: [
-        /* @__PURE__ */ jsx(HStack, { id: "truck-donuts-row-1", spacing: 10, children: truckShowcaseDonuts.slice(0, 5).map((donut, index) => /* @__PURE__ */ jsx(VStack, { id: `truck-row-1-${index}-${donut.id}`, children: /* @__PURE__ */ jsx(DonutPreview, { recipe: donut, size: "lattice" }) }, `truck-row-1-${index}-${donut.id}`)) }),
-        /* @__PURE__ */ jsxs(HStack, { id: "truck-donuts-row-2", spacing: 10, children: [
-          /* @__PURE__ */ jsx(Spacer, { id: "truck-donuts-row-2-leading" }),
-          truckShowcaseDonuts.slice(5, 9).map((donut, index) => /* @__PURE__ */ jsx(VStack, { id: `truck-row-2-${index}-${donut.id}`, children: /* @__PURE__ */ jsx(DonutPreview, { recipe: donut, size: "lattice" }) }, `truck-row-2-${index}-${donut.id}`)),
-          /* @__PURE__ */ jsx(Spacer, { id: "truck-donuts-row-2-trailing" })
-        ] }),
-        /* @__PURE__ */ jsx(HStack, { id: "truck-donuts-row-3", spacing: 10, children: truckShowcaseDonuts.slice(9, 14).map((donut, index) => /* @__PURE__ */ jsx(VStack, { id: `truck-row-3-${index}-${donut.id}`, children: /* @__PURE__ */ jsx(DonutPreview, { recipe: donut, size: "lattice" }) }, `truck-row-3-${index}-${donut.id}`)) })
-      ] })
+    return /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+      /* @__PURE__ */ jsx(CardNavigationHeader, { onSelect: () => props.onSelect("donuts"), children: /* @__PURE__ */ jsx(Label, { title: "Donuts", name: "donut", font: "headline", fontWeight: "semibold", foregroundColor: "indigo" }) }),
+      /* @__PURE__ */ jsx(DonutLatticeLayout, { children: props.donuts.slice(0, 14).map((donut) => /* @__PURE__ */ jsx(DonutView, { donut }, donut.id)) })
     ] });
+  }
+  function DonutLatticeLayout(props) {
+    return /* @__PURE__ */ jsx(
+      CustomLayout,
+      {
+        name: "DonutLatticeLayout",
+        frame: { minHeight: 180, maxHeight: "infinity" },
+        sizeThatFits,
+        placeSubviews,
+        children: props.children
+      }
+    );
+  }
+  function sizeThatFits(proposal, _subviews) {
+    const columns = 5;
+    const rows = 3;
+    const size = proposal.replacingUnspecifiedDimensions(defaultAxesSize);
+    const cellLength = Math.min(size.width / columns, size.height / rows);
+    return {
+      width: cellLength * columns,
+      height: cellLength * rows
+    };
+  }
+  function placeSubviews(bounds, proposal, subviews) {
+    const columns = 5;
+    const rows = 3;
+    const spacing = 10;
+    const size = proposal.replacingUnspecifiedDimensions(defaultAxesSize);
+    const cellLength = Math.min(size.width / columns, size.height / rows);
+    const rectSize = {
+      width: cellLength * columns,
+      height: cellLength * rows
+    };
+    const origin = {
+      x: bounds.minX + (bounds.width - rectSize.width),
+      y: bounds.minY + (bounds.height - rectSize.height)
+    };
+    const placements = [];
+    for (let row = 0; row < rows; row += 1) {
+      const cellY = origin.y + cellLength * row;
+      const columnsForRow = row % 2 === 0 ? columns : columns - 1;
+      for (let column = 0; column < columnsForRow; column += 1) {
+        let cellX = origin.x + cellLength * column;
+        if (row % 2 !== 0) {
+          cellX += cellLength * 0.5;
+        }
+        let index = column;
+        for (let completedRow = 0; completedRow < row; completedRow += 1) {
+          index += completedRow % 2 === 0 ? columns : columns - 1;
+        }
+        if (index >= subviews.length) {
+          break;
+        }
+        placements.push({
+          x: cellX + spacing * 0.5,
+          y: cellY + spacing * 0.5,
+          anchor: "topLeading",
+          width: cellLength - spacing,
+          height: cellLength - spacing
+        });
+      }
+    }
+    return placements;
+  }
+
+  // ../App/Project/src/Donut/DiagonalDonutStackLayout.tsx
+  var defaultSize = { width: 60, height: 60 };
+  function DiagonalDonutStackLayout(props) {
+    return /* @__PURE__ */ jsx(
+      CustomLayout,
+      {
+        name: "DiagonalDonutStackLayout",
+        padding: props.padding,
+        paddingTop: props.paddingTop,
+        frame: props.frame,
+        background: props.background,
+        foregroundColor: props.foregroundColor,
+        cornerRadius: props.cornerRadius,
+        aspectRatio: props.aspectRatio,
+        fixedSize: props.fixedSize,
+        compactVertical: props.compactVertical,
+        symbolRenderingMode: props.symbolRenderingMode,
+        buttonStyle: props.buttonStyle,
+        buttonBorderShape: props.buttonBorderShape,
+        disabled: props.disabled,
+        glassEffect: props.glassEffect,
+        onAppear: props.onAppear,
+        sizeThatFits: sizeThatFits2,
+        placeSubviews: placeSubviews2,
+        children: props.children
+      }
+    );
+  }
+  function sizeThatFits2(proposal, _subviews) {
+    const proposalSize = proposal.replacingUnspecifiedDimensions(defaultSize);
+    const minBound = Math.min(proposalSize.width, proposalSize.height);
+    return { width: minBound, height: minBound };
+  }
+  function placeSubviews2(bounds, proposal, subviews) {
+    const proposalSize = proposal.replacingUnspecifiedDimensions(defaultSize);
+    const minBound = Math.min(proposalSize.width, proposalSize.height);
+    const size = { width: minBound, height: minBound };
+    const rect = {
+      minX: bounds.minX + bounds.width - minBound,
+      minY: bounds.minY + bounds.height - minBound,
+      width: size.width,
+      height: size.height
+    };
+    const center = { x: rect.minX + rect.width * 0.5, y: rect.minY + rect.height * 0.5 };
+    const placements = [];
+    const count = Math.min(subviews.length, 3);
+    for (let index = 0; index < count; index += 1) {
+      switch (true) {
+        case count === 1:
+          placements.push({
+            x: center.x,
+            y: center.y,
+            anchor: "center",
+            width: size.width,
+            height: size.height
+          });
+          break;
+        case count === 2: {
+          const direction = index === 0 ? -1 : 1;
+          placements.push({
+            x: center.x + minBound * direction * 0.15,
+            y: center.y + minBound * direction * 0.2,
+            anchor: "center",
+            width: size.width * 0.7,
+            height: size.height * 0.7
+          });
+          break;
+        }
+        case index === 1:
+          placements.push({
+            x: center.x,
+            y: center.y,
+            anchor: "center",
+            width: size.width * 0.65,
+            height: size.height * 0.65
+          });
+          break;
+        default: {
+          const direction = index === 0 ? -1 : 1;
+          placements.push({
+            x: center.x + minBound * direction * 0.15,
+            y: center.y + minBound * direction * 0.23,
+            anchor: "center",
+            width: size.width * 0.7,
+            height: size.height * 0.65
+          });
+          break;
+        }
+      }
+    }
+    return placements;
+  }
+
+  // ../App/Project/src/Donut/DonutStackView.tsx
+  function DonutStackView(props) {
+    return /* @__PURE__ */ jsx(
+      DiagonalDonutStackLayout,
+      {
+        padding: props.padding,
+        paddingTop: props.paddingTop,
+        frame: props.frame,
+        background: props.background,
+        foregroundColor: props.foregroundColor,
+        cornerRadius: props.cornerRadius,
+        aspectRatio: props.aspectRatio,
+        fixedSize: props.fixedSize,
+        compactVertical: props.compactVertical,
+        symbolRenderingMode: props.symbolRenderingMode,
+        buttonStyle: props.buttonStyle,
+        buttonBorderShape: props.buttonBorderShape,
+        disabled: props.disabled,
+        glassEffect: props.glassEffect,
+        onAppear: props.onAppear,
+        children: props.donuts.slice(0, 3).map((donut) => /* @__PURE__ */ jsx(DonutView, { donut }, donut.id))
+      }
+    );
   }
 
   // ../App/Project/src/Truck/Cards/TruckOrdersCard.tsx
   function TruckOrdersCard(props) {
     const cardOrders = orders.slice().reverse().slice(0, 5);
     const footerOrder = orders[orders.length - 1];
-    return /* @__PURE__ */ jsxs(VStack, { id: "truck-orders-card", alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
-      /* @__PURE__ */ jsx(
-        CardNavigationHeader,
+    return /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+      /* @__PURE__ */ jsx(CardNavigationHeader, { onSelect: () => props.onSelect("orders"), children: /* @__PURE__ */ jsx(Label, { title: "New Orders", systemName: "shippingbox", font: "headline", fontWeight: "semibold", foregroundColor: "indigo" }) }),
+      /* @__PURE__ */ jsx(HeroSquareTilingLayout, { aspectRatio: 2, frame: { maxWidth: "infinity", maxHeight: 250 }, children: cardOrders.map((order) => /* @__PURE__ */ jsx(
+        DonutStackView,
         {
-          id: "truck-orders-card-header",
-          panel: "orders",
-          title: "New Orders",
-          systemName: "shippingbox",
-          onSelect: () => props.onSelect("orders")
-        }
-      ),
-      /* @__PURE__ */ jsx(HeroSquareTilingLayout, { id: "truck-orders-card-media", children: cardOrders.map((order, index) => /* @__PURE__ */ jsx(
-        OrderPreviewTile,
-        {
-          order,
-          recipe: donutCatalog[index % donutCatalog.length],
-          prominent: index === 0
+          donuts: order.donuts,
+          padding: 6,
+          background: "tertiarySystemFill",
+          cornerRadius: 10,
+          aspectRatio: { value: 1, contentMode: "fit" }
         },
         order.id
       )) }),
-      /* @__PURE__ */ jsxs(HStack, { id: "truck-orders-card-footer", spacing: 8, frame: { maxWidth: "infinity" }, children: [
-        /* @__PURE__ */ jsx(Spacer, { id: "truck-orders-card-footer-leading" }),
-        /* @__PURE__ */ jsx(Text, { id: "truck-orders-card-order-id", font: "subheadline", foregroundColor: "secondary", children: footerOrder.id }),
-        /* @__PURE__ */ jsx(Image, { id: "truck-orders-card-order-icon", name: "donut", frame: { width: 14, height: 14 } }),
-        /* @__PURE__ */ jsx(Text, { id: "truck-orders-card-order-total", font: "subheadline", foregroundColor: "secondary", children: footerOrder.total }),
-        /* @__PURE__ */ jsx(Spacer, { id: "truck-orders-card-footer-trailing" })
+      /* @__PURE__ */ jsxs(HStack, { spacing: 8, frame: { maxWidth: "infinity" }, children: [
+        /* @__PURE__ */ jsx(Spacer, {}),
+        /* @__PURE__ */ jsx(Text, { font: "subheadline", foregroundColor: "secondary", children: footerOrder.id }),
+        /* @__PURE__ */ jsx(Image, { name: "donut", frame: { width: 14, height: 14 } }),
+        /* @__PURE__ */ jsx(Text, { font: "subheadline", foregroundColor: "secondary", children: footerOrder.total }),
+        /* @__PURE__ */ jsx(Spacer, {})
       ] })
     ] });
   }
   function HeroSquareTilingLayout(props) {
-    const spacing = props.spacing ?? 10;
-    const [hero, tile1, tile2, tile3, tile4] = flattenChildren(props.children);
-    return /* @__PURE__ */ jsx(VStack, { id: props.id, frame: { maxWidth: "infinity", maxHeight: 250 }, aspectRatio: { value: 2, contentMode: "fit" }, children: /* @__PURE__ */ jsxs(HStack, { id: `${props.id}-content`, spacing, distribution: "fillEqually", children: [
-      /* @__PURE__ */ jsx(VStack, { id: `${props.id}-hero`, aspectRatio: { value: 1, contentMode: "fit" }, children: hero }),
-      /* @__PURE__ */ jsxs(VStack, { id: `${props.id}-tiles`, spacing, distribution: "fillEqually", children: [
-        /* @__PURE__ */ jsxs(HStack, { id: `${props.id}-tiles-top`, spacing, distribution: "fillEqually", children: [
-          /* @__PURE__ */ jsx(VStack, { id: `${props.id}-tiles-top-left`, aspectRatio: { value: 1, contentMode: "fit" }, children: tile1 }),
-          /* @__PURE__ */ jsx(VStack, { id: `${props.id}-tiles-top-right`, aspectRatio: { value: 1, contentMode: "fit" }, children: tile2 })
-        ] }),
-        /* @__PURE__ */ jsxs(HStack, { id: `${props.id}-tiles-bottom`, spacing, distribution: "fillEqually", children: [
-          /* @__PURE__ */ jsx(VStack, { id: `${props.id}-tiles-bottom-left`, aspectRatio: { value: 1, contentMode: "fit" }, children: tile3 }),
-          /* @__PURE__ */ jsx(VStack, { id: `${props.id}-tiles-bottom-right`, aspectRatio: { value: 1, contentMode: "fit" }, children: tile4 })
-        ] })
-      ] })
-    ] }) });
-  }
-  function flattenChildren(children) {
-    if (!Array.isArray(children)) {
-      return children === void 0 || children === null || children === false ? [] : [children];
-    }
-    return children.flatMap((child) => flattenChildren(child));
-  }
-  function OrderPreviewTile(props) {
     return /* @__PURE__ */ jsx(
-      VStack,
+      CustomLayout,
       {
-        id: `order-tile-${props.order.id}`,
-        alignment: "center",
-        spacing: 0,
-        padding: 6,
-        background: "tertiarySystemFill",
-        cornerRadius: 10,
-        aspectRatio: { value: 1, contentMode: "fit" },
-        children: /* @__PURE__ */ jsx(DonutPreview, { recipe: props.recipe, size: props.prominent ? "featured" : "mini" })
+        name: "HeroSquareTilingLayout",
+        values: { spacing: props.spacing ?? 10 },
+        aspectRatio: props.aspectRatio,
+        frame: props.frame,
+        children: props.children
       }
     );
   }
 
   // ../App/Project/src/Truck/Cards/TruckSocialFeedCard.tsx
   function TruckSocialFeedCard(props) {
-    return /* @__PURE__ */ jsxs(VStack, { id: "truck-social-feed-card", alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
-      /* @__PURE__ */ jsx(
-        CardNavigationHeader,
-        {
-          id: "truck-social-feed-card-header",
-          panel: "socialFeed",
-          title: "Social Feed",
-          systemName: "text.bubble",
-          onSelect: () => props.onSelect("socialFeed")
-        }
-      ),
+    return /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+      /* @__PURE__ */ jsx(CardNavigationHeader, { onSelect: () => props.onSelect("socialFeed"), children: /* @__PURE__ */ jsx(Label, { title: "Social Feed", systemName: "text.bubble", font: "headline", fontWeight: "semibold", foregroundColor: "indigo" }) }),
       /* @__PURE__ */ jsx(
         FlowLayout,
         {
-          id: "truck-social-tags",
           alignment: "center",
           spacing: 8,
           lineSpacing: 8,
@@ -614,10 +835,10 @@
           background: "quaternarySystemFill",
           cornerRadius: 18,
           frame: { maxWidth: "infinity", minHeight: 180 },
-          children: trendingTopics.map((topic) => /* @__PURE__ */ jsx(Text, { id: `chip-${topic}`, font: "footnote", padding: 8, background: "quaternarySystemFill", cornerRadius: 12, children: topic }, topic))
+          children: trendingTopics.map((topic) => /* @__PURE__ */ jsx(Text, { font: "footnote", padding: 8, background: "quaternarySystemFill", cornerRadius: 12, children: topic }, topic))
         }
       ),
-      /* @__PURE__ */ jsx(Text, { id: "truck-social-feed-caption", font: "footnote", foregroundColor: "secondary", children: "Trending Topics" })
+      /* @__PURE__ */ jsx(Text, { font: "footnote", foregroundColor: "secondary", children: "Trending Topics" })
     ] });
   }
 
@@ -627,38 +848,28 @@
     const high = Math.max(...truckForecast.entries.map((entry) => entry.degrees));
     const visibleEntries = truckForecast.entries.filter((_, index) => index % 3 === 0).slice(0, 6);
     const span = Math.max(high - low, 1);
-    return /* @__PURE__ */ jsxs(VStack, { id: "truck-weather-card", alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
-      /* @__PURE__ */ jsx(
-        CardNavigationHeader,
-        {
-          id: "truck-weather-card-header",
-          panel: cityPanel("san-francisco"),
-          title: "Forecast",
-          systemName: "cloud.sun",
-          onSelect: () => props.onSelect(cityPanel("san-francisco"))
-        }
-      ),
-      /* @__PURE__ */ jsxs(VStack, { id: "truck-weather-chart", alignment: "leading", spacing: 12, frame: { minHeight: 180 }, children: [
-        /* @__PURE__ */ jsx(HStack, { id: "truck-weather-bars", spacing: 10, children: visibleEntries.map((entry) => {
+    return /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, padding: 10, background: "white", cornerRadius: 20, children: [
+      /* @__PURE__ */ jsx(CardNavigationHeader, { onSelect: () => props.onSelect(cityPanel("san-francisco")), children: /* @__PURE__ */ jsx(Label, { title: "Forecast", systemName: "cloud.sun", font: "headline", fontWeight: "semibold", foregroundColor: "indigo" }) }),
+      /* @__PURE__ */ jsxs(VStack, { alignment: "leading", spacing: 12, frame: { minHeight: 180 }, children: [
+        /* @__PURE__ */ jsx(HStack, { spacing: 10, children: visibleEntries.map((entry) => {
           const normalizedHeight = 44 + (entry.degrees - low) / span * 76;
-          return /* @__PURE__ */ jsxs(VStack, { id: `truck-weather-bar-${entry.date.toISOString()}`, alignment: "center", spacing: 8, children: [
+          return /* @__PURE__ */ jsxs(VStack, { alignment: "center", spacing: 8, children: [
             /* @__PURE__ */ jsx(
               VStack,
               {
-                id: `truck-weather-bar-fill-${entry.date.toISOString()}`,
                 background: entry.isDaylight ? "teal" : "indigo",
                 cornerRadius: 12,
                 frame: { width: 22, height: normalizedHeight }
               }
             ),
-            /* @__PURE__ */ jsx(Text, { id: `truck-weather-bar-label-${entry.date.toISOString()}`, font: "caption", foregroundColor: "secondary", children: formatForecastHour(entry.date) }),
-            /* @__PURE__ */ jsxs(Text, { id: `truck-weather-bar-value-${entry.date.toISOString()}`, font: "caption", fontWeight: "semibold", children: [
+            /* @__PURE__ */ jsx(Text, { font: "caption", foregroundColor: "secondary", children: formatForecastHour(entry.date) }),
+            /* @__PURE__ */ jsxs(Text, { font: "caption", fontWeight: "semibold", children: [
               entry.degrees,
               "\xB0"
             ] })
           ] }, entry.date.toISOString());
         }) }),
-        /* @__PURE__ */ jsxs(Text, { id: "truck-weather-summary", font: "footnote", foregroundColor: "secondary", children: [
+        /* @__PURE__ */ jsxs(Text, { font: "footnote", foregroundColor: "secondary", children: [
           low,
           "\xB0F to ",
           high,
@@ -670,19 +881,18 @@
 
   // ../App/Project/src/Truck/TruckView.tsx
   function TruckView(props) {
-    return /* @__PURE__ */ jsx(WidthThresholdReader, { id: "truck-width-threshold", widthThreshold: 520, children: (proxy) => /* @__PURE__ */ jsx(TruckContent, { onSelect: props.onSelect, isCompact: proxy.isCompact }) });
+    return /* @__PURE__ */ jsx(WidthThresholdReader, { widthThreshold: 520, children: (proxy) => /* @__PURE__ */ jsx(TruckContent, { onSelect: props.onSelect, isCompact: proxy.isCompact }) });
   }
   function TruckContent(props) {
     const orders2 = /* @__PURE__ */ jsx(TruckOrdersCard, { onSelect: props.onSelect });
     const weather = /* @__PURE__ */ jsx(TruckWeatherCard, { onSelect: props.onSelect });
-    const donuts = /* @__PURE__ */ jsx(TruckDonutsCard, { onSelect: props.onSelect });
+    const donuts = /* @__PURE__ */ jsx(TruckDonutsCard, { donuts: truckShowcaseDonuts, onSelect: props.onSelect });
     const socialFeed = /* @__PURE__ */ jsx(TruckSocialFeedCard, { onSelect: props.onSelect });
-    return /* @__PURE__ */ jsx(ScrollView, { id: "truck-view", navigationTitle: "Truck", background: "systemGroupedBackground", children: /* @__PURE__ */ jsxs(VStack, { id: "truck-stack", spacing: 16, children: [
+    return /* @__PURE__ */ jsx(ScrollView, { navigationTitle: "Truck", background: "systemGroupedBackground", children: /* @__PURE__ */ jsxs(VStack, { spacing: 16, children: [
       /* @__PURE__ */ jsx(BrandHeader, { animated: false }),
       /* @__PURE__ */ jsx(
         Grid,
         {
-          id: "truck-grid",
           horizontalSpacing: 12,
           verticalSpacing: 12,
           fixedSize: { horizontal: false, vertical: true },
@@ -694,11 +904,11 @@
             donuts,
             socialFeed
           ] }) : /* @__PURE__ */ jsxs(Fragment2, { children: [
-            /* @__PURE__ */ jsxs(GridRow, { id: "truck-grid-row-1", children: [
+            /* @__PURE__ */ jsxs(GridRow, { children: [
               orders2,
               weather
             ] }),
-            /* @__PURE__ */ jsxs(GridRow, { id: "truck-grid-row-2", children: [
+            /* @__PURE__ */ jsxs(GridRow, { children: [
               donuts,
               socialFeed
             ] })
@@ -740,11 +950,10 @@
 
   // ../App/Project/src/Navigation/Sidebar.tsx
   function Sidebar(props) {
-    return /* @__PURE__ */ jsxs(List, { id: "sidebar", navigationTitle: "Food Truck", listStyle: "sidebar", children: [
+    return /* @__PURE__ */ jsxs(List, { navigationTitle: "Food Truck", listStyle: "sidebar", children: [
       /* @__PURE__ */ jsx(
         SidebarRow,
         {
-          id: "sidebar-truck",
           title: "Truck",
           systemName: "box.truck",
           selected: props.selection === "truck",
@@ -754,7 +963,6 @@
       /* @__PURE__ */ jsx(
         SidebarRow,
         {
-          id: "sidebar-orders",
           title: "Orders",
           systemName: "shippingbox",
           selected: props.selection === "orders",
@@ -764,7 +972,6 @@
       /* @__PURE__ */ jsx(
         SidebarRow,
         {
-          id: "sidebar-feed",
           title: "Social Feed",
           systemName: "text.bubble",
           selected: props.selection === "socialFeed",
@@ -774,17 +981,15 @@
       /* @__PURE__ */ jsx(
         SidebarRow,
         {
-          id: "sidebar-history",
           title: "Sales History",
           systemName: "clock",
           selected: props.selection === "salesHistory",
           action: () => props.onSelect("salesHistory")
         }
       ),
-      /* @__PURE__ */ jsx(Section, { id: "sidebar-donuts", title: "Donuts", children: donutPanels.map((item) => /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsx(Section, { title: "Donuts", children: donutPanels.map((item) => /* @__PURE__ */ jsx(
         SidebarRow,
         {
-          id: `sidebar-${item.panel}`,
           title: item.title,
           selected: props.selection === item.panel,
           action: () => props.onSelect(item.panel),
@@ -792,10 +997,9 @@
         },
         item.panel
       )) }),
-      /* @__PURE__ */ jsx(Section, { id: "sidebar-cities", title: "Cities", children: cities.map((city) => /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsx(Section, { title: "Cities", children: cities.map((city) => /* @__PURE__ */ jsx(
         SidebarRow,
         {
-          id: `sidebar-${city.id}`,
           title: city.name,
           systemName: "building.2",
           selected: props.selection === cityPanel(city.id),
@@ -809,16 +1013,15 @@
     return /* @__PURE__ */ jsx(
       Button,
       {
-        id: props.id,
         action: props.action,
         buttonStyle: "plain",
         padding: 8,
         background: props.selected ? "tertiarySystemFill" : "clear",
         cornerRadius: 12,
-        children: /* @__PURE__ */ jsxs(HStack, { id: `${props.id}-row`, spacing: 10, children: [
-          props.assetName ? /* @__PURE__ */ jsx(Image, { id: `${props.id}-asset`, name: props.assetName, frame: { width: 18, height: 18 } }) : /* @__PURE__ */ jsx(Image, { id: `${props.id}-icon`, systemName: props.systemName ?? "circle" }),
-          /* @__PURE__ */ jsx(Text, { id: `${props.id}-title`, font: "body", fontWeight: props.selected ? "semibold" : "regular", children: props.title }),
-          /* @__PURE__ */ jsx(Spacer, { id: `${props.id}-spacer` })
+        children: /* @__PURE__ */ jsxs(HStack, { spacing: 10, children: [
+          props.assetName ? /* @__PURE__ */ jsx(Image, { name: props.assetName, frame: { width: 18, height: 18 } }) : /* @__PURE__ */ jsx(Image, { systemName: props.systemName ?? "circle" }),
+          /* @__PURE__ */ jsx(Text, { font: "body", fontWeight: props.selected ? "semibold" : "regular", children: props.title }),
+          /* @__PURE__ */ jsx(Spacer, {})
         ] })
       }
     );
@@ -830,7 +1033,6 @@
     return /* @__PURE__ */ jsx(
       NavigationSplitView,
       {
-        id: "food-truck-root",
         sidebar: /* @__PURE__ */ jsx(Sidebar, { selection, onSelect: setSelection }),
         detail: /* @__PURE__ */ jsx(DetailColumn, { selection, onSelect: setSelection })
       }

@@ -6,6 +6,8 @@
   let seenComponents = new Set()
   let activeComponentKey = null
   let activeHookIndex = 0
+  let layoutHandlers = Object.create(null)
+  let geometryReaderHandlers = Object.create(null)
 
   function createElement(type, props) {
     const extraChildren = Array.prototype.slice.call(arguments, 2)
@@ -83,6 +85,8 @@
     }
 
     eventHandlers = Object.create(null)
+    layoutHandlers = Object.create(null)
+    geometryReaderHandlers = Object.create(null)
     pendingEffects = []
     seenComponents = new Set()
 
@@ -133,6 +137,10 @@
 
     const children = flatten(
       flatten(props.children || []).map(function (child, index) {
+        if (typeof child === "function") {
+          return child
+        }
+
         return resolveElement(child, path + "." + index)
       })
     ).filter(function (child) {
@@ -173,14 +181,47 @@
         node.axis = typeof props.axis === "string" ? props.axis : "vertical"
         node.children = hostChildren(children)
         return node
+      case "GeometryReader": {
+        const content = Array.isArray(props.children)
+          ? props.children.find(function (child) {
+              return typeof child === "function"
+            })
+          : typeof props.children === "function"
+            ? props.children
+            : undefined
+
+        if (typeof content !== "function") {
+          throw new Error("GeometryReader requires a render function child")
+        }
+
+        geometryReaderHandlers[id] = content
+        return node
+      }
       case "Custom":
         if (typeof props.name !== "string" || props.name.length === 0) {
           throw new Error("Custom requires a name prop")
         }
 
         node.customName = props.name
+        node.children = hostChildren(children)
         node.customValues = serializeCustomValues(props.values)
         node.customSlots = serializeCustomSlots(props.slots, path)
+        return node
+      case "CustomLayout":
+        if (typeof props.name !== "string" || props.name.length === 0) {
+          throw new Error("CustomLayout requires a name prop")
+        }
+
+        if (typeof props.sizeThatFits === "function" && typeof props.placeSubviews === "function") {
+          layoutHandlers[id] = {
+            sizeThatFits: props.sizeThatFits,
+            placeSubviews: props.placeSubviews
+          }
+        }
+
+        node.customName = props.name
+        node.children = hostChildren(children)
+        node.customValues = serializeCustomValues(props.values)
         return node
       case "List":
         node.children = hostChildren(children)
@@ -250,6 +291,14 @@
       node.alignment = props.alignment
     }
 
+    if (
+      typeof props.viewID === "string" ||
+      typeof props.viewID === "number" ||
+      typeof props.viewID === "boolean"
+    ) {
+      node.viewIdentity = serializeCustomValue(props.viewID)
+    }
+
     if (typeof props.padding === "number") {
       node.padding = props.padding
     }
@@ -308,6 +357,10 @@
 
     if (typeof props.imageContentMode === "string") {
       node.imageContentMode = props.imageContentMode
+    }
+
+    if (typeof props.interpolation === "string") {
+      node.imageInterpolation = props.interpolation
     }
 
     if (typeof props.aspectRatio === "number") {
@@ -398,16 +451,34 @@
     const result = {}
 
     Object.keys(values).forEach(function (key) {
-      const value = values[key]
-
-      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-        result[key] = value
-      } else {
-        throw new Error("Custom values only support string, number, and boolean")
-      }
+      result[key] = serializeCustomValue(values[key])
     })
 
     return Object.keys(result).length > 0 ? result : undefined
+  }
+
+  function serializeCustomValue(value) {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      return value
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(function (item) {
+        return serializeCustomValue(item)
+      })
+    }
+
+    if (value && typeof value === "object") {
+      const result = {}
+
+      Object.keys(value).forEach(function (key) {
+        result[key] = serializeCustomValue(value[key])
+      })
+
+      return result
+    }
+
+    throw new Error("Custom values must be JSON-compatible")
   }
 
   function serializeCustomSlots(slots, path) {
@@ -559,13 +630,147 @@
     return "node_" + path.replace(/\./g, "_")
   }
 
+  function hasLayoutHandler(id) {
+    return !!layoutHandlers[id]
+  }
+
+  function hasGeometryReaderHandler(id) {
+    return !!geometryReaderHandlers[id]
+  }
+
+  function measureLayout(id, proposalJSON, subviewCount) {
+    const handler = layoutHandlers[id]
+    if (!handler) {
+      throw new Error("Missing custom layout handler: " + id)
+    }
+
+    const proposal = createProposedViewSize(parseJSON(proposalJSON))
+    const subviews = createLayoutSubviews(subviewCount)
+    return JSON.stringify(normalizeSize(handler.sizeThatFits(proposal, subviews)))
+  }
+
+  function placeLayoutSubviews(id, boundsJSON, proposalJSON, subviewCount) {
+    const handler = layoutHandlers[id]
+    if (!handler) {
+      throw new Error("Missing custom layout handler: " + id)
+    }
+
+    const bounds = createBounds(parseJSON(boundsJSON))
+    const proposal = createProposedViewSize(parseJSON(proposalJSON))
+    const subviews = createLayoutSubviews(subviewCount)
+    return JSON.stringify(handler.placeSubviews(bounds, proposal, subviews) || [])
+  }
+
+  function renderGeometryReader(id, sizeJSON) {
+    const handler = geometryReaderHandlers[id]
+    if (!handler) {
+      throw new Error("Missing GeometryReader handler: " + id)
+    }
+
+    const size = normalizeSize(parseJSON(sizeJSON))
+    const content = handler({
+      size: {
+        width: typeof size.width === "number" ? size.width : 0,
+        height: typeof size.height === "number" ? size.height : 0
+      }
+    })
+    const resolved = resolveElement(content, "geometry." + id)
+    return JSON.stringify(serializeGeometryReaderContent(resolved, "geometry." + id))
+  }
+
+  function createLayoutSubviews(subviewCount) {
+    const result = []
+
+    for (let index = 0; index < subviewCount; index += 1) {
+      result.push({
+        sizeThatFits: function (proposal) {
+          return parseJSON(__swiftjs_layout_subviewSizeThatFits(index, JSON.stringify(normalizeSize(proposal))))
+        }
+      })
+    }
+
+    return result
+  }
+
+  function serializeGeometryReaderContent(resolved, path) {
+    if (resolved && typeof resolved === "object" && !Array.isArray(resolved)) {
+      return resolved
+    }
+
+    if (Array.isArray(resolved)) {
+      const nodes = resolved.filter(function (child) {
+        return typeof child === "object" && child !== null
+      })
+
+      if (nodes.length === 1) {
+        return nodes[0]
+      }
+
+      if (nodes.length > 1) {
+        return {
+          type: "VStack",
+          id: autoID(path),
+          alignment: "leading",
+          spacing: 0,
+          children: nodes
+        }
+      }
+    }
+
+    throw new Error("GeometryReader requires view content")
+  }
+
+  function createProposedViewSize(value) {
+    const size = normalizeSize(value)
+    size.replacingUnspecifiedDimensions = function (replacement) {
+      return {
+        width: size.width === undefined ? replacement.width : size.width,
+        height: size.height === undefined ? replacement.height : size.height
+      }
+    }
+    return size
+  }
+
+  function createBounds(value) {
+    return {
+      minX: typeof value.minX === "number" ? value.minX : 0,
+      minY: typeof value.minY === "number" ? value.minY : 0,
+      width: typeof value.width === "number" ? value.width : 0,
+      height: typeof value.height === "number" ? value.height : 0
+    }
+  }
+
+  function normalizeSize(value) {
+    if (!value || typeof value !== "object") {
+      return {}
+    }
+
+    return {
+      width: typeof value.width === "number" ? value.width : undefined,
+      height: typeof value.height === "number" ? value.height : undefined
+    }
+  }
+
+  function parseJSON(value) {
+    if (typeof value !== "string" || value.length === 0) {
+      return null
+    }
+
+    return JSON.parse(value)
+  }
+
   const Fragment = Symbol("SwiftJS.Fragment")
 
   globalThis.__swiftjsRuntime = {
     Fragment: Fragment,
     createElement: createElement,
     dispatchEvent: dispatchEvent,
+    hasGeometryReaderHandler: hasGeometryReaderHandler,
+    hasLayoutHandler: hasLayoutHandler,
+    measureLayout: measureLayout,
     mount: mount,
+    placeLayoutSubviews: placeLayoutSubviews,
+    renderGeometryReader: renderGeometryReader,
     useEffect: useEffect,
     useRef: useRef,
     useState: useState

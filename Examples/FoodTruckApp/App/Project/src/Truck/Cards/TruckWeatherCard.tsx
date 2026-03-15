@@ -1,4 +1,4 @@
-import { HStack, Text, VStack } from "../../swiftjs"
+import { HStack, Label, Text, VStack } from "../../swiftjs"
 import { cityPanel, formatForecastHour, truckForecast } from "../../Support/SampleData"
 import type { Panel } from "../../Support/SampleData"
 import { CardNavigationHeader } from "./CardNavigationHeader"
@@ -10,39 +10,34 @@ export function TruckWeatherCard(props: { onSelect: (panel: Panel) => void }) {
   const span = Math.max(high - low, 1)
 
   return (
-    <VStack id="truck-weather-card" alignment="leading" spacing={12} padding={10} background="white" cornerRadius={20}>
-      <CardNavigationHeader
-        id="truck-weather-card-header"
-        panel={cityPanel("san-francisco")}
-        title="Forecast"
-        systemName="cloud.sun"
-        onSelect={() => props.onSelect(cityPanel("san-francisco"))}
-      />
+    <VStack alignment="leading" spacing={12} padding={10} background="white" cornerRadius={20}>
+      <CardNavigationHeader onSelect={() => props.onSelect(cityPanel("san-francisco"))}>
+        <Label title="Forecast" systemName="cloud.sun" font="headline" fontWeight="semibold" foregroundColor="indigo" />
+      </CardNavigationHeader>
 
-      <VStack id="truck-weather-chart" alignment="leading" spacing={12} frame={{ minHeight: 180 }}>
-        <HStack id="truck-weather-bars" spacing={10}>
+      <VStack alignment="leading" spacing={12} frame={{ minHeight: 180 }}>
+        <HStack spacing={10}>
           {visibleEntries.map((entry) => {
             const normalizedHeight = 44 + ((entry.degrees - low) / span) * 76
 
             return (
-              <VStack id={`truck-weather-bar-${entry.date.toISOString()}`} key={entry.date.toISOString()} alignment="center" spacing={8}>
+              <VStack key={entry.date.toISOString()} alignment="center" spacing={8}>
                 <VStack
-                  id={`truck-weather-bar-fill-${entry.date.toISOString()}`}
                   background={entry.isDaylight ? "teal" : "indigo"}
                   cornerRadius={12}
                   frame={{ width: 22, height: normalizedHeight }}
                 />
-                <Text id={`truck-weather-bar-label-${entry.date.toISOString()}`} font="caption" foregroundColor="secondary">
+                <Text font="caption" foregroundColor="secondary">
                   {formatForecastHour(entry.date)}
                 </Text>
-                <Text id={`truck-weather-bar-value-${entry.date.toISOString()}`} font="caption" fontWeight="semibold">
+                <Text font="caption" fontWeight="semibold">
                   {entry.degrees}°
                 </Text>
               </VStack>
             )
           })}
         </HStack>
-        <Text id="truck-weather-summary" font="footnote" foregroundColor="secondary">
+        <Text font="footnote" foregroundColor="secondary">
           {low}°F to {high}°F
         </Text>
       </VStack>

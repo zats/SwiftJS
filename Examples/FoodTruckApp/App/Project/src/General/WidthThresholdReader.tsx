@@ -1,4 +1,4 @@
-import { createElement } from "../swiftjs"
+import { CustomHost } from "./CustomHost"
 
 type WidthThresholdReaderProxy = {
   width: number
@@ -6,7 +6,6 @@ type WidthThresholdReaderProxy = {
 }
 
 export function WidthThresholdReader(props: {
-  id?: string
   widthThreshold?: number
   children: ((proxy: WidthThresholdReaderProxy) => unknown) | Array<(proxy: WidthThresholdReaderProxy) => unknown>
 }) {
@@ -17,15 +16,16 @@ export function WidthThresholdReader(props: {
     throw new Error("WidthThresholdReader requires a render function child")
   }
 
-  return createElement("Custom", {
-    id: props.id,
-    name: "WidthThresholdReader",
-    values: {
-      widthThreshold,
-    },
-    slots: {
-      compact: content({ width: widthThreshold - 1, isCompact: true }),
-      regular: content({ width: widthThreshold + 1, isCompact: false }),
-    },
-  })
+  return (
+    <CustomHost
+      name="WidthThresholdReader"
+      values={{
+        widthThreshold,
+      }}
+      slots={{
+        compact: content({ width: widthThreshold - 1, isCompact: true }),
+        regular: content({ width: widthThreshold + 1, isCompact: false }),
+      }}
+    />
+  )
 }
