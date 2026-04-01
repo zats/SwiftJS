@@ -15,6 +15,8 @@ import type {
   LayoutSubview,
   LabelProps,
   ListProps,
+  NavigationLinkProps,
+  NavigationStackProps,
   NavigationSplitViewProps,
   ProposedViewSize,
   ScrollViewProps,
@@ -55,6 +57,8 @@ export type {
   LabelProps,
   ListProps,
   ListStyle,
+  NavigationLinkProps,
+  NavigationStackProps,
   NavigationSplitViewProps,
   ProposedViewSize,
   ScrollViewProps,
@@ -118,6 +122,8 @@ export const ScrollView = hostComponent<ScrollViewProps>("ScrollView")
 export const GeometryReader = hostComponent<GeometryReaderProps>("GeometryReader")
 export const List = hostComponent<ListProps>("List")
 export const Section = hostComponent<SectionProps>("Section")
+export const NavigationStack = hostComponent<NavigationStackProps>("NavigationStack")
+export const NavigationLink = hostComponent<NavigationLinkProps>("NavigationLink")
 export const NavigationSplitView = hostComponent<NavigationSplitViewProps>("NavigationSplitView")
 export const Spacer = hostComponent<SpacerProps>("Spacer")
 export const Text = hostComponent<TextProps>("Text")

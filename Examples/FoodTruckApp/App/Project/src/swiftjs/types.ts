@@ -103,6 +103,12 @@ export type SectionProps = ViewProps & {
   title?: string
 }
 
+export type NavigationStackProps = ViewProps
+
+export type NavigationLinkProps = ViewProps & {
+  destination: unknown
+}
+
 export type CustomValue = string | number | boolean | CustomValue[] | { [key: string]: CustomValue }
 
 export type ProposedViewSize = {

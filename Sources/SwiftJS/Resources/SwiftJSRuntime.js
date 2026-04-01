@@ -230,6 +230,13 @@
         node.title = typeof props.title === "string" ? props.title : undefined
         node.children = hostChildren(children)
         return node
+      case "NavigationStack":
+        node.children = hostChildren(children)
+        return node
+      case "NavigationLink":
+        node.destination = serializeSlot(props.destination, path + ".destination", "destination")
+        node.children = hostChildren(children)
+        return node
       case "NavigationSplitView":
         node.sidebar = serializeSlot(props.sidebar, path + ".sidebar", "sidebar")
         node.detail = serializeSlot(props.detail, path + ".detail", "detail")

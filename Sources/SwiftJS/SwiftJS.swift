@@ -454,6 +454,17 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
+    case navigationStack(
+        id: NodeID,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
+    case navigationLink(
+        id: NodeID,
+        modifiers: ViewModifiers,
+        destination: ViewNode,
+        children: [ViewNode]
+    )
     case navigationSplitView(
         id: NodeID,
         modifiers: ViewModifiers,
@@ -506,6 +517,8 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .customLayout(id, _, _, _, _),
              let .list(id, _, _),
              let .section(id, _, _, _),
+             let .navigationStack(id, _, _),
+             let .navigationLink(id, _, _, _),
              let .navigationSplitView(id, _, _, _),
              let .spacer(id, _),
              let .text(id, _, _),
@@ -531,6 +544,8 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .customLayout(_, _, modifiers, _, _),
              let .list(_, modifiers, _),
              let .section(_, _, modifiers, _),
+             let .navigationStack(_, modifiers, _),
+             let .navigationLink(_, modifiers, _, _),
              let .navigationSplitView(_, modifiers, _, _),
              let .spacer(_, modifiers),
              let .text(_, _, modifiers),
@@ -1033,6 +1048,14 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 sectionView(title: title, children: children)
             )
+        case let .navigationStack(_, _, children):
+            applyCommonModifiers(
+                navigationStackView(children: children)
+            )
+        case let .navigationLink(_, modifiers, destination, children):
+            applyCommonModifiers(
+                navigationLinkView(destination: destination, modifiers: modifiers, children: children)
+            )
         case let .navigationSplitView(_, _, sidebar, detail):
             applyCommonModifiers(
                 navigationSplitView(sidebar: sidebar, detail: detail)
@@ -1360,6 +1383,30 @@ private struct RenderNodeView: View {
             applyCommonModifiers(list.listStyle(.insetGrouped))
         case .sidebar:
             applyCommonModifiers(list.listStyle(.sidebar))
+        }
+    }
+
+    @ViewBuilder
+    private func navigationStackView(children: [ViewNode]) -> some View {
+        NavigationStack {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func navigationLinkView(destination: ViewNode, modifiers _: ViewModifiers, children: [ViewNode]) -> some View {
+        NavigationLink {
+            RenderNodeView(node: destination, onEvent: onEvent, customHostRegistry: customHostRegistry)
+        } label: {
+            if children.isEmpty {
+                Text("Open")
+            } else {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
         }
     }
 
@@ -1870,6 +1917,7 @@ private final class HostNode: Decodable {
     let name: String?
     let title: String?
     let event: String?
+    let destination: HostNode?
     let customName: String?
     let customValues: [String: CustomHostValue]?
     let children: [HostNode]?
@@ -1980,6 +2028,19 @@ private final class HostNode: Decodable {
                 id: NodeID(id),
                 title: title,
                 modifiers: modifiers,
+                children: try mapChildren()
+            )
+        case .navigationStack:
+            return .navigationStack(
+                id: NodeID(id),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
+        case .navigationLink:
+            return .navigationLink(
+                id: NodeID(id),
+                modifiers: modifiers,
+                destination: try mapSlot(destination, name: "destination"),
                 children: try mapChildren()
             )
         case .navigationSplitView:
@@ -2139,6 +2200,8 @@ private enum HostComponentType: String, Decodable {
     case customLayout = "CustomLayout"
     case list = "List"
     case section = "Section"
+    case navigationStack = "NavigationStack"
+    case navigationLink = "NavigationLink"
     case navigationSplitView = "NavigationSplitView"
     case spacer = "Spacer"
     case text = "Text"
