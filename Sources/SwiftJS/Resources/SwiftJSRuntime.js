@@ -70,13 +70,13 @@
     render()
   }
 
-  function dispatchEvent(eventId) {
+  function dispatchEvent(eventId, payloadJSON) {
     const handler = eventHandlers[eventId]
     if (typeof handler !== "function") {
       throw new Error("Missing event handler for " + eventId)
     }
 
-    handler()
+    handler(parseJSON(payloadJSON))
   }
 
   function render() {
@@ -226,6 +226,9 @@
       case "List":
         node.children = hostChildren(children)
         return node
+      case "Form":
+        node.children = hostChildren(children)
+        return node
       case "Section":
         node.title = typeof props.title === "string" ? props.title : undefined
         node.children = hostChildren(children)
@@ -282,6 +285,16 @@
         node.title = textValue(props.children)
         node.children = hostChildren(children)
         node.event = registerHandler(props.action, id + ":action")
+        return node
+      case "Toggle":
+        if (typeof props.isOn !== "boolean") {
+          throw new Error("Toggle requires an isOn boolean prop")
+        }
+
+        node.title = textValue(props.children)
+        node.children = hostChildren(children)
+        node.isOn = props.isOn
+        node.event = registerHandler(props.onChange, id + ":change")
         return node
       default:
         throw new Error("Unsupported host component: " + type)

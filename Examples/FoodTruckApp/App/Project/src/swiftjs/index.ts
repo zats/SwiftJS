@@ -4,6 +4,7 @@ import type {
   CustomValue,
   CustomLayoutProps,
   DividerProps,
+  FormProps,
   GeometryReaderProps,
   FlowLayoutProps,
   GridProps,
@@ -25,6 +26,7 @@ import type {
   StackDistribution,
   StackProps,
   TextProps,
+  ToggleProps,
 } from "./types"
 
 export type {
@@ -38,6 +40,7 @@ export type {
   CustomValue,
   CustomLayoutProps,
   DividerProps,
+  FormProps,
   GeometryProxy,
   GeometryReaderProps,
   FontValue,
@@ -68,6 +71,7 @@ export type {
   StackProps,
   SymbolRenderingMode,
   TextProps,
+  ToggleProps,
   ViewProps,
 } from "./types"
 
@@ -121,6 +125,7 @@ export const CustomLayout = hostComponent<CustomLayoutProps>("CustomLayout")
 export const ScrollView = hostComponent<ScrollViewProps>("ScrollView")
 export const GeometryReader = hostComponent<GeometryReaderProps>("GeometryReader")
 export const List = hostComponent<ListProps>("List")
+export const Form = hostComponent<FormProps>("Form")
 export const Section = hostComponent<SectionProps>("Section")
 export const NavigationStack = hostComponent<NavigationStackProps>("NavigationStack")
 export const NavigationLink = hostComponent<NavigationLinkProps>("NavigationLink")
@@ -131,3 +136,4 @@ export const Label = hostComponent<LabelProps>("Label")
 export const Image = hostComponent<ImageProps>("Image")
 export const Divider = hostComponent<DividerProps>("Divider")
 export const Button = hostComponent<ButtonProps>("Button")
+export const Toggle = hostComponent<ToggleProps>("Toggle")

@@ -5,9 +5,15 @@ import SwiftUI
 
 public struct SurfaceEvent: Hashable, Sendable, ExpressibleByStringLiteral {
     public let name: String
+    public let payloadJSON: String?
 
     public init(_ name: String) {
+        self.init(name, payloadJSON: nil)
+    }
+
+    public init(_ name: String, payloadJSON: String?) {
         self.name = name
+        self.payloadJSON = payloadJSON
     }
 
     public init(stringLiteral value: StringLiteralType) {
@@ -448,6 +454,11 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
+    case form(
+        id: NodeID,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
     case section(
         id: NodeID,
         title: String?,
@@ -502,6 +513,14 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
+    case toggle(
+        id: NodeID,
+        title: String,
+        isOn: Bool,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
 
     public var id: NodeID {
         switch self {
@@ -516,6 +535,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .custom(id, _, _, _, _, _),
              let .customLayout(id, _, _, _, _),
              let .list(id, _, _),
+             let .form(id, _, _),
              let .section(id, _, _, _),
              let .navigationStack(id, _, _),
              let .navigationLink(id, _, _, _),
@@ -525,7 +545,8 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .label(id, _, _, _),
              let .image(id, _, _),
              let .divider(id, _),
-             let .button(id, _, _, _, _):
+             let .button(id, _, _, _, _),
+             let .toggle(id, _, _, _, _, _):
             id
         }
     }
@@ -543,6 +564,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .custom(_, _, modifiers, _, _, _),
              let .customLayout(_, _, modifiers, _, _),
              let .list(_, modifiers, _),
+             let .form(_, modifiers, _),
              let .section(_, _, modifiers, _),
              let .navigationStack(_, modifiers, _),
              let .navigationLink(_, modifiers, _, _),
@@ -552,7 +574,8 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .label(_, _, _, modifiers),
              let .image(_, _, modifiers),
              let .divider(_, modifiers),
-             let .button(_, _, _, modifiers, _):
+             let .button(_, _, _, modifiers, _),
+             let .toggle(_, _, _, _, modifiers, _):
             modifiers
         }
     }
@@ -696,7 +719,12 @@ public final class JSSurfaceRuntime {
         context.exception = nil
         let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
         let dispatch = runtime?.objectForKeyedSubscript("dispatchEvent")
-        dispatch?.call(withArguments: [event.name])
+
+        if let payloadJSON = event.payloadJSON {
+            dispatch?.call(withArguments: [event.name, payloadJSON])
+        } else {
+            dispatch?.call(withArguments: [event.name])
+        }
 
         if let exception = context.exception?.toString(), !exception.isEmpty {
             errorMessage = exception
@@ -1044,6 +1072,10 @@ private struct RenderNodeView: View {
             )
         case let .list(_, modifiers, children):
             listView(children: children, modifiers: modifiers)
+        case let .form(_, _, children):
+            applyCommonModifiers(
+                formView(children: children)
+            )
         case let .section(_, title, _, children):
             applyCommonModifiers(
                 sectionView(title: title, children: children)
@@ -1079,6 +1111,10 @@ private struct RenderNodeView: View {
         case let .button(_, title, event, modifiers, children):
             applyCommonModifiers(
                 buttonView(title, event: event, modifiers: modifiers, children: children)
+            )
+        case let .toggle(_, title, isOn, event, modifiers, children):
+            applyCommonModifiers(
+                toggleView(title, isOn: isOn, event: event, modifiers: modifiers, children: children)
             )
         }
     }
@@ -1387,6 +1423,15 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
+    private func formView(children: [ViewNode]) -> some View {
+        Form {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        }
+    }
+
+    @ViewBuilder
     private func navigationStackView(children: [ViewNode]) -> some View {
         NavigationStack {
             ForEach(children) { child in
@@ -1402,6 +1447,27 @@ private struct RenderNodeView: View {
         } label: {
             if children.isEmpty {
                 Text("Open")
+            } else {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func toggleView(_ title: String, isOn: Bool, event: SurfaceEvent, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
+        Toggle(
+            isOn: Binding(
+                get: { isOn },
+                set: { nextValue in
+                    onEvent(SurfaceEvent(event.name, payloadJSON: nextValue ? "true" : "false"))
+                }
+            )
+        ) {
+            if children.isEmpty {
+                Text(title)
+                    .modifier(NodeAppearanceModifier(modifiers: modifiers))
             } else {
                 ForEach(children) { child in
                     RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
@@ -1917,6 +1983,7 @@ private final class HostNode: Decodable {
     let name: String?
     let title: String?
     let event: String?
+    let isOn: Bool?
     let destination: HostNode?
     let customName: String?
     let customValues: [String: CustomHostValue]?
@@ -2023,6 +2090,12 @@ private final class HostNode: Decodable {
                 modifiers: modifiers,
                 children: try mapChildren()
             )
+        case .form:
+            return .form(
+                id: NodeID(id),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
         case .section:
             return .section(
                 id: NodeID(id),
@@ -2122,6 +2195,23 @@ private final class HostNode: Decodable {
                 modifiers: modifiers,
                 children: childNodes
             )
+        case .toggle:
+            guard let event else {
+                throw JSSurfaceError.invalidTree("Toggle node '\(id)' is missing an onChange event")
+            }
+
+            guard let isOn else {
+                throw JSSurfaceError.invalidTree("Toggle node '\(id)' is missing an isOn value")
+            }
+
+            return .toggle(
+                id: NodeID(id),
+                title: title ?? "",
+                isOn: isOn,
+                event: SurfaceEvent(event),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
         }
     }
 
@@ -2199,6 +2289,7 @@ private enum HostComponentType: String, Decodable {
     case custom = "Custom"
     case customLayout = "CustomLayout"
     case list = "List"
+    case form = "Form"
     case section = "Section"
     case navigationStack = "NavigationStack"
     case navigationLink = "NavigationLink"
@@ -2209,6 +2300,7 @@ private enum HostComponentType: String, Decodable {
     case image = "Image"
     case divider = "Divider"
     case button = "Button"
+    case toggle = "Toggle"
 }
 
 private enum JSSurfaceError: LocalizedError {

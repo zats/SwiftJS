@@ -103,6 +103,8 @@ export type SectionProps = ViewProps & {
   title?: string
 }
 
+export type FormProps = ViewProps
+
 export type NavigationStackProps = ViewProps
 
 export type NavigationLinkProps = ViewProps & {
@@ -157,6 +159,11 @@ export type ButtonProps = ViewProps & {
   action: () => void
   font?: FontValue
   fontWeight?: FontWeight
+}
+
+export type ToggleProps = ViewProps & {
+  isOn: boolean
+  onChange: (nextValue: boolean) => void
 }
 
 export type ImageProps = ViewProps & {
