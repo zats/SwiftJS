@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "SwiftJS",
     platforms: [
-        .iOS(.v18),
+        .iOS(.v26),
         .macOS(.v15)
     ],
     products: [
@@ -20,6 +20,10 @@ let package = Package(
         .library(
             name: "SwiftJSLocation",
             targets: ["SwiftJSLocation"]
+        ),
+        .library(
+            name: "SwiftJSCalendar",
+            targets: ["SwiftJSCalendar"]
         )
     ],
     targets: [
@@ -35,6 +39,10 @@ let package = Package(
         ),
         .target(
             name: "SwiftJSLocation",
+            dependencies: ["SwiftJSCore"]
+        ),
+        .target(
+            name: "SwiftJSCalendar",
             dependencies: ["SwiftJSCore"]
         )
     ],
