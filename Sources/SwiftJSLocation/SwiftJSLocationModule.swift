@@ -23,15 +23,27 @@ public final class SwiftJSLocationModule: NSObject, JSRuntimeModule, @preconcurr
         completion: @escaping (Result<String?, Error>) -> Void
     ) {
         switch method {
-        case "getAuthorizationStatus":
+        case "authorizationStatus":
             do {
                 completion(.success(try encodeStatus(manager.authorizationStatus)))
             } catch {
                 completion(.failure(error))
             }
+        case "accuracyAuthorization":
+            do {
+                completion(.success(try encodeAccuracyAuthorization(manager.accuracyAuthorization)))
+            } catch {
+                completion(.failure(error))
+            }
+        case "locationServicesEnabled":
+            do {
+                completion(.success(try encodeLocationServicesEnabled(CLLocationManager.locationServicesEnabled())))
+            } catch {
+                completion(.failure(error))
+            }
         case "requestWhenInUseAuthorization":
             requestWhenInUseAuthorization(completion: completion)
-        case "getCurrentLocation":
+        case "requestLocation":
             requestCurrentLocation(completion: completion)
         default:
             completion(.failure(LocationModuleError.unknownMethod(method)))
@@ -138,14 +150,24 @@ public final class SwiftJSLocationModule: NSObject, JSRuntimeModule, @preconcurr
     }
 
     private func encodeStatus(_ status: CLAuthorizationStatus) throws -> String {
-        try encode(StatusResponse(status: status.locationAuthorizationStatus))
+        try encode(AuthorizationStatusResponse(value: status.locationAuthorizationStatus))
+    }
+
+    private func encodeAccuracyAuthorization(_ accuracyAuthorization: CLAccuracyAuthorization) throws -> String {
+        try encode(AccuracyAuthorizationResponse(value: accuracyAuthorization.locationAccuracyAuthorization))
+    }
+
+    private func encodeLocationServicesEnabled(_ isEnabled: Bool) throws -> String {
+        try encode(LocationServicesEnabledResponse(value: isEnabled))
     }
 
     private func encodeLocation(_ location: CLLocation) throws -> String {
         try encode(
             LocationResponse(
-                latitude: location.coordinate.latitude,
-                longitude: location.coordinate.longitude,
+                coordinate: .init(
+                    latitude: location.coordinate.latitude,
+                    longitude: location.coordinate.longitude
+                ),
                 altitude: location.altitude,
                 horizontalAccuracy: location.horizontalAccuracy,
                 verticalAccuracy: location.verticalAccuracy,
@@ -187,13 +209,25 @@ private enum LocationModuleError: LocalizedError {
     }
 }
 
-private struct StatusResponse: Codable {
-    let status: LocationAuthorizationStatus
+private struct AuthorizationStatusResponse: Codable {
+    let value: LocationAuthorizationStatus
+}
+
+private struct AccuracyAuthorizationResponse: Codable {
+    let value: LocationAccuracyAuthorization
+}
+
+private struct LocationServicesEnabledResponse: Codable {
+    let value: Bool
+}
+
+private struct CoordinateResponse: Codable {
+    let latitude: Double
+    let longitude: Double
 }
 
 private struct LocationResponse: Codable {
-    let latitude: Double
-    let longitude: Double
+    let coordinate: CoordinateResponse
     let altitude: Double
     let horizontalAccuracy: Double
     let verticalAccuracy: Double
@@ -208,6 +242,11 @@ private enum LocationAuthorizationStatus: String, Codable {
     case denied
     case authorizedAlways
     case authorizedWhenInUse
+}
+
+private enum LocationAccuracyAuthorization: String, Codable {
+    case fullAccuracy
+    case reducedAccuracy
 }
 
 private extension CLAuthorizationStatus {
@@ -225,6 +264,19 @@ private extension CLAuthorizationStatus {
             return .authorizedWhenInUse
         @unknown default:
             return .notDetermined
+        }
+    }
+}
+
+private extension CLAccuracyAuthorization {
+    var locationAccuracyAuthorization: LocationAccuracyAuthorization {
+        switch self {
+        case .fullAccuracy:
+            return .fullAccuracy
+        case .reducedAccuracy:
+            return .reducedAccuracy
+        @unknown default:
+            return .reducedAccuracy
         }
     }
 }
