@@ -10,16 +10,32 @@ let package = Package(
     ],
     products: [
         .library(
+            name: "SwiftJSCore",
+            targets: ["SwiftJSCore"]
+        ),
+        .library(
             name: "SwiftJS",
             targets: ["SwiftJS"]
+        ),
+        .library(
+            name: "SwiftJSLocation",
+            targets: ["SwiftJSLocation"]
         )
     ],
     targets: [
         .target(
+            name: "SwiftJSCore"
+        ),
+        .target(
             name: "SwiftJS",
+            dependencies: ["SwiftJSCore"],
             resources: [
                 .process("Resources")
             ]
+        ),
+        .target(
+            name: "SwiftJSLocation",
+            dependencies: ["SwiftJSCore"]
         )
     ],
     swiftLanguageModes: [.v6]

@@ -2,6 +2,7 @@ import Foundation
 import JavaScriptCore
 import Observation
 import SwiftUI
+import SwiftJSCore
 
 public struct SurfaceEvent: Hashable, Sendable, ExpressibleByStringLiteral {
     public let name: String
@@ -744,21 +745,28 @@ public struct JSSurfaceView: View {
 }
 
 @Observable
+@MainActor
 public final class JSSurfaceRuntime {
     public private(set) var rootNode: ViewNode?
     public private(set) var errorMessage: String?
     public private(set) var customHostRegistry: CustomHostRegistry
 
     private let source: JSScriptSource
+    private let modulesByName: [String: any JSRuntimeModule]
     private var context: JSContext
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
     private var didStart = false
     private var activeLayoutMeasurementStack: [(Int, ProposedViewSize) -> CGSize] = []
 
-    public init(source: JSScriptSource, customHostRegistry: CustomHostRegistry = .init()) {
+    public init(
+        source: JSScriptSource,
+        customHostRegistry: CustomHostRegistry = .init(),
+        modules: [any JSRuntimeModule] = []
+    ) {
         self.source = source
         self.customHostRegistry = customHostRegistry
+        self.modulesByName = Self.makeModulesByName(modules)
         self.context = Self.makeContext()
         installBridge()
         installGeometryReaderBridge()
@@ -842,11 +850,16 @@ public final class JSSurfaceRuntime {
             UserDefaults.standard.set(payloadJSON, forKey: key)
         }
 
+        let invokeModule: @convention(block) (String, String, String, String?) -> Void = { [weak self] callID, moduleName, methodName, payloadJSON in
+            self?.invokeModuleCall(callID: callID, moduleName: moduleName, methodName: methodName, payloadJSON: payloadJSON)
+        }
+
         let console = JSValue(newObjectIn: context)
         console?.setObject(log, forKeyedSubscript: "log" as NSString)
 
         context.setObject(commit, forKeyedSubscript: "__swiftjs_commit" as NSString)
         context.setObject(report, forKeyedSubscript: "__swiftjs_reportError" as NSString)
+        context.setObject(invokeModule, forKeyedSubscript: "__swiftjs_invokeModule" as NSString)
         context.setObject(storageGet, forKeyedSubscript: "__swiftjs_storage_get" as NSString)
         context.setObject(storageSet, forKeyedSubscript: "__swiftjs_storage_set" as NSString)
         context.setObject(console, forKeyedSubscript: "console" as NSString)
@@ -904,6 +917,62 @@ public final class JSSurfaceRuntime {
         }
 
         return context
+    }
+
+    private static func makeModulesByName(_ modules: [any JSRuntimeModule]) -> [String: any JSRuntimeModule] {
+        var byName: [String: any JSRuntimeModule] = [:]
+
+        for module in modules {
+            if byName.updateValue(module, forKey: module.name) != nil {
+                preconditionFailure(JSRuntimeModuleError.duplicateModuleName(module.name).localizedDescription)
+            }
+        }
+
+        return byName
+    }
+
+    private func invokeModuleCall(callID: String, moduleName: String, methodName: String, payloadJSON: String?) {
+        guard let module = modulesByName[moduleName] else {
+            rejectModuleCall(callID: callID, message: JSRuntimeModuleError.missingModule(moduleName).localizedDescription)
+            return
+        }
+
+        MainActor.assumeIsolated {
+            module.invoke(method: methodName, payloadJSON: payloadJSON) { [weak self] result in
+                guard let self else {
+                    return
+                }
+
+                switch result {
+                case let .success(responseJSON):
+                    self.resolveModuleCall(callID: callID, payloadJSON: responseJSON)
+                case let .failure(error):
+                    self.rejectModuleCall(callID: callID, message: error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private func resolveModuleCall(callID: String, payloadJSON: String?) {
+        context.exception = nil
+        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
+        let resolve = runtime?.objectForKeyedSubscript("resolveModuleCall")
+        resolve?.call(withArguments: [callID, payloadJSON ?? NSNull()])
+
+        if let exception = context.exception?.toString(), !exception.isEmpty {
+            errorMessage = exception
+        }
+    }
+
+    private func rejectModuleCall(callID: String, message: String) {
+        context.exception = nil
+        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
+        let reject = runtime?.objectForKeyedSubscript("rejectModuleCall")
+        reject?.call(withArguments: [callID, message])
+
+        if let exception = context.exception?.toString(), !exception.isEmpty {
+            errorMessage = exception
+        }
     }
 
     private func evaluateRuntime() throws {
@@ -1092,6 +1161,20 @@ public final class JSSurfaceRuntime {
         } catch {
             report(error)
             return nil
+        }
+    }
+}
+
+enum JSRuntimeModuleError: LocalizedError {
+    case duplicateModuleName(String)
+    case missingModule(String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .duplicateModuleName(name):
+            return "Duplicate SwiftJS module '\(name)'"
+        case let .missingModule(name):
+            return "Missing SwiftJS module '\(name)'"
         }
     }
 }

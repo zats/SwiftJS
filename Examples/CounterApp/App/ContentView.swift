@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftJS
 
+@MainActor
 struct ContentView: View {
     @State private var runtime: JSSurfaceRuntime
     @State private var workspace: CounterScriptWorkspace.Workspace

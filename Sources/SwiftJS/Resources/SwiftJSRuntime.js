@@ -6,6 +6,8 @@
   let seenComponents = new Set()
   let activeComponentKey = null
   let activeHookIndex = 0
+  let nextModuleCallID = 1
+  const pendingModuleCalls = new Map()
   let layoutHandlers = Object.create(null)
   let geometryReaderHandlers = Object.create(null)
 
@@ -60,6 +62,45 @@
     }
 
     return [value, setStoredValue]
+  }
+
+  function invokeModule(moduleName, methodName, payload) {
+    return new Promise(function (resolve, reject) {
+      const callID = String(nextModuleCallID++)
+      pendingModuleCalls.set(callID, { resolve: resolve, reject: reject })
+
+      try {
+        __swiftjs_invokeModule(
+          callID,
+          moduleName,
+          methodName,
+          payload === undefined ? undefined : JSON.stringify(payload)
+        )
+      } catch (error) {
+        pendingModuleCalls.delete(callID)
+        reject(error)
+      }
+    })
+  }
+
+  function resolveModuleCall(callID, payloadJSON) {
+    const pendingCall = pendingModuleCalls.get(callID)
+    if (!pendingCall) {
+      return
+    }
+
+    pendingModuleCalls.delete(callID)
+    pendingCall.resolve(payloadJSON === null || payloadJSON === undefined ? undefined : parseJSON(payloadJSON))
+  }
+
+  function rejectModuleCall(callID, message) {
+    const pendingCall = pendingModuleCalls.get(callID)
+    if (!pendingCall) {
+      return
+    }
+
+    pendingModuleCalls.delete(callID)
+    pendingCall.reject(new Error(message))
   }
 
   function useRef(initialValue) {
@@ -877,6 +918,9 @@
     mount: mount,
     placeLayoutSubviews: placeLayoutSubviews,
     renderGeometryReader: renderGeometryReader,
+    invokeModule: invokeModule,
+    rejectModuleCall: rejectModuleCall,
+    resolveModuleCall: resolveModuleCall,
     useAppStorage: useAppStorage,
     useEffect: useEffect,
     useRef: useRef,
