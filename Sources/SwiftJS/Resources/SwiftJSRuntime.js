@@ -286,6 +286,13 @@
         node.children = hostChildren(children)
         node.event = registerHandler(props.action, id + ":action")
         return node
+      case "Picker":
+        node.title = textValue(props.children)
+        node.children = hostChildren(children)
+        node.selection = serializePickerValue(props.selection)
+        node.options = serializePickerOptions(props.options)
+        node.event = registerHandler(props.onChange, id + ":change")
+        return node
       case "Toggle":
         if (typeof props.isOn !== "boolean") {
           throw new Error("Toggle requires an isOn boolean prop")
@@ -513,6 +520,43 @@
     })
 
     return result
+  }
+
+  function serializePickerValue(value) {
+    if (typeof value === "string" || typeof value === "number") {
+      return value
+    }
+
+    throw new Error("Picker selection must be a string or number")
+  }
+
+  function serializePickerOptions(options) {
+    if (!Array.isArray(options)) {
+      throw new Error("Picker requires an options array")
+    }
+
+    return options.map(function (option) {
+      if (typeof option === "string" || typeof option === "number") {
+        return {
+          title: String(option),
+          value: option
+        }
+      }
+
+      if (
+        option &&
+        typeof option === "object" &&
+        typeof option.title === "string" &&
+        (typeof option.value === "string" || typeof option.value === "number")
+      ) {
+        return {
+          title: option.title,
+          value: option.value
+        }
+      }
+
+      throw new Error("Picker options must be strings, numbers, or { title, value } objects")
+    })
   }
 
   function normalizeFont(font) {

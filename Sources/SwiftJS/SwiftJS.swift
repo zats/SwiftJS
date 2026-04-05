@@ -118,6 +118,56 @@ public enum ImageSource: Equatable, Sendable {
     case asset(String)
 }
 
+public enum PickerSelectionValue: Equatable, Hashable, Sendable, Codable {
+    case string(String)
+    case number(Double)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+
+        if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else {
+            self = .string(try container.decode(String.self))
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+
+        switch self {
+        case let .string(value):
+            try container.encode(value)
+        case let .number(value):
+            try container.encode(value)
+        }
+    }
+
+    var payloadJSON: String {
+        switch self {
+        case let .string(value):
+            let data = try? JSONEncoder().encode(value)
+            return String(decoding: data ?? Data("null".utf8), as: UTF8.self)
+        case let .number(value):
+            if value.rounded(.towardZero) == value {
+                return String(Int64(value))
+            }
+
+            return String(value)
+        }
+    }
+}
+
+public struct PickerOption: Equatable, Hashable, Sendable, Codable {
+    public let title: String
+    public let value: PickerSelectionValue
+
+    public init(title: String, value: PickerSelectionValue) {
+        self.title = title
+        self.value = value
+    }
+}
+
 public enum CustomHostValue: Equatable, Sendable, Codable {
     case string(String)
     case number(Double)
@@ -513,6 +563,15 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
+    case picker(
+        id: NodeID,
+        title: String,
+        selection: PickerSelectionValue,
+        options: [PickerOption],
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
     case toggle(
         id: NodeID,
         title: String,
@@ -546,6 +605,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .image(id, _, _),
              let .divider(id, _),
              let .button(id, _, _, _, _),
+             let .picker(id, _, _, _, _, _, _),
              let .toggle(id, _, _, _, _, _):
             id
         }
@@ -575,6 +635,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .image(_, _, modifiers),
              let .divider(_, modifiers),
              let .button(_, _, _, modifiers, _),
+             let .picker(_, _, _, _, _, modifiers, _),
              let .toggle(_, _, _, _, modifiers, _):
             modifiers
         }
@@ -1112,6 +1173,10 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 buttonView(title, event: event, modifiers: modifiers, children: children)
             )
+        case let .picker(_, title, selection, options, event, modifiers, children):
+            applyCommonModifiers(
+                pickerView(title, selection: selection, options: options, event: event, modifiers: modifiers, children: children)
+            )
         case let .toggle(_, title, isOn, event, modifiers, children):
             applyCommonModifiers(
                 toggleView(title, isOn: isOn, event: event, modifiers: modifiers, children: children)
@@ -1453,6 +1518,39 @@ private struct RenderNodeView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func pickerView(
+        _ title: String,
+        selection: PickerSelectionValue,
+        options: [PickerOption],
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    ) -> some View {
+        Picker(
+            selection: Binding(
+                get: { selection },
+                set: { nextValue in
+                    onEvent(SurfaceEvent(event.name, payloadJSON: nextValue.payloadJSON))
+                }
+            )
+        ) {
+            ForEach(options, id: \.value) { option in
+                Text(option.title).tag(option.value)
+            }
+        } label: {
+            if children.isEmpty {
+                Text(title)
+            } else {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
     }
 
     @ViewBuilder
@@ -1984,6 +2082,8 @@ private final class HostNode: Decodable {
     let title: String?
     let event: String?
     let isOn: Bool?
+    let selection: PickerSelectionValue?
+    let options: [PickerOption]?
     let destination: HostNode?
     let customName: String?
     let customValues: [String: CustomHostValue]?
@@ -2195,6 +2295,28 @@ private final class HostNode: Decodable {
                 modifiers: modifiers,
                 children: childNodes
             )
+        case .picker:
+            guard let event else {
+                throw JSSurfaceError.invalidTree("Picker node '\(id)' is missing an onChange event")
+            }
+
+            guard let selection else {
+                throw JSSurfaceError.invalidTree("Picker node '\(id)' is missing a selection value")
+            }
+
+            guard let options else {
+                throw JSSurfaceError.invalidTree("Picker node '\(id)' is missing options")
+            }
+
+            return .picker(
+                id: NodeID(id),
+                title: title ?? "",
+                selection: selection,
+                options: options,
+                event: SurfaceEvent(event),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
         case .toggle:
             guard let event else {
                 throw JSSurfaceError.invalidTree("Toggle node '\(id)' is missing an onChange event")
@@ -2300,6 +2422,7 @@ private enum HostComponentType: String, Decodable {
     case image = "Image"
     case divider = "Divider"
     case button = "Button"
+    case picker = "Picker"
     case toggle = "Toggle"
 }
 
@@ -2425,6 +2548,10 @@ private func glassValue(for modifiers: ViewModifiers) -> SwiftUI.Glass {
 
 private extension Color {
     static func named(_ value: String) -> Color? {
+        if let hexColor = hex(value) {
+            return hexColor
+        }
+
         switch value {
         case "red":
             return .red
@@ -2465,6 +2592,63 @@ private extension Color {
         default:
             return Color(value)
         }
+    }
+
+    static func hex(_ value: String) -> Color? {
+        guard let digits = value.stripHexPrefix else {
+            return nil
+        }
+
+        let expanded: String
+        switch digits.count {
+        case 3, 4:
+            expanded = digits.reduce(into: "") { partialResult, character in
+                partialResult.append(character)
+                partialResult.append(character)
+            }
+        case 6, 8:
+            expanded = digits
+        default:
+            return nil
+        }
+
+        guard let hex = UInt64(expanded, radix: 16) else {
+            return nil
+        }
+
+        let red: Double
+        let green: Double
+        let blue: Double
+        let alpha: Double
+
+        if expanded.count == 6 {
+            red = Double((hex >> 16) & 0xFF) / 255
+            green = Double((hex >> 8) & 0xFF) / 255
+            blue = Double(hex & 0xFF) / 255
+            alpha = 1
+        } else {
+            red = Double((hex >> 24) & 0xFF) / 255
+            green = Double((hex >> 16) & 0xFF) / 255
+            blue = Double((hex >> 8) & 0xFF) / 255
+            alpha = Double(hex & 0xFF) / 255
+        }
+
+        return Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha)
+    }
+}
+
+private extension String {
+    var stripHexPrefix: String? {
+        guard hasPrefix("#") else {
+            return nil
+        }
+
+        let digits = String(dropFirst())
+        guard !digits.isEmpty, digits.allSatisfy(\.isHexDigit) else {
+            return nil
+        }
+
+        return digits
     }
 }
 
