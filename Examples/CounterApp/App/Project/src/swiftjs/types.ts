@@ -3,6 +3,8 @@ export type FontWeight = "regular" | "medium" | "semibold" | "bold"
 export type SymbolRenderingMode = "monochrome" | "hierarchical" | "multicolor"
 export type ButtonStyle = "plain" | "bordered" | "borderedProminent" | "glass" | "glassProminent"
 export type ButtonBorderShape = "automatic" | "capsule" | "roundedRectangle" | "circle"
+/** Mirrors SwiftUI.Visibility for navigation link indicators. */
+export type VisibilityKind = "automatic" | "visible" | "hidden"
 export type GlassEffectValue = boolean | { tint?: ColorValue }
 export type FontValue =
   | "largeTitle"
@@ -25,6 +27,8 @@ export type ViewProps = {
   background?: ColorValue
   foregroundColor?: ColorValue
   cornerRadius?: number
+  /** Controls the chevron visibility SwiftUI applies to navigation links. */
+  navigationLinkIndicatorVisibility?: VisibilityKind
   symbolRenderingMode?: SymbolRenderingMode
   buttonStyle?: ButtonStyle
   buttonBorderShape?: ButtonBorderShape

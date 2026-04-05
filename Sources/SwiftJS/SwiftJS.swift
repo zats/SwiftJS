@@ -57,6 +57,12 @@ public enum SymbolRenderingMode: String, Codable, Equatable, Sendable {
     case multicolor
 }
 
+public enum VisibilityKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case visible
+    case hidden
+}
+
 public enum ButtonStyle: String, Codable, Equatable, Sendable {
     case plain
     case bordered
@@ -347,6 +353,7 @@ public struct ViewModifiers: Equatable, Sendable {
     public var glassEffect: Bool
     public var glassTint: String?
     public var navigationTitle: String?
+    public var navigationLinkIndicatorVisibility: VisibilityKind?
     public var listStyle: ListStyleKind?
     public var imageContentMode: ImageContentMode?
     public var imageInterpolation: ImageInterpolation?
@@ -383,6 +390,7 @@ public struct ViewModifiers: Equatable, Sendable {
         glassEffect: Bool = false,
         glassTint: String? = nil,
         navigationTitle: String? = nil,
+        navigationLinkIndicatorVisibility: VisibilityKind? = nil,
         listStyle: ListStyleKind? = nil,
         imageContentMode: ImageContentMode? = nil,
         imageInterpolation: ImageInterpolation? = nil,
@@ -418,6 +426,7 @@ public struct ViewModifiers: Equatable, Sendable {
         self.glassEffect = glassEffect
         self.glassTint = glassTint
         self.navigationTitle = navigationTitle
+        self.navigationLinkIndicatorVisibility = navigationLinkIndicatorVisibility
         self.listStyle = listStyle
         self.imageContentMode = imageContentMode
         self.imageInterpolation = imageInterpolation
@@ -825,11 +834,21 @@ public final class JSSurfaceRuntime {
             print("[SwiftJS] \(message)")
         }
 
+        let storageGet: @convention(block) (String) -> String? = { key in
+            UserDefaults.standard.string(forKey: key)
+        }
+
+        let storageSet: @convention(block) (String, String) -> Void = { key, payloadJSON in
+            UserDefaults.standard.set(payloadJSON, forKey: key)
+        }
+
         let console = JSValue(newObjectIn: context)
         console?.setObject(log, forKeyedSubscript: "log" as NSString)
 
         context.setObject(commit, forKeyedSubscript: "__swiftjs_commit" as NSString)
         context.setObject(report, forKeyedSubscript: "__swiftjs_reportError" as NSString)
+        context.setObject(storageGet, forKeyedSubscript: "__swiftjs_storage_get" as NSString)
+        context.setObject(storageSet, forKeyedSubscript: "__swiftjs_storage_set" as NSString)
         context.setObject(console, forKeyedSubscript: "console" as NSString)
     }
 
@@ -1952,7 +1971,8 @@ private struct CommonNodeModifier: ViewModifier {
         let styledBackground = backgroundStyled(laidOut)
         let styledGlass = glassStyled(styledBackground)
         let titled = titleStyled(styledGlass)
-        let identified = identityStyled(titled)
+        let indicatorStyled = navigationLinkIndicatorStyled(titled)
+        let identified = identityStyled(indicatorStyled)
 
         if let onAppearEvent = modifiers.onAppearEvent {
             identified.onAppear {
@@ -2000,6 +2020,15 @@ private struct CommonNodeModifier: ViewModifier {
     private func titleStyled<Content: View>(_ content: Content) -> some View {
         if let navigationTitle = modifiers.navigationTitle {
             content.navigationTitle(navigationTitle)
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
+    private func navigationLinkIndicatorStyled<Content: View>(_ content: Content) -> some View {
+        if let visibility = modifiers.swiftUINavigationLinkIndicatorVisibility {
+            content.navigationLinkIndicatorVisibility(visibility)
         } else {
             content
         }
@@ -2067,6 +2096,7 @@ private final class HostNode: Decodable {
     let glassEffect: Bool?
     let glassTint: String?
     let navigationTitle: String?
+    let navigationLinkIndicatorVisibility: VisibilityKind?
     let listStyle: ListStyleKind?
     let imageContentMode: ImageContentMode?
     let imageInterpolation: ImageInterpolation?
@@ -2386,6 +2416,7 @@ private final class HostNode: Decodable {
             glassEffect: glassEffect ?? false,
             glassTint: glassTint,
             navigationTitle: navigationTitle,
+            navigationLinkIndicatorVisibility: navigationLinkIndicatorVisibility,
             listStyle: listStyle,
             imageContentMode: imageContentMode,
             imageInterpolation: imageInterpolation,
@@ -2534,6 +2565,21 @@ private extension ViewModifiers {
 
     var swiftUIAspectRatioContentMode: SwiftUI.ContentMode {
         (aspectRatioContentMode ?? .fit).swiftUIContentMode
+    }
+
+    var swiftUINavigationLinkIndicatorVisibility: SwiftUI.Visibility? {
+        guard let navigationLinkIndicatorVisibility else {
+            return nil
+        }
+
+        switch navigationLinkIndicatorVisibility {
+        case .automatic:
+            return .automatic
+        case .visible:
+            return .visible
+        case .hidden:
+            return .hidden
+        }
     }
 }
 

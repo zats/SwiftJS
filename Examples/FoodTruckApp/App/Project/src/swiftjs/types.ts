@@ -19,6 +19,8 @@ export type StackDistribution = "natural" | "fillEqually"
 export type ListStyle = "automatic" | "plain" | "insetGrouped" | "sidebar"
 export type ImageContentMode = "fit" | "fill"
 export type ImageInterpolation = "none" | "low" | "medium" | "high"
+/** Mirrors SwiftUI.Visibility for navigation link indicators. */
+export type VisibilityKind = "automatic" | "visible" | "hidden"
 export type FixedSizeValue = boolean | { horizontal?: boolean; vertical?: boolean }
 export type AspectRatioValue = number | { value?: number; contentMode?: ImageContentMode }
 export type FontValue =
@@ -53,6 +55,8 @@ export type ViewProps = {
   foregroundColor?: ColorValue
   cornerRadius?: number
   navigationTitle?: string
+  /** Controls the chevron visibility SwiftUI applies to navigation links. */
+  navigationLinkIndicatorVisibility?: VisibilityKind
   listStyle?: ListStyle
   imageContentMode?: ImageContentMode
   aspectRatio?: AspectRatioValue

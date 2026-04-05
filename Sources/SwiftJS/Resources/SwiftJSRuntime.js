@@ -32,6 +32,36 @@
     return [slot.value, setState]
   }
 
+  function useAppStorage(key, defaultValue) {
+    if (typeof key !== "string" || key.length === 0) {
+      throw new Error("useAppStorage requires a non-empty string key")
+    }
+
+    assertAppStorageValue(defaultValue)
+
+    const [value, setValue] = useState(function () {
+      const stored = __swiftjs_storage_get(key)
+      if (typeof stored !== "string" || stored.length === 0) {
+        return defaultValue
+      }
+
+      const parsed = parseJSON(stored)
+      assertAppStorageValue(parsed)
+      return parsed
+    })
+
+    function setStoredValue(nextValue) {
+      setValue(function (currentValue) {
+        const resolved = typeof nextValue === "function" ? nextValue(currentValue) : nextValue
+        assertAppStorageValue(resolved)
+        __swiftjs_storage_set(key, JSON.stringify(resolved))
+        return resolved
+      })
+    }
+
+    return [value, setStoredValue]
+  }
+
   function useRef(initialValue) {
     const slot = currentHookSlot("useRef")
     if (!("value" in slot)) {
@@ -376,6 +406,10 @@
 
     if (typeof props.navigationTitle === "string") {
       node.navigationTitle = props.navigationTitle
+    }
+
+    if (typeof props.navigationLinkIndicatorVisibility === "string") {
+      node.navigationLinkIndicatorVisibility = props.navigationLinkIndicatorVisibility
     }
 
     if (typeof props.listStyle === "string") {
@@ -823,6 +857,14 @@
     return JSON.parse(value)
   }
 
+  function assertAppStorageValue(value) {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      return
+    }
+
+    throw new Error("useAppStorage only supports string, number, and boolean values")
+  }
+
   const Fragment = Symbol("SwiftJS.Fragment")
 
   globalThis.__swiftjsRuntime = {
@@ -835,6 +877,7 @@
     mount: mount,
     placeLayoutSubviews: placeLayoutSubviews,
     renderGeometryReader: renderGeometryReader,
+    useAppStorage: useAppStorage,
     useEffect: useEffect,
     useRef: useRef,
     useState: useState

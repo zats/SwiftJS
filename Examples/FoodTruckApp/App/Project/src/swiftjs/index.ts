@@ -27,6 +27,7 @@ import type {
   StackProps,
   TextProps,
   ToggleProps,
+  VisibilityKind,
 } from "./types"
 
 export type {
@@ -72,8 +73,12 @@ export type {
   SymbolRenderingMode,
   TextProps,
   ToggleProps,
+  VisibilityKind,
   ViewProps,
 } from "./types"
+
+/** Values persisted by `useAppStorage`. */
+export type AppStorageValue = string | number | boolean
 
 export type Runtime = {
   Fragment: symbol
@@ -82,6 +87,11 @@ export type Runtime = {
   measureLayout: (id: string, proposalJSON: string, subviewCount: number) => string
   mount: (component: () => unknown) => void
   placeLayoutSubviews: (id: string, boundsJSON: string, proposalJSON: string, subviewCount: number) => string
+  /** Persists a primitive value through the native app storage bridge. */
+  useAppStorage: <Value extends AppStorageValue>(
+    key: string,
+    defaultValue: Value
+  ) => [Value, (nextValue: Value | ((current: Value) => Value)) => void]
   useEffect: (effect: () => void | (() => void), deps?: unknown[]) => void
   useRef: <Value>(initialValue: Value) => { current: Value }
   useState: <Value>(
@@ -111,6 +121,9 @@ export const Fragment = runtime().Fragment
 export const createElement = (type: unknown, props?: Record<string, unknown>, ...children: unknown[]) =>
   runtime().createElement(type, props, ...children)
 export const useState = <Value,>(initialValue: Value | (() => Value)) => runtime().useState(initialValue)
+/** Stores a string, number, or boolean in native app storage under `key`. */
+export const useAppStorage = <Value extends AppStorageValue>(key: string, defaultValue: Value) =>
+  runtime().useAppStorage(key, defaultValue)
 export const useEffect = (effect: () => void | (() => void), deps?: unknown[]) => runtime().useEffect(effect, deps)
 export const useRef = <Value,>(initialValue: Value) => runtime().useRef(initialValue)
 export const mount = (component: () => unknown) => runtime().mount(component)
