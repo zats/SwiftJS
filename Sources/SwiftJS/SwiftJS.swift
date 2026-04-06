@@ -902,6 +902,231 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
     }
 }
 
+private struct ViewNodePair {
+    let lhs: ViewNode
+    let rhs: ViewNode
+}
+
+public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
+    var stack = [ViewNodePair(lhs: lhs, rhs: rhs)]
+
+    while let pair = stack.popLast() {
+        switch (pair.lhs, pair.rhs) {
+        case let (.vStack(lID, lAlignment, lDistribution, lSpacing, lModifiers, lChildren),
+                  .vStack(rID, rAlignment, rDistribution, rSpacing, rModifiers, rChildren)):
+            guard lID == rID,
+                  lAlignment == rAlignment,
+                  lDistribution == rDistribution,
+                  lSpacing == rSpacing,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.hStack(lID, lAlignment, lDistribution, lSpacing, lModifiers, lChildren),
+                  .hStack(rID, rAlignment, rDistribution, rSpacing, rModifiers, rChildren)):
+            guard lID == rID,
+                  lAlignment == rAlignment,
+                  lDistribution == rDistribution,
+                  lSpacing == rSpacing,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.zStack(lID, lAlignment, lModifiers, lChildren),
+                  .zStack(rID, rAlignment, rModifiers, rChildren)):
+            guard lID == rID,
+                  lAlignment == rAlignment,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.grid(lID, lHorizontalSpacing, lVerticalSpacing, lModifiers, lChildren),
+                  .grid(rID, rHorizontalSpacing, rVerticalSpacing, rModifiers, rChildren)):
+            guard lID == rID,
+                  lHorizontalSpacing == rHorizontalSpacing,
+                  lVerticalSpacing == rVerticalSpacing,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.flowLayout(lID, lAlignment, lSpacing, lLineSpacing, lModifiers, lChildren),
+                  .flowLayout(rID, rAlignment, rSpacing, rLineSpacing, rModifiers, rChildren)):
+            guard lID == rID,
+                  lAlignment == rAlignment,
+                  lSpacing == rSpacing,
+                  lLineSpacing == rLineSpacing,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.gridRow(lID, lAlignment, lModifiers, lChildren),
+                  .gridRow(rID, rAlignment, rModifiers, rChildren)):
+            guard lID == rID,
+                  lAlignment == rAlignment,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.scrollView(lID, lAxis, lModifiers, lChildren),
+                  .scrollView(rID, rAxis, rModifiers, rChildren)):
+            guard lID == rID,
+                  lAxis == rAxis,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.geometryReader(lID, lModifiers),
+                  .geometryReader(rID, rModifiers)):
+            guard lID == rID, lModifiers == rModifiers else { return false }
+        case let (.custom(lID, lName, lModifiers, lValues, lChildren, lSlots),
+                  .custom(rID, rName, rModifiers, rValues, rChildren, rSlots)):
+            guard lID == rID,
+                  lName == rName,
+                  lModifiers == rModifiers,
+                  lValues == rValues,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack),
+                  enqueueSlots(lhs: lSlots, rhs: rSlots, into: &stack)
+            else { return false }
+        case let (.customLayout(lID, lName, lModifiers, lValues, lChildren),
+                  .customLayout(rID, rName, rModifiers, rValues, rChildren)):
+            guard lID == rID,
+                  lName == rName,
+                  lModifiers == rModifiers,
+                  lValues == rValues,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.list(lID, lModifiers, lChildren),
+                  .list(rID, rModifiers, rChildren)):
+            guard lID == rID,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.form(lID, lModifiers, lChildren),
+                  .form(rID, rModifiers, rChildren)):
+            guard lID == rID,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.section(lID, lTitle, lModifiers, lChildren),
+                  .section(rID, rTitle, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.navigationStack(lID, lModifiers, lChildren),
+                  .navigationStack(rID, rModifiers, rChildren)):
+            guard lID == rID,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.navigationLink(lID, lModifiers, lDestination, lChildren),
+                  .navigationLink(rID, rModifiers, rDestination, rChildren)):
+            guard lID == rID,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+            stack.append(.init(lhs: lDestination, rhs: rDestination))
+        case let (.navigationSplitView(lID, lModifiers, lSidebar, lDetail),
+                  .navigationSplitView(rID, rModifiers, rSidebar, rDetail)):
+            guard lID == rID, lModifiers == rModifiers else { return false }
+            stack.append(.init(lhs: lSidebar, rhs: rSidebar))
+            stack.append(.init(lhs: lDetail, rhs: rDetail))
+        case let (.spacer(lID, lModifiers),
+                  .spacer(rID, rModifiers)):
+            guard lID == rID, lModifiers == rModifiers else { return false }
+        case let (.text(lID, lValue, lModifiers),
+                  .text(rID, rValue, rModifiers)):
+            guard lID == rID, lValue == rValue, lModifiers == rModifiers else { return false }
+        case let (.label(lID, lTitle, lSource, lModifiers),
+                  .label(rID, rTitle, rSource, rModifiers)):
+            guard lID == rID, lTitle == rTitle, lSource == rSource, lModifiers == rModifiers else { return false }
+        case let (.image(lID, lSource, lModifiers),
+                  .image(rID, rSource, rModifiers)):
+            guard lID == rID, lSource == rSource, lModifiers == rModifiers else { return false }
+        case let (.rectangle(lID, lFill, lStroke, lLineWidth, lModifiers),
+                  .rectangle(rID, rFill, rStroke, rLineWidth, rModifiers)):
+            guard lID == rID, lFill == rFill, lStroke == rStroke, lLineWidth == rLineWidth, lModifiers == rModifiers else { return false }
+        case let (.roundedRectangle(lID, lCornerRadius, lFill, lStroke, lLineWidth, lModifiers),
+                  .roundedRectangle(rID, rCornerRadius, rFill, rStroke, rLineWidth, rModifiers)):
+            guard lID == rID, lCornerRadius == rCornerRadius, lFill == rFill, lStroke == rStroke, lLineWidth == rLineWidth, lModifiers == rModifiers else { return false }
+        case let (.circle(lID, lFill, lStroke, lLineWidth, lModifiers),
+                  .circle(rID, rFill, rStroke, rLineWidth, rModifiers)):
+            guard lID == rID, lFill == rFill, lStroke == rStroke, lLineWidth == rLineWidth, lModifiers == rModifiers else { return false }
+        case let (.capsule(lID, lFill, lStroke, lLineWidth, lModifiers),
+                  .capsule(rID, rFill, rStroke, rLineWidth, rModifiers)):
+            guard lID == rID, lFill == rFill, lStroke == rStroke, lLineWidth == rLineWidth, lModifiers == rModifiers else { return false }
+        case let (.ellipse(lID, lFill, lStroke, lLineWidth, lModifiers),
+                  .ellipse(rID, rFill, rStroke, rLineWidth, rModifiers)):
+            guard lID == rID, lFill == rFill, lStroke == rStroke, lLineWidth == rLineWidth, lModifiers == rModifiers else { return false }
+        case let (.linearGradient(lID, lValue, lModifiers),
+                  .linearGradient(rID, rValue, rModifiers)):
+            guard lID == rID, lValue == rValue, lModifiers == rModifiers else { return false }
+        case let (.radialGradient(lID, lValue, lModifiers),
+                  .radialGradient(rID, rValue, rModifiers)):
+            guard lID == rID, lValue == rValue, lModifiers == rModifiers else { return false }
+        case let (.angularGradient(lID, lValue, lModifiers),
+                  .angularGradient(rID, rValue, rModifiers)):
+            guard lID == rID, lValue == rValue, lModifiers == rModifiers else { return false }
+        case let (.divider(lID, lModifiers),
+                  .divider(rID, rModifiers)):
+            guard lID == rID, lModifiers == rModifiers else { return false }
+        case let (.button(lID, lTitle, lEvent, lModifiers, lChildren),
+                  .button(rID, rTitle, rEvent, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.picker(lID, lTitle, lSelection, lOptions, lEvent, lModifiers, lChildren),
+                  .picker(rID, rTitle, rSelection, rOptions, rEvent, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lSelection == rSelection,
+                  lOptions == rOptions,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.toggle(lID, lTitle, lIsOn, lEvent, lModifiers, lChildren),
+                  .toggle(rID, rTitle, rIsOn, rEvent, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lIsOn == rIsOn,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        default:
+            return false
+        }
+    }
+
+    return true
+}
+
+private func enqueueChildren(lhs: [ViewNode], rhs: [ViewNode], into stack: inout [ViewNodePair]) -> Bool {
+    guard lhs.count == rhs.count else {
+        return false
+    }
+
+    for (lhsChild, rhsChild) in zip(lhs, rhs) {
+        stack.append(.init(lhs: lhsChild, rhs: rhsChild))
+    }
+
+    return true
+}
+
+private func enqueueSlots(lhs: [String: ViewNode], rhs: [String: ViewNode], into stack: inout [ViewNodePair]) -> Bool {
+    guard lhs.count == rhs.count else {
+        return false
+    }
+
+    for (key, lhsValue) in lhs {
+        guard let rhsValue = rhs[key] else {
+            return false
+        }
+
+        stack.append(.init(lhs: lhsValue, rhs: rhsValue))
+    }
+
+    return true
+}
+
 public enum JSScriptSource {
     case string(String)
     case file(URL)
