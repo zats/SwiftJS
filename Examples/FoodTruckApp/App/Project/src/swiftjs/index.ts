@@ -1,9 +1,13 @@
 import type {
+  AngularGradientProps,
   AspectRatioValue,
   ButtonProps,
+  CapsuleProps,
+  CircleProps,
   CustomValue,
   CustomLayoutProps,
   DividerProps,
+  EllipseProps,
   FormProps,
   GeometryReaderProps,
   FlowLayoutProps,
@@ -16,10 +20,14 @@ import type {
   LayoutSubview,
   LabelProps,
   ListProps,
+  LinearGradientProps,
   NavigationLinkProps,
   NavigationStackProps,
   NavigationSplitViewProps,
   ProposedViewSize,
+  RectangleProps,
+  RoundedRectangleProps,
+  RadialGradientProps,
   ScrollViewProps,
   SectionProps,
   SpacerProps,
@@ -31,19 +39,25 @@ import type {
 } from "./types"
 
 export type {
+  AngularGradientProps,
+  AngularGradientValue,
   AspectRatioValue,
   AxisValue,
   ButtonBorderShape,
   ButtonProps,
   ButtonStyle,
+  CapsuleProps,
+  CircleProps,
   ColorValue,
   ContentAlignment,
   CustomValue,
   CustomLayoutProps,
   DividerProps,
+  EllipseProps,
   FormProps,
   GeometryProxy,
   GeometryReaderProps,
+  GradientStop,
   FontValue,
   FontWeight,
   FlowLayoutProps,
@@ -59,19 +73,28 @@ export type {
   LayoutPlacement,
   LayoutSubview,
   LabelProps,
+  LinearGradientProps,
+  LinearGradientValue,
   ListProps,
   ListStyle,
   NavigationLinkProps,
   NavigationStackProps,
   NavigationSplitViewProps,
   ProposedViewSize,
+  RadialGradientProps,
+  RadialGradientValue,
+  RectangleProps,
+  RoundedRectangleProps,
   ScrollViewProps,
   SectionProps,
+  ShapeProps,
+  ShapeStyleValue,
   SpacerProps,
   StackDistribution,
   StackProps,
   SymbolRenderingMode,
   TextProps,
+  UnitPointValue,
   ToggleProps,
   VisibilityKind,
   ViewProps,
@@ -147,6 +170,14 @@ export const Spacer = hostComponent<SpacerProps>("Spacer")
 export const Text = hostComponent<TextProps>("Text")
 export const Label = hostComponent<LabelProps>("Label")
 export const Image = hostComponent<ImageProps>("Image")
+export const Rectangle = hostComponent<RectangleProps>("Rectangle")
+export const RoundedRectangle = hostComponent<RoundedRectangleProps>("RoundedRectangle")
+export const Circle = hostComponent<CircleProps>("Circle")
+export const Capsule = hostComponent<CapsuleProps>("Capsule")
+export const Ellipse = hostComponent<EllipseProps>("Ellipse")
+export const LinearGradient = hostComponent<LinearGradientProps>("LinearGradient")
+export const RadialGradient = hostComponent<RadialGradientProps>("RadialGradient")
+export const AngularGradient = hostComponent<AngularGradientProps>("AngularGradient")
 export const Divider = hostComponent<DividerProps>("Divider")
 export const Button = hostComponent<ButtonProps>("Button")
 export const Toggle = hostComponent<ToggleProps>("Toggle")

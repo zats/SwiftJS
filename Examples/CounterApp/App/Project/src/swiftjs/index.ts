@@ -1,19 +1,49 @@
-import type { ButtonProps, DividerProps, ImageProps, StackProps, TextProps } from "./types"
+import type {
+  AngularGradientProps,
+  ButtonProps,
+  CapsuleProps,
+  CircleProps,
+  DividerProps,
+  EllipseProps,
+  ImageProps,
+  LinearGradientProps,
+  RadialGradientProps,
+  RectangleProps,
+  RoundedRectangleProps,
+  StackProps,
+  TextProps,
+} from "./types"
 
 export type {
+  AngularGradientProps,
+  AngularGradientValue,
   ButtonBorderShape,
   ButtonProps,
   ButtonStyle,
+  CapsuleProps,
+  CircleProps,
   ColorValue,
+  ContentAlignment,
   DividerProps,
+  EllipseProps,
   FontValue,
   FontWeight,
   FrameValue,
   GlassEffectValue,
+  GradientStop,
   ImageProps,
+  LinearGradientProps,
+  LinearGradientValue,
+  RadialGradientProps,
+  RadialGradientValue,
+  RectangleProps,
+  RoundedRectangleProps,
+  ShapeProps,
+  ShapeStyleValue,
   StackProps,
   SymbolRenderingMode,
   TextProps,
+  UnitPointValue,
   VisibilityKind,
   ViewProps,
 } from "./types"
@@ -70,5 +100,13 @@ export const VStack = hostComponent<StackProps>("VStack")
 export const HStack = hostComponent<StackProps>("HStack")
 export const Text = hostComponent<TextProps>("Text")
 export const Image = hostComponent<ImageProps>("Image")
+export const Rectangle = hostComponent<RectangleProps>("Rectangle")
+export const RoundedRectangle = hostComponent<RoundedRectangleProps>("RoundedRectangle")
+export const Circle = hostComponent<CircleProps>("Circle")
+export const Capsule = hostComponent<CapsuleProps>("Capsule")
+export const Ellipse = hostComponent<EllipseProps>("Ellipse")
+export const LinearGradient = hostComponent<LinearGradientProps>("LinearGradient")
+export const RadialGradient = hostComponent<RadialGradientProps>("RadialGradient")
+export const AngularGradient = hostComponent<AngularGradientProps>("AngularGradient")
 export const Divider = hostComponent<DividerProps>("Divider")
 export const Button = hostComponent<ButtonProps>("Button")

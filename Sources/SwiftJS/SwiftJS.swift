@@ -101,6 +101,18 @@ public enum ContentAlignment: String, Codable, Equatable, Sendable {
     case bottomTrailing
 }
 
+public enum UnitPointValue: String, Codable, Equatable, Sendable {
+    case center
+    case leading
+    case trailing
+    case top
+    case bottom
+    case topLeading
+    case topTrailing
+    case bottomLeading
+    case bottomTrailing
+}
+
 public enum ListStyleKind: String, Codable, Equatable, Sendable {
     case automatic
     case plain
@@ -123,6 +135,47 @@ public enum ImageInterpolation: String, Codable, Equatable, Sendable {
 public enum ImageSource: Equatable, Sendable {
     case system(String)
     case asset(String)
+}
+
+public struct GradientStopValue: Codable, Equatable, Sendable {
+    public let color: String
+    public let location: Double
+
+    public init(color: String, location: Double) {
+        self.color = color
+        self.location = location
+    }
+}
+
+public struct LinearGradientValue: Codable, Equatable, Sendable {
+    public let colors: [String]?
+    public let stops: [GradientStopValue]?
+    public let startPoint: UnitPointValue
+    public let endPoint: UnitPointValue
+}
+
+public struct RadialGradientValue: Codable, Equatable, Sendable {
+    public let colors: [String]?
+    public let stops: [GradientStopValue]?
+    public let center: UnitPointValue
+    public let startRadius: Double
+    public let endRadius: Double
+}
+
+public struct AngularGradientValue: Codable, Equatable, Sendable {
+    public let colors: [String]?
+    public let stops: [GradientStopValue]?
+    public let center: UnitPointValue
+    public let angle: Double?
+    public let startAngle: Double?
+    public let endAngle: Double?
+}
+
+public enum ShapeStyleValue: Equatable, Sendable {
+    case color(String)
+    case linearGradient(LinearGradientValue)
+    case radialGradient(RadialGradientValue)
+    case angularGradient(AngularGradientValue)
 }
 
 public enum PickerSelectionValue: Equatable, Hashable, Sendable, Codable {
@@ -212,6 +265,101 @@ public enum CustomHostValue: Equatable, Sendable, Codable {
             try container.encode(value)
         case let .object(value):
             try container.encode(value)
+        }
+    }
+}
+
+extension ShapeStyleValue: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case value
+        case colors
+        case stops
+        case startPoint
+        case endPoint
+        case center
+        case startRadius
+        case endRadius
+        case angle
+        case startAngle
+        case endAngle
+    }
+
+    public init(from decoder: Decoder) throws {
+        if let container = try? decoder.singleValueContainer(),
+           let value = try? container.decode(String.self) {
+            self = .color(value)
+            return
+        }
+
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+
+        switch type {
+        case "LinearGradient":
+            self = .linearGradient(
+                LinearGradientValue(
+                    colors: try container.decodeIfPresent([String].self, forKey: .colors),
+                    stops: try container.decodeIfPresent([GradientStopValue].self, forKey: .stops),
+                    startPoint: try container.decode(UnitPointValue.self, forKey: .startPoint),
+                    endPoint: try container.decode(UnitPointValue.self, forKey: .endPoint)
+                )
+            )
+        case "RadialGradient":
+            self = .radialGradient(
+                RadialGradientValue(
+                    colors: try container.decodeIfPresent([String].self, forKey: .colors),
+                    stops: try container.decodeIfPresent([GradientStopValue].self, forKey: .stops),
+                    center: try container.decodeIfPresent(UnitPointValue.self, forKey: .center) ?? .center,
+                    startRadius: try container.decodeIfPresent(Double.self, forKey: .startRadius) ?? 0,
+                    endRadius: try container.decode(Double.self, forKey: .endRadius)
+                )
+            )
+        case "AngularGradient":
+            self = .angularGradient(
+                AngularGradientValue(
+                    colors: try container.decodeIfPresent([String].self, forKey: .colors),
+                    stops: try container.decodeIfPresent([GradientStopValue].self, forKey: .stops),
+                    center: try container.decodeIfPresent(UnitPointValue.self, forKey: .center) ?? .center,
+                    angle: try container.decodeIfPresent(Double.self, forKey: .angle),
+                    startAngle: try container.decodeIfPresent(Double.self, forKey: .startAngle),
+                    endAngle: try container.decodeIfPresent(Double.self, forKey: .endAngle)
+                )
+            )
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unsupported shape style type '\(type)'")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case let .color(value):
+            var container = encoder.singleValueContainer()
+            try container.encode(value)
+        case let .linearGradient(value):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode("LinearGradient", forKey: .type)
+            try container.encodeIfPresent(value.colors, forKey: .colors)
+            try container.encodeIfPresent(value.stops, forKey: .stops)
+            try container.encode(value.startPoint, forKey: .startPoint)
+            try container.encode(value.endPoint, forKey: .endPoint)
+        case let .radialGradient(value):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode("RadialGradient", forKey: .type)
+            try container.encodeIfPresent(value.colors, forKey: .colors)
+            try container.encodeIfPresent(value.stops, forKey: .stops)
+            try container.encode(value.center, forKey: .center)
+            try container.encode(value.startRadius, forKey: .startRadius)
+            try container.encode(value.endRadius, forKey: .endRadius)
+        case let .angularGradient(value):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode("AngularGradient", forKey: .type)
+            try container.encodeIfPresent(value.colors, forKey: .colors)
+            try container.encodeIfPresent(value.stops, forKey: .stops)
+            try container.encode(value.center, forKey: .center)
+            try container.encodeIfPresent(value.angle, forKey: .angle)
+            try container.encodeIfPresent(value.startAngle, forKey: .startAngle)
+            try container.encodeIfPresent(value.endAngle, forKey: .endAngle)
         }
     }
 }
@@ -341,8 +489,9 @@ public struct ViewModifiers: Equatable, Sendable {
     public var frameMaxHeight: Bool
     public var frameMaxWidthValue: Double?
     public var frameMaxHeightValue: Double?
-    public var background: String?
+    public var background: ShapeStyleValue?
     public var foregroundColor: String?
+    public var foregroundStyle: ShapeStyleValue?
     public var cornerRadius: Double?
     public var fontStyle: TextStyle?
     public var fontSize: Double?
@@ -378,8 +527,9 @@ public struct ViewModifiers: Equatable, Sendable {
         frameMaxHeight: Bool = false,
         frameMaxWidthValue: Double? = nil,
         frameMaxHeightValue: Double? = nil,
-        background: String? = nil,
+        background: ShapeStyleValue? = nil,
         foregroundColor: String? = nil,
+        foregroundStyle: ShapeStyleValue? = nil,
         cornerRadius: Double? = nil,
         fontStyle: TextStyle? = nil,
         fontSize: Double? = nil,
@@ -416,6 +566,7 @@ public struct ViewModifiers: Equatable, Sendable {
         self.frameMaxHeightValue = frameMaxHeightValue
         self.background = background
         self.foregroundColor = foregroundColor
+        self.foregroundStyle = foregroundStyle
         self.cornerRadius = cornerRadius
         self.fontStyle = fontStyle
         self.fontSize = fontSize
@@ -562,6 +713,57 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         source: ImageSource,
         modifiers: ViewModifiers
     )
+    case rectangle(
+        id: NodeID,
+        fill: ShapeStyleValue?,
+        stroke: ShapeStyleValue?,
+        lineWidth: Double?,
+        modifiers: ViewModifiers
+    )
+    case roundedRectangle(
+        id: NodeID,
+        cornerRadius: Double,
+        fill: ShapeStyleValue?,
+        stroke: ShapeStyleValue?,
+        lineWidth: Double?,
+        modifiers: ViewModifiers
+    )
+    case circle(
+        id: NodeID,
+        fill: ShapeStyleValue?,
+        stroke: ShapeStyleValue?,
+        lineWidth: Double?,
+        modifiers: ViewModifiers
+    )
+    case capsule(
+        id: NodeID,
+        fill: ShapeStyleValue?,
+        stroke: ShapeStyleValue?,
+        lineWidth: Double?,
+        modifiers: ViewModifiers
+    )
+    case ellipse(
+        id: NodeID,
+        fill: ShapeStyleValue?,
+        stroke: ShapeStyleValue?,
+        lineWidth: Double?,
+        modifiers: ViewModifiers
+    )
+    case linearGradient(
+        id: NodeID,
+        value: LinearGradientValue,
+        modifiers: ViewModifiers
+    )
+    case radialGradient(
+        id: NodeID,
+        value: RadialGradientValue,
+        modifiers: ViewModifiers
+    )
+    case angularGradient(
+        id: NodeID,
+        value: AngularGradientValue,
+        modifiers: ViewModifiers
+    )
     case divider(
         id: NodeID,
         modifiers: ViewModifiers
@@ -613,6 +815,14 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .text(id, _, _),
              let .label(id, _, _, _),
              let .image(id, _, _),
+             let .rectangle(id, _, _, _, _),
+             let .roundedRectangle(id, _, _, _, _, _),
+             let .circle(id, _, _, _, _),
+             let .capsule(id, _, _, _, _),
+             let .ellipse(id, _, _, _, _),
+             let .linearGradient(id, _, _),
+             let .radialGradient(id, _, _),
+             let .angularGradient(id, _, _),
              let .divider(id, _),
              let .button(id, _, _, _, _),
              let .picker(id, _, _, _, _, _, _),
@@ -643,6 +853,14 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .text(_, _, modifiers),
              let .label(_, _, _, modifiers),
              let .image(_, _, modifiers),
+             let .rectangle(_, _, _, _, modifiers),
+             let .roundedRectangle(_, _, _, _, _, modifiers),
+             let .circle(_, _, _, _, modifiers),
+             let .capsule(_, _, _, _, modifiers),
+             let .ellipse(_, _, _, _, modifiers),
+             let .linearGradient(_, _, modifiers),
+             let .radialGradient(_, _, modifiers),
+             let .angularGradient(_, _, modifiers),
              let .divider(_, modifiers),
              let .button(_, _, _, modifiers, _),
              let .picker(_, _, _, _, _, modifiers, _),
@@ -1297,6 +1515,38 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 imageView(source, modifiers: modifiers)
             )
+        case let .rectangle(_, fill, stroke, lineWidth, modifiers):
+            applyCommonModifiers(
+                shapeView(Rectangle(), fill: fill, stroke: stroke, lineWidth: lineWidth, modifiers: modifiers)
+            )
+        case let .roundedRectangle(_, cornerRadius, fill, stroke, lineWidth, modifiers):
+            applyCommonModifiers(
+                shapeView(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
+                    fill: fill,
+                    stroke: stroke,
+                    lineWidth: lineWidth,
+                    modifiers: modifiers
+                )
+            )
+        case let .circle(_, fill, stroke, lineWidth, modifiers):
+            applyCommonModifiers(
+                shapeView(Circle(), fill: fill, stroke: stroke, lineWidth: lineWidth, modifiers: modifiers)
+            )
+        case let .capsule(_, fill, stroke, lineWidth, modifiers):
+            applyCommonModifiers(
+                shapeView(Capsule(), fill: fill, stroke: stroke, lineWidth: lineWidth, modifiers: modifiers)
+            )
+        case let .ellipse(_, fill, stroke, lineWidth, modifiers):
+            applyCommonModifiers(
+                shapeView(Ellipse(), fill: fill, stroke: stroke, lineWidth: lineWidth, modifiers: modifiers)
+            )
+        case let .linearGradient(_, value, _):
+            applyCommonModifiers(linearGradientView(value))
+        case let .radialGradient(_, value, _):
+            applyCommonModifiers(radialGradientView(value))
+        case let .angularGradient(_, value, _):
+            applyCommonModifiers(angularGradientView(value))
         case .divider:
             applyCommonModifiers(Divider())
         case let .button(_, title, event, modifiers, children):
@@ -1431,6 +1681,65 @@ private struct RenderNodeView: View {
             }
         } else {
             Text("Missing GeometryReader handler: \(id.rawValue)")
+        }
+    }
+
+    private func linearGradientView(_ value: LinearGradientValue) -> some View {
+        LinearGradient(
+            gradient: value.swiftUIGradient,
+            startPoint: value.startPoint.swiftUIUnitPoint,
+            endPoint: value.endPoint.swiftUIUnitPoint
+        )
+    }
+
+    private func radialGradientView(_ value: RadialGradientValue) -> some View {
+        RadialGradient(
+            gradient: value.swiftUIGradient,
+            center: value.center.swiftUIUnitPoint,
+            startRadius: value.startRadius,
+            endRadius: value.endRadius
+        )
+    }
+
+    @ViewBuilder
+    private func angularGradientView(_ value: AngularGradientValue) -> some View {
+        if let angle = value.angle {
+            AngularGradient(
+                gradient: value.swiftUIGradient,
+                center: value.center.swiftUIUnitPoint,
+                angle: .degrees(angle)
+            )
+        } else {
+            AngularGradient(
+                gradient: value.swiftUIGradient,
+                center: value.center.swiftUIUnitPoint,
+                startAngle: .degrees(value.startAngle ?? 0),
+                endAngle: .degrees(value.endAngle ?? 360)
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func shapeView<S: Shape>(
+        _ shape: S,
+        fill: ShapeStyleValue?,
+        stroke: ShapeStyleValue?,
+        lineWidth: Double?,
+        modifiers: ViewModifiers
+    ) -> some View {
+        let fillStyle = fill?.swiftUIShapeStyle ?? modifiers.foregroundShapeStyle
+        let width = CGFloat(lineWidth ?? 1)
+
+        ZStack {
+            if let fillStyle {
+                shape.fill(fillStyle)
+            } else if stroke == nil {
+                shape.fill(modifiers.defaultShapeStyle)
+            }
+
+            if let stroke {
+                shape.stroke(stroke.swiftUIShapeStyle, lineWidth: width)
+            }
         }
     }
 
@@ -2047,7 +2356,9 @@ private struct NodeAppearanceModifier: ViewModifier {
             .fontWeight(modifiers.swiftUIFontWeight)
             .symbolRenderingMode(modifiers.swiftUISymbolRenderingMode)
 
-        if let foregroundColor = modifiers.swiftUIColor {
+        if let foregroundStyle = modifiers.foregroundShapeStyle {
+            styled.foregroundStyle(foregroundStyle)
+        } else if let foregroundColor = modifiers.swiftUIColor {
             styled.foregroundStyle(foregroundColor)
         } else {
             styled
@@ -2096,8 +2407,12 @@ private struct CommonNodeModifier: ViewModifier {
 
     @ViewBuilder
     private func backgroundStyled<Content: View>(_ content: Content) -> some View {
-        if let background = modifiers.backgroundColor {
-            clipped(content.background(background))
+        if let backgroundStyle = modifiers.backgroundShapeStyle {
+            clipped(
+                content.background {
+                    Rectangle().fill(backgroundStyle)
+                }
+            )
         } else {
             clipped(content)
         }
@@ -2194,8 +2509,12 @@ private final class HostNode: Decodable {
     let frameMaxHeight: Bool?
     let frameMaxWidthValue: Double?
     let frameMaxHeightValue: Double?
-    let background: String?
+    let background: ShapeStyleValue?
     let foregroundColor: String?
+    let foregroundStyle: ShapeStyleValue?
+    let fill: ShapeStyleValue?
+    let stroke: ShapeStyleValue?
+    let lineWidth: Double?
     let cornerRadius: Double?
     let fontName: TextStyle?
     let fontSize: Double?
@@ -2225,6 +2544,16 @@ private final class HostNode: Decodable {
     let isOn: Bool?
     let selection: PickerSelectionValue?
     let options: [PickerOption]?
+    let colors: [String]?
+    let stops: [GradientStopValue]?
+    let startPoint: UnitPointValue?
+    let endPoint: UnitPointValue?
+    let center: UnitPointValue?
+    let startRadius: Double?
+    let endRadius: Double?
+    let angle: Double?
+    let startAngle: Double?
+    let endAngle: Double?
     let destination: HostNode?
     let customName: String?
     let customValues: [String: CustomHostValue]?
@@ -2414,6 +2743,69 @@ private final class HostNode: Decodable {
                 source: source,
                 modifiers: modifiers
             )
+        case .rectangle:
+            return .rectangle(
+                id: NodeID(id),
+                fill: fill,
+                stroke: stroke,
+                lineWidth: lineWidth,
+                modifiers: modifiers
+            )
+        case .roundedRectangle:
+            guard let cornerRadius else {
+                throw JSSurfaceError.invalidTree("RoundedRectangle node '\(id)' is missing a cornerRadius")
+            }
+
+            return .roundedRectangle(
+                id: NodeID(id),
+                cornerRadius: cornerRadius,
+                fill: fill,
+                stroke: stroke,
+                lineWidth: lineWidth,
+                modifiers: modifiers
+            )
+        case .circle:
+            return .circle(
+                id: NodeID(id),
+                fill: fill,
+                stroke: stroke,
+                lineWidth: lineWidth,
+                modifiers: modifiers
+            )
+        case .capsule:
+            return .capsule(
+                id: NodeID(id),
+                fill: fill,
+                stroke: stroke,
+                lineWidth: lineWidth,
+                modifiers: modifiers
+            )
+        case .ellipse:
+            return .ellipse(
+                id: NodeID(id),
+                fill: fill,
+                stroke: stroke,
+                lineWidth: lineWidth,
+                modifiers: modifiers
+            )
+        case .linearGradient:
+            return .linearGradient(
+                id: NodeID(id),
+                value: try makeLinearGradientValue(),
+                modifiers: modifiers
+            )
+        case .radialGradient:
+            return .radialGradient(
+                id: NodeID(id),
+                value: try makeRadialGradientValue(),
+                modifiers: modifiers
+            )
+        case .angularGradient:
+            return .angularGradient(
+                id: NodeID(id),
+                value: try makeAngularGradientValue(),
+                modifiers: modifiers
+            )
         case .divider:
             return .divider(
                 id: NodeID(id),
@@ -2516,6 +2908,7 @@ private final class HostNode: Decodable {
             frameMaxHeightValue: frameMaxHeightValue,
             background: background,
             foregroundColor: foregroundColor,
+            foregroundStyle: foregroundStyle,
             cornerRadius: cornerRadius,
             fontStyle: fontName,
             fontSize: fontSize,
@@ -2538,6 +2931,44 @@ private final class HostNode: Decodable {
             compactVertical: compactVertical ?? false,
             onAppearEvent: onAppearEvent.map { SurfaceEvent($0) }
         )
+    }
+
+    private func makeLinearGradientValue() throws -> LinearGradientValue {
+        LinearGradientValue(
+            colors: colors,
+            stops: stops,
+            startPoint: try required(startPoint, name: "startPoint"),
+            endPoint: try required(endPoint, name: "endPoint")
+        )
+    }
+
+    private func makeRadialGradientValue() throws -> RadialGradientValue {
+        RadialGradientValue(
+            colors: colors,
+            stops: stops,
+            center: center ?? .center,
+            startRadius: startRadius ?? 0,
+            endRadius: try required(endRadius, name: "endRadius")
+        )
+    }
+
+    private func makeAngularGradientValue() throws -> AngularGradientValue {
+        AngularGradientValue(
+            colors: colors,
+            stops: stops,
+            center: center ?? .center,
+            angle: angle,
+            startAngle: startAngle,
+            endAngle: endAngle
+        )
+    }
+
+    private func required<Value>(_ value: Value?, name: String) throws -> Value {
+        guard let value else {
+            throw JSSurfaceError.invalidTree("\(type.rawValue) node '\(id)' is missing a \(name)")
+        }
+
+        return value
     }
 }
 
@@ -2562,6 +2993,14 @@ private enum HostComponentType: String, Decodable {
     case text = "Text"
     case label = "Label"
     case image = "Image"
+    case rectangle = "Rectangle"
+    case roundedRectangle = "RoundedRectangle"
+    case circle = "Circle"
+    case capsule = "Capsule"
+    case ellipse = "Ellipse"
+    case linearGradient = "LinearGradient"
+    case radialGradient = "RadialGradient"
+    case angularGradient = "AngularGradient"
     case divider = "Divider"
     case button = "Button"
     case picker = "Picker"
@@ -2638,12 +3077,20 @@ private extension ViewModifiers {
         }
     }
 
-    var backgroundColor: Color? {
-        background.flatMap(Color.named(_:))
-    }
-
     var swiftUIColor: Color? {
         foregroundColor.flatMap(Color.named(_:))
+    }
+
+    var backgroundShapeStyle: AnyShapeStyle? {
+        background?.swiftUIShapeStyle
+    }
+
+    var foregroundShapeStyle: AnyShapeStyle? {
+        foregroundStyle?.swiftUIShapeStyle
+    }
+
+    var defaultShapeStyle: AnyShapeStyle {
+        foregroundShapeStyle ?? swiftUIColor.map(AnyShapeStyle.init) ?? AnyShapeStyle(.foreground)
     }
 
     var swiftUISymbolRenderingMode: SwiftUI.SymbolRenderingMode? {
@@ -2694,6 +3141,84 @@ private extension ViewModifiers {
     }
 }
 
+private extension ShapeStyleValue {
+    var swiftUIShapeStyle: AnyShapeStyle {
+        switch self {
+        case let .color(value):
+            AnyShapeStyle(Color.named(value) ?? Color(value))
+        case let .linearGradient(value):
+            AnyShapeStyle(
+                LinearGradient(
+                    gradient: value.swiftUIGradient,
+                    startPoint: value.startPoint.swiftUIUnitPoint,
+                    endPoint: value.endPoint.swiftUIUnitPoint
+                )
+            )
+        case let .radialGradient(value):
+            AnyShapeStyle(
+                RadialGradient(
+                    gradient: value.swiftUIGradient,
+                    center: value.center.swiftUIUnitPoint,
+                    startRadius: value.startRadius,
+                    endRadius: value.endRadius
+                )
+            )
+        case let .angularGradient(value):
+            if let angle = value.angle {
+                AnyShapeStyle(
+                    AngularGradient(
+                        gradient: value.swiftUIGradient,
+                        center: value.center.swiftUIUnitPoint,
+                        angle: .degrees(angle)
+                    )
+                )
+            } else {
+                AnyShapeStyle(
+                    AngularGradient(
+                        gradient: value.swiftUIGradient,
+                        center: value.center.swiftUIUnitPoint,
+                        startAngle: .degrees(value.startAngle ?? 0),
+                        endAngle: .degrees(value.endAngle ?? 360)
+                    )
+                )
+            }
+        }
+    }
+}
+
+private extension LinearGradientValue {
+    var swiftUIGradient: Gradient {
+        makeGradient(colors: colors, stops: stops)
+    }
+}
+
+private extension RadialGradientValue {
+    var swiftUIGradient: Gradient {
+        makeGradient(colors: colors, stops: stops)
+    }
+}
+
+private extension AngularGradientValue {
+    var swiftUIGradient: Gradient {
+        makeGradient(colors: colors, stops: stops)
+    }
+}
+
+private func makeGradient(colors: [String]?, stops: [GradientStopValue]?) -> Gradient {
+    if let stops, !stops.isEmpty {
+        return Gradient(
+            stops: stops.map { stop in
+                Gradient.Stop(
+                    color: Color.named(stop.color) ?? Color(stop.color),
+                    location: stop.location
+                )
+            }
+        )
+    }
+
+    return Gradient(colors: (colors ?? ["clear", "clear"]).map { Color.named($0) ?? Color($0) })
+}
+
 @available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *)
 private func glassValue(for modifiers: ViewModifiers) -> SwiftUI.Glass {
     if let tint = modifiers.glassTint.flatMap(Color.named(_:)) {
@@ -2720,6 +3245,16 @@ private extension Color {
             return .blue
         case "orange":
             return .orange
+        case "pink":
+            return .pink
+        case "purple":
+            return .purple
+        case "cyan":
+            return .cyan
+        case "gray", "grey":
+            return .gray
+        case "black":
+            return .black
         case "mint":
             return .mint
         case "indigo":
@@ -2816,6 +3351,31 @@ private extension AxisKind {
             return .vertical
         case .horizontal:
             return .horizontal
+        }
+    }
+}
+
+private extension UnitPointValue {
+    var swiftUIUnitPoint: UnitPoint {
+        switch self {
+        case .center:
+            .center
+        case .leading:
+            .leading
+        case .trailing:
+            .trailing
+        case .top:
+            .top
+        case .bottom:
+            .bottom
+        case .topLeading:
+            .topLeading
+        case .topTrailing:
+            .topTrailing
+        case .bottomLeading:
+            .bottomLeading
+        case .bottomTrailing:
+            .bottomTrailing
         }
     }
 }

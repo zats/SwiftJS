@@ -350,6 +350,60 @@
         }
 
         throw new Error("Image requires a systemName or name prop")
+      case "Rectangle":
+      case "Circle":
+      case "Capsule":
+      case "Ellipse":
+        node.fill = serializeShapeStyle(props.fill, path + ".fill")
+        node.stroke = serializeShapeStyle(props.stroke, path + ".stroke")
+        if (typeof props.lineWidth === "number") {
+          node.lineWidth = props.lineWidth
+        }
+        return node
+      case "RoundedRectangle":
+        if (typeof props.cornerRadius !== "number") {
+          throw new Error("RoundedRectangle requires a cornerRadius prop")
+        }
+
+        node.cornerRadius = props.cornerRadius
+        node.fill = serializeShapeStyle(props.fill, path + ".fill")
+        node.stroke = serializeShapeStyle(props.stroke, path + ".stroke")
+        if (typeof props.lineWidth === "number") {
+          node.lineWidth = props.lineWidth
+        }
+        return node
+      case "LinearGradient":
+        serializeGradient(node, type, props)
+        return node
+      case "RadialGradient":
+        serializeGradient(node, type, props)
+        if (typeof props.center === "string") {
+          node.center = props.center
+        }
+        if (typeof props.startRadius === "number") {
+          node.startRadius = props.startRadius
+        }
+        if (typeof props.endRadius === "number") {
+          node.endRadius = props.endRadius
+        } else {
+          throw new Error("RadialGradient requires an endRadius prop")
+        }
+        return node
+      case "AngularGradient":
+        serializeGradient(node, type, props)
+        if (typeof props.center === "string") {
+          node.center = props.center
+        }
+        if (typeof props.angle === "number") {
+          node.angle = props.angle
+        }
+        if (typeof props.startAngle === "number") {
+          node.startAngle = props.startAngle
+        }
+        if (typeof props.endAngle === "number") {
+          node.endAngle = props.endAngle
+        }
+        return node
       case "Divider":
         return node
       case "Button":
@@ -433,13 +487,12 @@
       node.frameMaxHeight = true
     }
 
-    if (typeof props.background === "string") {
-      node.background = props.background
-    }
-
     if (typeof props.foregroundColor === "string") {
       node.foregroundColor = props.foregroundColor
     }
+
+    node.background = serializeShapeStyle(props.background, id + ".background")
+    node.foregroundStyle = serializeShapeStyle(props.foregroundStyle, id + ".foregroundStyle")
 
     if (typeof props.cornerRadius === "number") {
       node.cornerRadius = props.cornerRadius
@@ -543,6 +596,88 @@
     }
 
     return node
+  }
+
+  function serializeGradient(node, type, props) {
+    node.type = type
+
+    if (Array.isArray(props.colors)) {
+      node.colors = props.colors.map(function (color) {
+        if (typeof color !== "string") {
+          throw new Error(type + " colors must be strings")
+        }
+
+        return color
+      })
+    }
+
+    if (Array.isArray(props.stops)) {
+      node.stops = props.stops.map(function (stop) {
+        if (
+          !stop ||
+          typeof stop !== "object" ||
+          typeof stop.color !== "string" ||
+          typeof stop.location !== "number"
+        ) {
+          throw new Error(type + " stops must be { color, location } objects")
+        }
+
+        return { color: stop.color, location: stop.location }
+      })
+    }
+
+    if (!node.colors && !node.stops) {
+      throw new Error(type + " requires colors or stops")
+    }
+
+    if (type === "LinearGradient") {
+      if (typeof props.startPoint !== "string" || typeof props.endPoint !== "string") {
+        throw new Error("LinearGradient requires startPoint and endPoint props")
+      }
+
+      node.startPoint = props.startPoint
+      node.endPoint = props.endPoint
+    }
+  }
+
+  function serializeShapeStyle(value, path) {
+    if (typeof value === "string") {
+      return value
+    }
+
+    if (value === undefined || value === null) {
+      return undefined
+    }
+
+    const resolved = resolveElement(normalizeStyleElement(value), path)
+    if (!resolved || typeof resolved !== "object" || Array.isArray(resolved)) {
+      throw new Error("Shape style values must be a color string or gradient component")
+    }
+
+    if (
+      resolved.type !== "LinearGradient" &&
+      resolved.type !== "RadialGradient" &&
+      resolved.type !== "AngularGradient"
+    ) {
+      throw new Error("Only gradient components can be used as shape styles")
+    }
+
+    return resolved
+  }
+
+  function normalizeStyleElement(value) {
+    if (
+      value &&
+      typeof value === "object" &&
+      typeof value.type === "string" &&
+      !("props" in value)
+    ) {
+      const props = Object.assign({}, value)
+      delete props.type
+      return { type: value.type, props: props }
+    }
+
+    return value
   }
 
   function serializeCustomValues(values) {

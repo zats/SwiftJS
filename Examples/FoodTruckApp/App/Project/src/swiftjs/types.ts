@@ -14,6 +14,7 @@ export type ContentAlignment =
   | "topTrailing"
   | "bottomLeading"
   | "bottomTrailing"
+export type UnitPointValue = ContentAlignment
 export type AxisValue = "vertical" | "horizontal"
 export type StackDistribution = "natural" | "fillEqually"
 export type ListStyle = "automatic" | "plain" | "insetGrouped" | "sidebar"
@@ -51,8 +52,9 @@ export type ViewProps = {
   paddingTop?: number
   frame?: FrameValue
   alignment?: ContentAlignment
-  background?: ColorValue
+  background?: ShapeStyleValue
   foregroundColor?: ColorValue
+  foregroundStyle?: ShapeStyleValue
   cornerRadius?: number
   navigationTitle?: string
   /** Controls the chevron visibility SwiftUI applies to navigation links. */
@@ -158,6 +160,58 @@ export type TextProps = ViewProps & {
   font?: FontValue
   fontWeight?: FontWeight
 }
+
+export type GradientStop = {
+  color: ColorValue
+  location: number
+}
+
+type LinearGradientBase = {
+  colors?: ColorValue[]
+  stops?: GradientStop[]
+  startPoint: UnitPointValue
+  endPoint: UnitPointValue
+}
+
+type RadialGradientBase = {
+  colors?: ColorValue[]
+  stops?: GradientStop[]
+  center?: UnitPointValue
+  startRadius?: number
+  endRadius: number
+}
+
+type AngularGradientBase = {
+  colors?: ColorValue[]
+  stops?: GradientStop[]
+  center?: UnitPointValue
+  angle?: number
+  startAngle?: number
+  endAngle?: number
+}
+
+export type LinearGradientValue = { type: "LinearGradient" } & LinearGradientBase
+export type RadialGradientValue = { type: "RadialGradient" } & RadialGradientBase
+export type AngularGradientValue = { type: "AngularGradient" } & AngularGradientBase
+export type ShapeStyleValue = ColorValue | LinearGradientValue | RadialGradientValue | AngularGradientValue
+
+export type ShapeProps = ViewProps & {
+  fill?: ShapeStyleValue
+  stroke?: ShapeStyleValue
+  lineWidth?: number
+}
+
+export type RectangleProps = ShapeProps
+export type CircleProps = ShapeProps
+export type CapsuleProps = ShapeProps
+export type EllipseProps = ShapeProps
+export type RoundedRectangleProps = ShapeProps & {
+  cornerRadius: number
+}
+
+export type LinearGradientProps = ViewProps & LinearGradientBase
+export type RadialGradientProps = ViewProps & RadialGradientBase
+export type AngularGradientProps = ViewProps & AngularGradientBase
 
 export type ButtonProps = ViewProps & {
   action: () => void
