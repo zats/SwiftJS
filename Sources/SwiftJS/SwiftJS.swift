@@ -729,6 +729,7 @@ public struct JSSurfaceView: View {
     }
 
     public var body: some View {
+        let _ = runtime.rootVersion
         Group {
             if let rootNode = runtime.rootNode {
                 SurfaceView(root: rootNode, onEvent: runtime.dispatch, customHostRegistry: runtime.customHostRegistry)
@@ -747,7 +748,9 @@ public struct JSSurfaceView: View {
 @Observable
 @MainActor
 public final class JSSurfaceRuntime {
-    public private(set) var rootNode: ViewNode?
+    @ObservationIgnored private var currentRootNode: ViewNode?
+    @ObservationIgnored private var lastTreePayload: String?
+    public private(set) var rootVersion = 0
     public private(set) var errorMessage: String?
     public private(set) var customHostRegistry: CustomHostRegistry
 
@@ -758,6 +761,10 @@ public final class JSSurfaceRuntime {
     private let encoder = JSONEncoder()
     private var didStart = false
     private var activeLayoutMeasurementStack: [(Int, ProposedViewSize) -> CGSize] = []
+
+    public var rootNode: ViewNode? {
+        currentRootNode
+    }
 
     public init(
         source: JSScriptSource,
@@ -820,7 +827,8 @@ public final class JSSurfaceRuntime {
     }
 
     public func reload() {
-        rootNode = nil
+        currentRootNode = nil
+        lastTreePayload = nil
         errorMessage = nil
         didStart = false
         context = Self.makeContext()
@@ -1017,10 +1025,16 @@ public final class JSSurfaceRuntime {
     }
 
     private func applyTreeJSON(_ payload: String) {
+        if lastTreePayload == payload {
+            return
+        }
+
         do {
             let data = Data(payload.utf8)
             let hostNode = try decoder.decode(HostNode.self, from: data)
-            rootNode = try hostNode.makeViewNode()
+            currentRootNode = try hostNode.makeViewNode()
+            lastTreePayload = payload
+            rootVersion += 1
             errorMessage = nil
         } catch {
             report(error)
