@@ -768,9 +768,7 @@ public final class JSSurfaceRuntime {
         self.customHostRegistry = customHostRegistry
         self.modulesByName = Self.makeModulesByName(modules)
         self.context = Self.makeContext()
-        installBridge()
-        installGeometryReaderBridge()
-        installJavaScriptLayoutBridge()
+        initializeContext()
     }
 
     public func start() {
@@ -786,6 +784,18 @@ public final class JSSurfaceRuntime {
         } catch {
             didStart = false
             report(error)
+        }
+    }
+
+    public func validate() throws {
+        start()
+
+        if let errorMessage, !errorMessage.isEmpty {
+            throw JSSurfaceError.invalidTree(errorMessage)
+        }
+
+        guard rootNode != nil else {
+            throw JSSurfaceError.missingRootNode
         }
     }
 
@@ -814,10 +824,14 @@ public final class JSSurfaceRuntime {
         errorMessage = nil
         didStart = false
         context = Self.makeContext()
+        initializeContext()
+        start()
+    }
+
+    private func initializeContext() {
         installBridge()
         installGeometryReaderBridge()
         installJavaScriptLayoutBridge()
-        start()
     }
 
     private func installBridge() {
