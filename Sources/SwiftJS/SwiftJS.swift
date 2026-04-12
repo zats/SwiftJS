@@ -38,18 +38,26 @@ public enum TextStyle: String, Codable, Equatable, Sendable {
     case largeTitle
     case title
     case title2
+    case title3
     case headline
     case subheadline
     case body
+    case callout
     case caption
+    case caption2
     case footnote
 }
 
 public enum FontWeight: String, Codable, Equatable, Sendable {
+    case ultraLight
+    case thin
+    case light
     case regular
     case medium
     case semibold
     case bold
+    case heavy
+    case black
 }
 
 public enum SymbolRenderingMode: String, Codable, Equatable, Sendable {
@@ -65,6 +73,8 @@ public enum VisibilityKind: String, Codable, Equatable, Sendable {
 }
 
 public enum ButtonStyle: String, Codable, Equatable, Sendable {
+    case automatic
+    case borderless
     case plain
     case bordered
     case borderedProminent
@@ -116,8 +126,73 @@ public enum UnitPointValue: String, Codable, Equatable, Sendable {
 public enum ListStyleKind: String, Codable, Equatable, Sendable {
     case automatic
     case plain
+    case grouped
+    case inset
     case insetGrouped
     case sidebar
+}
+
+public enum TextAlignmentKind: String, Codable, Equatable, Sendable {
+    case leading
+    case center
+    case trailing
+}
+
+public enum TruncationModeKind: String, Codable, Equatable, Sendable {
+    case head
+    case middle
+    case tail
+}
+
+public enum NavigationBarTitleDisplayModeKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case inline
+    case large
+}
+
+public enum ColorSchemeKind: String, Codable, Equatable, Sendable {
+    case light
+    case dark
+}
+
+public enum GlassVariantKind: String, Codable, Equatable, Sendable {
+    case regular
+    case clear
+}
+
+public enum EdgeKind: String, Codable, Equatable, Sendable {
+    case top
+    case bottom
+    case leading
+    case trailing
+}
+
+public enum EdgeSetKind: String, Codable, Equatable, Sendable {
+    case all
+    case horizontal
+    case vertical
+    case top
+    case bottom
+    case leading
+    case trailing
+}
+
+public enum ContentMarginPlacementKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case scrollContent
+    case scrollIndicators
+}
+
+public enum ToolbarItemPlacementKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case principal
+    case topBarLeading
+    case topBarTrailing
+    case bottomBar
+    case status
+    case cancellationAction
+    case confirmationAction
+    case primaryAction
 }
 
 public enum ImageContentMode: String, Codable, Equatable, Sendable {
@@ -226,6 +301,136 @@ public struct PickerOption: Equatable, Hashable, Sendable, Codable {
         self.title = title
         self.value = value
     }
+}
+
+public enum BadgeValue: Equatable, Hashable, Sendable, Codable {
+    case string(String)
+    case number(Double)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+
+        if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else {
+            self = .string(try container.decode(String.self))
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+
+        switch self {
+        case let .string(value):
+            try container.encode(value)
+        case let .number(value):
+            try container.encode(value)
+        }
+    }
+}
+
+public struct EdgeInsetsValue: Codable, Equatable, Sendable {
+    public let top: Double?
+    public let leading: Double?
+    public let bottom: Double?
+    public let trailing: Double?
+}
+
+public struct ContentMarginsValue: Codable, Equatable, Sendable {
+    public let edges: EdgeSetKind
+    public let amount: Double
+    public let placement: ContentMarginPlacementKind
+}
+
+public struct SafeAreaInsetValue: Equatable, Sendable {
+    public let edge: EdgeKind
+    public let spacing: Double?
+    public let content: ViewNode
+}
+
+public struct ToolbarItemValue: Equatable, Sendable {
+    public let placement: ToolbarItemPlacementKind
+    public let content: ViewNode
+}
+
+public enum DialogActionRoleKind: String, Codable, Equatable, Sendable {
+    case cancel
+    case destructive
+}
+
+public struct DialogActionValue: Codable, Equatable, Sendable {
+    public let title: String
+    public let role: DialogActionRoleKind?
+    public let event: String?
+}
+
+public struct AlertValue: Equatable, Sendable {
+    public let title: String
+    public let isPresented: Bool
+    public let message: ViewNode?
+    public let actions: [DialogActionValue]
+}
+
+public struct ConfirmationDialogValue: Equatable, Sendable {
+    public let title: String
+    public let isPresented: Bool
+    public let titleVisibility: VisibilityKind
+    public let message: ViewNode?
+    public let actions: [DialogActionValue]
+}
+
+public enum PresentationDetentValue: Equatable, Sendable, Codable {
+    case medium
+    case large
+    case fraction(Double)
+    case height(Double)
+
+    private enum CodingKeys: String, CodingKey {
+        case kind
+        case value
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try container.decode(String.self, forKey: .kind)
+
+        switch kind {
+        case "medium":
+            self = .medium
+        case "large":
+            self = .large
+        case "fraction":
+            self = .fraction(try container.decode(Double.self, forKey: .value))
+        case "height":
+            self = .height(try container.decode(Double.self, forKey: .value))
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unsupported presentation detent '\(kind)'")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case .medium:
+            try container.encode("medium", forKey: .kind)
+        case .large:
+            try container.encode("large", forKey: .kind)
+        case let .fraction(value):
+            try container.encode("fraction", forKey: .kind)
+            try container.encode(value, forKey: .value)
+        case let .height(value):
+            try container.encode("height", forKey: .kind)
+            try container.encode(value, forKey: .value)
+        }
+    }
+}
+
+public enum PresentationBackgroundInteractionValue: Equatable, Sendable {
+    case automatic
+    case enabled
+    case disabled
+    case upThrough(PresentationDetentValue)
 }
 
 public enum CustomHostValue: Equatable, Sendable, Codable {
@@ -492,6 +697,7 @@ public struct ViewModifiers: Equatable, Sendable {
     public var background: ShapeStyleValue?
     public var foregroundColor: String?
     public var foregroundStyle: ShapeStyleValue?
+    public var tint: String?
     public var cornerRadius: Double?
     public var fontStyle: TextStyle?
     public var fontSize: Double?
@@ -501,17 +707,42 @@ public struct ViewModifiers: Equatable, Sendable {
     public var buttonBorderShape: ButtonBorderShape?
     public var isDisabled: Bool
     public var glassEffect: Bool
+    public var glassVariant: GlassVariantKind
     public var glassTint: String?
     public var navigationTitle: String?
+    public var navigationBarTitleDisplayMode: NavigationBarTitleDisplayModeKind?
     public var navigationLinkIndicatorVisibility: VisibilityKind?
+    public var toolbarItems: [ToolbarItemValue]
+    public var toolbarBackgroundVisibility: VisibilityKind?
+    public var toolbarColorScheme: ColorSchemeKind?
     public var listStyle: ListStyleKind?
+    public var scrollContentBackground: VisibilityKind?
+    public var listRowSeparator: VisibilityKind?
+    public var listSectionSeparator: VisibilityKind?
+    public var listRowInsets: EdgeInsetsValue?
+    public var listRowBackground: ShapeStyleValue?
+    public var contentMargins: [ContentMarginsValue]
     public var imageContentMode: ImageContentMode?
     public var imageInterpolation: ImageInterpolation?
     public var aspectRatio: Double?
     public var aspectRatioContentMode: ImageContentMode?
     public var fixedSizeHorizontal: Bool
     public var fixedSizeVertical: Bool
-    public var compactVertical: Bool
+    public var safeAreaPaddingLength: Double?
+    public var safeAreaPaddingEdges: EdgeSetKind
+    public var ignoresSafeArea: Bool
+    public var ignoresSafeAreaEdges: EdgeSetKind
+    public var safeAreaInsets: [SafeAreaInsetValue]
+    public var lineLimit: Int?
+    public var multilineTextAlignment: TextAlignmentKind?
+    public var truncationMode: TruncationModeKind?
+    public var minimumScaleFactor: Double?
+    public var presentationDetents: [PresentationDetentValue]
+    public var presentationDragIndicator: VisibilityKind?
+    public var presentationCornerRadius: Double?
+    public var presentationBackgroundInteraction: PresentationBackgroundInteractionValue?
+    public var alert: AlertValue?
+    public var confirmationDialog: ConfirmationDialogValue?
     public var onAppearEvent: SurfaceEvent?
 
     public init(
@@ -530,6 +761,7 @@ public struct ViewModifiers: Equatable, Sendable {
         background: ShapeStyleValue? = nil,
         foregroundColor: String? = nil,
         foregroundStyle: ShapeStyleValue? = nil,
+        tint: String? = nil,
         cornerRadius: Double? = nil,
         fontStyle: TextStyle? = nil,
         fontSize: Double? = nil,
@@ -539,17 +771,42 @@ public struct ViewModifiers: Equatable, Sendable {
         buttonBorderShape: ButtonBorderShape? = nil,
         isDisabled: Bool = false,
         glassEffect: Bool = false,
+        glassVariant: GlassVariantKind = .regular,
         glassTint: String? = nil,
         navigationTitle: String? = nil,
+        navigationBarTitleDisplayMode: NavigationBarTitleDisplayModeKind? = nil,
         navigationLinkIndicatorVisibility: VisibilityKind? = nil,
+        toolbarItems: [ToolbarItemValue] = [],
+        toolbarBackgroundVisibility: VisibilityKind? = nil,
+        toolbarColorScheme: ColorSchemeKind? = nil,
         listStyle: ListStyleKind? = nil,
+        scrollContentBackground: VisibilityKind? = nil,
+        listRowSeparator: VisibilityKind? = nil,
+        listSectionSeparator: VisibilityKind? = nil,
+        listRowInsets: EdgeInsetsValue? = nil,
+        listRowBackground: ShapeStyleValue? = nil,
+        contentMargins: [ContentMarginsValue] = [],
         imageContentMode: ImageContentMode? = nil,
         imageInterpolation: ImageInterpolation? = nil,
         aspectRatio: Double? = nil,
         aspectRatioContentMode: ImageContentMode? = nil,
         fixedSizeHorizontal: Bool = false,
         fixedSizeVertical: Bool = false,
-        compactVertical: Bool = false,
+        safeAreaPaddingLength: Double? = nil,
+        safeAreaPaddingEdges: EdgeSetKind = .all,
+        ignoresSafeArea: Bool = false,
+        ignoresSafeAreaEdges: EdgeSetKind = .all,
+        safeAreaInsets: [SafeAreaInsetValue] = [],
+        lineLimit: Int? = nil,
+        multilineTextAlignment: TextAlignmentKind? = nil,
+        truncationMode: TruncationModeKind? = nil,
+        minimumScaleFactor: Double? = nil,
+        presentationDetents: [PresentationDetentValue] = [],
+        presentationDragIndicator: VisibilityKind? = nil,
+        presentationCornerRadius: Double? = nil,
+        presentationBackgroundInteraction: PresentationBackgroundInteractionValue? = nil,
+        alert: AlertValue? = nil,
+        confirmationDialog: ConfirmationDialogValue? = nil,
         onAppearEvent: SurfaceEvent? = nil
     ) {
         self.alignment = alignment
@@ -567,6 +824,7 @@ public struct ViewModifiers: Equatable, Sendable {
         self.background = background
         self.foregroundColor = foregroundColor
         self.foregroundStyle = foregroundStyle
+        self.tint = tint
         self.cornerRadius = cornerRadius
         self.fontStyle = fontStyle
         self.fontSize = fontSize
@@ -576,17 +834,42 @@ public struct ViewModifiers: Equatable, Sendable {
         self.buttonBorderShape = buttonBorderShape
         self.isDisabled = isDisabled
         self.glassEffect = glassEffect
+        self.glassVariant = glassVariant
         self.glassTint = glassTint
         self.navigationTitle = navigationTitle
+        self.navigationBarTitleDisplayMode = navigationBarTitleDisplayMode
         self.navigationLinkIndicatorVisibility = navigationLinkIndicatorVisibility
+        self.toolbarItems = toolbarItems
+        self.toolbarBackgroundVisibility = toolbarBackgroundVisibility
+        self.toolbarColorScheme = toolbarColorScheme
         self.listStyle = listStyle
+        self.scrollContentBackground = scrollContentBackground
+        self.listRowSeparator = listRowSeparator
+        self.listSectionSeparator = listSectionSeparator
+        self.listRowInsets = listRowInsets
+        self.listRowBackground = listRowBackground
+        self.contentMargins = contentMargins
         self.imageContentMode = imageContentMode
         self.imageInterpolation = imageInterpolation
         self.aspectRatio = aspectRatio
         self.aspectRatioContentMode = aspectRatioContentMode
         self.fixedSizeHorizontal = fixedSizeHorizontal
         self.fixedSizeVertical = fixedSizeVertical
-        self.compactVertical = compactVertical
+        self.safeAreaPaddingLength = safeAreaPaddingLength
+        self.safeAreaPaddingEdges = safeAreaPaddingEdges
+        self.ignoresSafeArea = ignoresSafeArea
+        self.ignoresSafeAreaEdges = ignoresSafeAreaEdges
+        self.safeAreaInsets = safeAreaInsets
+        self.lineLimit = lineLimit
+        self.multilineTextAlignment = multilineTextAlignment
+        self.truncationMode = truncationMode
+        self.minimumScaleFactor = minimumScaleFactor
+        self.presentationDetents = presentationDetents
+        self.presentationDragIndicator = presentationDragIndicator
+        self.presentationCornerRadius = presentationCornerRadius
+        self.presentationBackgroundInteraction = presentationBackgroundInteraction
+        self.alert = alert
+        self.confirmationDialog = confirmationDialog
         self.onAppearEvent = onAppearEvent
     }
 }
@@ -626,6 +909,12 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         alignment: ContentAlignment,
         spacing: Double,
         lineSpacing: Double,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
+    case viewThatFits(
+        id: NodeID,
+        axis: AxisKind?,
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
@@ -687,6 +976,39 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         destination: ViewNode,
         children: [ViewNode]
     )
+    case sheet(
+        id: NodeID,
+        isPresented: Bool,
+        onDismiss: SurfaceEvent?,
+        modifiers: ViewModifiers,
+        content: ViewNode,
+        children: [ViewNode]
+    )
+    case fullScreenCover(
+        id: NodeID,
+        isPresented: Bool,
+        onDismiss: SurfaceEvent?,
+        interactiveDismissDisabled: Bool,
+        modifiers: ViewModifiers,
+        content: ViewNode,
+        children: [ViewNode]
+    )
+    case tabView(
+        id: NodeID,
+        selection: PickerSelectionValue?,
+        event: SurfaceEvent?,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
+    case tab(
+        id: NodeID,
+        title: String,
+        source: ImageSource?,
+        badge: BadgeValue?,
+        selection: PickerSelectionValue?,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
     case navigationSplitView(
         id: NodeID,
         modifiers: ViewModifiers,
@@ -707,6 +1029,14 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         title: String,
         source: ImageSource,
         modifiers: ViewModifiers
+    )
+    case contentUnavailable(
+        id: NodeID,
+        title: String,
+        source: ImageSource?,
+        description: ViewNode?,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
     )
     case image(
         id: NodeID,
@@ -775,6 +1105,27 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
+    case menu(
+        id: NodeID,
+        title: String,
+        modifiers: ViewModifiers,
+        content: ViewNode,
+        children: [ViewNode]
+    )
+    case disclosureGroup(
+        id: NodeID,
+        title: String,
+        isExpanded: Bool,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        content: ViewNode,
+        children: [ViewNode]
+    )
+    case controlGroup(
+        id: NodeID,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
     case picker(
         id: NodeID,
         title: String,
@@ -800,6 +1151,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .zStack(id, _, _, _),
              let .grid(id, _, _, _, _),
              let .flowLayout(id, _, _, _, _, _),
+             let .viewThatFits(id, _, _, _),
              let .gridRow(id, _, _, _),
              let .scrollView(id, _, _, _),
              let .geometryReader(id, _),
@@ -810,10 +1162,15 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .section(id, _, _, _),
              let .navigationStack(id, _, _),
              let .navigationLink(id, _, _, _),
+             let .sheet(id, _, _, _, _, _),
+             let .fullScreenCover(id, _, _, _, _, _, _),
+             let .tabView(id, _, _, _, _),
+             let .tab(id, _, _, _, _, _, _),
              let .navigationSplitView(id, _, _, _),
              let .spacer(id, _),
              let .text(id, _, _),
              let .label(id, _, _, _),
+             let .contentUnavailable(id, _, _, _, _, _),
              let .image(id, _, _),
              let .rectangle(id, _, _, _, _),
              let .roundedRectangle(id, _, _, _, _, _),
@@ -825,6 +1182,9 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .angularGradient(id, _, _),
              let .divider(id, _),
              let .button(id, _, _, _, _),
+             let .menu(id, _, _, _, _),
+             let .disclosureGroup(id, _, _, _, _, _, _),
+             let .controlGroup(id, _, _),
              let .picker(id, _, _, _, _, _, _),
              let .toggle(id, _, _, _, _, _):
             id
@@ -838,6 +1198,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .zStack(_, _, modifiers, _),
              let .grid(_, _, _, modifiers, _),
              let .flowLayout(_, _, _, _, modifiers, _),
+             let .viewThatFits(_, _, modifiers, _),
              let .gridRow(_, _, modifiers, _),
              let .scrollView(_, _, modifiers, _),
              let .geometryReader(_, modifiers),
@@ -848,10 +1209,15 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .section(_, _, modifiers, _),
              let .navigationStack(_, modifiers, _),
              let .navigationLink(_, modifiers, _, _),
+             let .sheet(_, _, _, modifiers, _, _),
+             let .fullScreenCover(_, _, _, _, modifiers, _, _),
+             let .tabView(_, _, _, modifiers, _),
+             let .tab(_, _, _, _, _, modifiers, _),
              let .navigationSplitView(_, modifiers, _, _),
              let .spacer(_, modifiers),
              let .text(_, _, modifiers),
              let .label(_, _, _, modifiers),
+             let .contentUnavailable(_, _, _, _, modifiers, _),
              let .image(_, _, modifiers),
              let .rectangle(_, _, _, _, modifiers),
              let .roundedRectangle(_, _, _, _, _, modifiers),
@@ -863,6 +1229,9 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .angularGradient(_, _, modifiers),
              let .divider(_, modifiers),
              let .button(_, _, _, modifiers, _),
+             let .menu(_, _, modifiers, _, _),
+             let .disclosureGroup(_, _, _, _, modifiers, _, _),
+             let .controlGroup(_, modifiers, _),
              let .picker(_, _, _, _, _, modifiers, _),
              let .toggle(_, _, _, _, modifiers, _):
             modifiers
@@ -883,14 +1252,6 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         }
 
         return 1
-    }
-
-    fileprivate var isCompactVerticalGridRow: Bool {
-        if case let .gridRow(_, _, modifiers, _) = self {
-            return modifiers.compactVertical
-        }
-
-        return false
     }
 
     fileprivate var gridRowChildren: [ViewNode] {
@@ -951,6 +1312,13 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
                   lAlignment == rAlignment,
                   lSpacing == rSpacing,
                   lLineSpacing == rLineSpacing,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.viewThatFits(lID, lAxis, lModifiers, lChildren),
+                  .viewThatFits(rID, rAxis, rModifiers, rChildren)):
+            guard lID == rID,
+                  lAxis == rAxis,
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
@@ -1020,6 +1388,43 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
             stack.append(.init(lhs: lDestination, rhs: rDestination))
+        case let (.sheet(lID, lIsPresented, lOnDismiss, lModifiers, lContent, lChildren),
+                  .sheet(rID, rIsPresented, rOnDismiss, rModifiers, rContent, rChildren)):
+            guard lID == rID,
+                  lIsPresented == rIsPresented,
+                  lOnDismiss == rOnDismiss,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+            stack.append(.init(lhs: lContent, rhs: rContent))
+        case let (.fullScreenCover(lID, lIsPresented, lOnDismiss, lInteractiveDismissDisabled, lModifiers, lContent, lChildren),
+                  .fullScreenCover(rID, rIsPresented, rOnDismiss, rInteractiveDismissDisabled, rModifiers, rContent, rChildren)):
+            guard lID == rID,
+                  lIsPresented == rIsPresented,
+                  lOnDismiss == rOnDismiss,
+                  lInteractiveDismissDisabled == rInteractiveDismissDisabled,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+            stack.append(.init(lhs: lContent, rhs: rContent))
+        case let (.tabView(lID, lSelection, lEvent, lModifiers, lChildren),
+                  .tabView(rID, rSelection, rEvent, rModifiers, rChildren)):
+            guard lID == rID,
+                  lSelection == rSelection,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.tab(lID, lTitle, lSource, lBadge, lSelection, lModifiers, lChildren),
+                  .tab(rID, rTitle, rSource, rBadge, rSelection, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lSource == rSource,
+                  lBadge == rBadge,
+                  lSelection == rSelection,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
         case let (.navigationSplitView(lID, lModifiers, lSidebar, lDetail),
                   .navigationSplitView(rID, rModifiers, rSidebar, rDetail)):
             guard lID == rID, lModifiers == rModifiers else { return false }
@@ -1069,6 +1474,30 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
             guard lID == rID,
                   lTitle == rTitle,
                   lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.menu(lID, lTitle, lModifiers, lContent, lChildren),
+                  .menu(rID, rTitle, rModifiers, rContent, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+            stack.append(.init(lhs: lContent, rhs: rContent))
+        case let (.disclosureGroup(lID, lTitle, lIsExpanded, lEvent, lModifiers, lContent, lChildren),
+                  .disclosureGroup(rID, rTitle, rIsExpanded, rEvent, rModifiers, rContent, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lIsExpanded == rIsExpanded,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+            stack.append(.init(lhs: lContent, rhs: rContent))
+        case let (.controlGroup(lID, lModifiers, lChildren),
+                  .controlGroup(rID, rModifiers, rChildren)):
+            guard lID == rID,
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
@@ -1161,6 +1590,14 @@ public struct SurfaceView: View {
 
     public var body: some View {
         RenderNodeView(node: root, onEvent: onEvent, customHostRegistry: customHostRegistry)
+    }
+}
+
+public enum SwiftJSTypeScriptPackage {
+    public static var packageRootURL: URL? {
+        Bundle.module
+            .url(forResource: "package", withExtension: "json")?
+            .deletingLastPathComponent()
     }
 }
 
@@ -1684,6 +2121,10 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 flowLayoutView(alignment: alignment, spacing: spacing, lineSpacing: lineSpacing, children: children)
             )
+        case let .viewThatFits(_, axis, _, children):
+            applyCommonModifiers(
+                viewThatFitsView(axis: axis, children: children)
+            )
         case let .gridRow(_, alignment, modifiers, children):
             applyCommonModifiers(
                 gridRowView(alignment: alignment, modifiers: modifiers, children: children)
@@ -1722,6 +2163,29 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 navigationLinkView(destination: destination, modifiers: modifiers, children: children)
             )
+        case let .sheet(_, isPresented, onDismiss, modifiers, content, children):
+            applyCommonModifiers(
+                sheetView(isPresented: isPresented, onDismiss: onDismiss, content: content, children: children, modifiers: modifiers)
+            )
+        case let .fullScreenCover(_, isPresented, onDismiss, interactiveDismissDisabled, modifiers, content, children):
+            applyCommonModifiers(
+                fullScreenCoverView(
+                    isPresented: isPresented,
+                    onDismiss: onDismiss,
+                    interactiveDismissDisabled: interactiveDismissDisabled,
+                    content: content,
+                    children: children,
+                    modifiers: modifiers
+                )
+            )
+        case let .tabView(_, selection, event, _, children):
+            applyCommonModifiers(
+                tabView(selection: selection, event: event, children: children)
+            )
+        case let .tab(_, _, _, _, _, _, children):
+            applyCommonModifiers(
+                tabContent(children: children)
+            )
         case let .navigationSplitView(_, _, sidebar, detail):
             applyCommonModifiers(
                 navigationSplitView(sidebar: sidebar, detail: detail)
@@ -1735,6 +2199,16 @@ private struct RenderNodeView: View {
         case let .label(_, title, source, modifiers):
             applyCommonModifiers(
                 labelView(title: title, source: source, modifiers: modifiers)
+            )
+        case let .contentUnavailable(_, title, source, description, modifiers, children):
+            applyCommonModifiers(
+                contentUnavailableView(
+                    title: title,
+                    source: source,
+                    description: description,
+                    modifiers: modifiers,
+                    children: children
+                )
             )
         case let .image(_, source, modifiers):
             applyCommonModifiers(
@@ -1778,6 +2252,25 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 buttonView(title, event: event, modifiers: modifiers, children: children)
             )
+        case let .menu(_, title, modifiers, content, children):
+            applyCommonModifiers(
+                menuView(title, content: content, modifiers: modifiers, children: children)
+            )
+        case let .disclosureGroup(_, title, isExpanded, event, modifiers, content, children):
+            applyCommonModifiers(
+                disclosureGroupView(
+                    title,
+                    isExpanded: isExpanded,
+                    event: event,
+                    modifiers: modifiers,
+                    content: content,
+                    children: children
+                )
+            )
+        case let .controlGroup(_, _, children):
+            applyCommonModifiers(
+                controlGroupView(children: children)
+            )
         case let .picker(_, title, selection, options, event, modifiers, children):
             applyCommonModifiers(
                 pickerView(title, selection: selection, options: options, event: event, modifiers: modifiers, children: children)
@@ -1791,60 +2284,15 @@ private struct RenderNodeView: View {
 
     @ViewBuilder
     private func gridRowView(alignment: ContentAlignment, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
-        #if canImport(UIKit)
-        if horizontalSizeClass == .compact && modifiers.compactVertical {
-            GridRow {
-                VStack(alignment: alignment.swiftUIHorizontalAlignment, spacing: 12) {
-                    ForEach(children) { child in
-                        RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .gridCellColumns(max(children.count, 1))
-            }
-        } else {
-            GridRow {
-                ForEach(children) { child in
-                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
-            }
-        }
-        #else
         GridRow {
             ForEach(children) { child in
                 RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
         }
-        #endif
     }
 
     @ViewBuilder
     private func gridView(horizontalSpacing: Double, verticalSpacing: Double, children: [ViewNode]) -> some View {
-        #if canImport(UIKit)
-        if horizontalSizeClass == .compact, children.allSatisfy(\.isCompactVerticalGridRow) {
-            VStack(alignment: .leading, spacing: verticalSpacing) {
-                ForEach(children.flatMap(\.gridRowChildren)) { child in
-            RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            let maxColumns = max(children.map(\.gridColumnCount).max() ?? 1, 1)
-
-            Grid(horizontalSpacing: horizontalSpacing, verticalSpacing: verticalSpacing) {
-                ForEach(children) { child in
-                    if child.isGridRow {
-                        RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                    } else {
-                        GridRow {
-                            RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                                .gridCellColumns(maxColumns)
-                        }
-                    }
-                }
-            }
-        }
-        #else
         let maxColumns = max(children.map(\.gridColumnCount).max() ?? 1, 1)
 
         Grid(horizontalSpacing: horizontalSpacing, verticalSpacing: verticalSpacing) {
@@ -1859,7 +2307,6 @@ private struct RenderNodeView: View {
                 }
             }
         }
-        #endif
     }
 
     private func flowLayoutView(alignment: ContentAlignment, spacing: Double, lineSpacing: Double, children: [ViewNode]) -> some View {
@@ -1870,6 +2317,23 @@ private struct RenderNodeView: View {
         ) {
             ForEach(children) { child in
                 RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func viewThatFitsView(axis: AxisKind?, children: [ViewNode]) -> some View {
+        if let axis {
+            ViewThatFits(in: axis.swiftUIAxisSet) {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
+        } else {
+            ViewThatFits {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
             }
         }
     }
@@ -2046,6 +2510,41 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
+    private func contentUnavailableView(
+        title: String,
+        source: ImageSource?,
+        description: ViewNode?,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    ) -> some View {
+        ContentUnavailableView {
+            if let source {
+                switch source {
+                case let .system(systemName):
+                    Label(title, systemImage: systemName)
+                case let .asset(name):
+                    Label {
+                        Text(title)
+                    } icon: {
+                        Image(name)
+                    }
+                }
+            } else {
+                Text(title)
+            }
+        } description: {
+            if let description {
+                RenderNodeView(node: description, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        } actions: {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+    }
+
+    @ViewBuilder
     private func buttonView(_ title: String, event: SurfaceEvent, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
         let button = Button {
             onEvent(event)
@@ -2061,7 +2560,11 @@ private struct RenderNodeView: View {
         .modifier(NodeAppearanceModifier(modifiers: modifiers))
         .disabled(modifiers.isDisabled)
 
-        switch modifiers.buttonStyle ?? .plain {
+        switch modifiers.buttonStyle ?? .automatic {
+        case .automatic:
+            shapedButton(button, modifiers: modifiers)
+        case .borderless:
+            shapedButton(button.buttonStyle(.borderless), modifiers: modifiers)
         case .plain:
             shapedButton(button.buttonStyle(.plain), modifiers: modifiers)
         case .bordered:
@@ -2079,6 +2582,63 @@ private struct RenderNodeView: View {
                 shapedButton(button.buttonStyle(.glassProminent), modifiers: modifiers)
             } else {
                 shapedButton(button.buttonStyle(.borderedProminent), modifiers: modifiers)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func menuView(_ title: String, content: ViewNode, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
+        Menu {
+            RenderNodeView(node: content, onEvent: onEvent, customHostRegistry: customHostRegistry)
+        } label: {
+            if children.isEmpty {
+                Text(title)
+            } else {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
+    }
+
+    @ViewBuilder
+    private func disclosureGroupView(
+        _ title: String,
+        isExpanded: Bool,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        content: ViewNode,
+        children: [ViewNode]
+    ) -> some View {
+        DisclosureGroup(
+            isExpanded: Binding(
+                get: { isExpanded },
+                set: { nextValue in
+                    onEvent(SurfaceEvent(event.name, payloadJSON: nextValue ? "true" : "false"))
+                }
+            )
+        ) {
+            RenderNodeView(node: content, onEvent: onEvent, customHostRegistry: customHostRegistry)
+        } label: {
+            if children.isEmpty {
+                Text(title)
+            } else {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
+    }
+
+    @ViewBuilder
+    private func controlGroupView(children: [ViewNode]) -> some View {
+        ControlGroup {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
         }
     }
@@ -2144,6 +2704,10 @@ private struct RenderNodeView: View {
             applyCommonModifiers(list)
         case .plain:
             applyCommonModifiers(list.listStyle(.plain))
+        case .grouped:
+            applyCommonModifiers(list.listStyle(.grouped))
+        case .inset:
+            applyCommonModifiers(list.listStyle(.inset))
         case .insetGrouped:
             applyCommonModifiers(list.listStyle(.insetGrouped))
         case .sidebar:
@@ -2170,6 +2734,61 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
+    private func tabView(selection: PickerSelectionValue?, event: SurfaceEvent?, children: [ViewNode]) -> some View {
+        let tabs = children.compactMap { child -> (NodeID, ViewNode)? in
+            if case .tab(let id, _, _, _, _, _, _) = child {
+                return (id, child)
+            }
+
+            return nil
+        }
+
+        if let selection, let event {
+            TabView(
+                selection: Binding(
+                    get: { selection },
+                    set: { nextValue in
+                        onEvent(SurfaceEvent(event.name, payloadJSON: nextValue.payloadJSON))
+                    }
+                )
+            ) {
+                ForEach(tabs, id: \.0) { entry in
+                    tabItemView(entry.1)
+                }
+            }
+        } else {
+            TabView {
+                ForEach(tabs, id: \.0) { entry in
+                    tabItemView(entry.1)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func tabItemView(_ node: ViewNode) -> some View {
+        if case let .tab(_, title, source, badge, selection, _, children) = node {
+            tabContent(children: children)
+                .modifier(TabItemLabelModifier(title: title, source: source))
+                .modifier(TabBadgeModifier(badge: badge))
+                .modifier(TabTagModifier(selection: selection))
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func tabContent(children: [ViewNode]) -> some View {
+        if children.isEmpty {
+            Color.clear
+        } else {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        }
+    }
+
+    @ViewBuilder
     private func navigationLinkView(destination: ViewNode, modifiers _: ViewModifiers, children: [ViewNode]) -> some View {
         NavigationLink {
             RenderNodeView(node: destination, onEvent: onEvent, customHostRegistry: customHostRegistry)
@@ -2181,6 +2800,114 @@ private struct RenderNodeView: View {
                     RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func sheetView(
+        isPresented: Bool,
+        onDismiss: SurfaceEvent?,
+        content: ViewNode,
+        children: [ViewNode],
+        modifiers: ViewModifiers
+    ) -> some View {
+        let root = modalRootView(children: children)
+        let modal = root.sheet(
+            isPresented: Binding(
+                get: { isPresented },
+                set: { nextValue in
+                    if !nextValue, let onDismiss {
+                        onEvent(onDismiss)
+                    }
+                }
+            )
+        ) {
+            RenderNodeView(node: content, onEvent: onEvent, customHostRegistry: customHostRegistry)
+        }
+
+        configuredSheet(modal, modifiers: modifiers)
+    }
+
+    @ViewBuilder
+    private func fullScreenCoverView(
+        isPresented: Bool,
+        onDismiss: SurfaceEvent?,
+        interactiveDismissDisabled: Bool,
+        content: ViewNode,
+        children: [ViewNode],
+        modifiers _: ViewModifiers
+    ) -> some View {
+        modalRootView(children: children)
+            .fullScreenCover(
+                isPresented: Binding(
+                    get: { isPresented },
+                    set: { nextValue in
+                        if !nextValue, let onDismiss {
+                            onEvent(onDismiss)
+                        }
+                    }
+                )
+            ) {
+                RenderNodeView(node: content, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+            .interactiveDismissDisabled(interactiveDismissDisabled)
+    }
+
+    @ViewBuilder
+    private func modalRootView(children: [ViewNode]) -> some View {
+        if children.isEmpty {
+            Color.clear
+        } else {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func configuredSheet<Content: View>(_ content: Content, modifiers: ViewModifiers) -> some View {
+        let detentConfigured = presentationDetentsStyled(content, modifiers: modifiers)
+        let cornerConfigured = presentationCornerRadiusStyled(detentConfigured, modifiers: modifiers)
+        let backgroundInteractionConfigured = presentationBackgroundInteractionStyled(cornerConfigured, modifiers: modifiers)
+
+        if let visibility = modifiers.swiftUIPresentationDragIndicator {
+            backgroundInteractionConfigured.presentationDragIndicator(visibility)
+        } else {
+            backgroundInteractionConfigured
+        }
+    }
+
+    @ViewBuilder
+    private func presentationDetentsStyled<Content: View>(_ content: Content, modifiers: ViewModifiers) -> some View {
+        if !modifiers.presentationDetents.isEmpty {
+            content.presentationDetents(Set(modifiers.presentationDetents.map(\.swiftUIPresentationDetent)))
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
+    private func presentationCornerRadiusStyled<Content: View>(_ content: Content, modifiers: ViewModifiers) -> some View {
+        if let radius = modifiers.presentationCornerRadius {
+            content.presentationCornerRadius(radius)
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
+    private func presentationBackgroundInteractionStyled<Content: View>(_ content: Content, modifiers: ViewModifiers) -> some View {
+        switch modifiers.presentationBackgroundInteraction {
+        case .automatic:
+            content.presentationBackgroundInteraction(.automatic)
+        case .enabled:
+            content.presentationBackgroundInteraction(.enabled)
+        case .disabled:
+            content.presentationBackgroundInteraction(.disabled)
+        case let .upThrough(detent):
+            content.presentationBackgroundInteraction(.enabled(upThrough: detent.swiftUIPresentationDetent))
+        case nil:
+            content
         }
     }
 
@@ -2239,7 +2966,7 @@ private struct RenderNodeView: View {
     }
 
     private func applyCommonModifiers<Content: View>(_ content: Content) -> some View {
-        content.modifier(CommonNodeModifier(modifiers: node.modifiers, onEvent: onEvent))
+        content.modifier(CommonNodeModifier(modifiers: node.modifiers, onEvent: onEvent, customHostRegistry: customHostRegistry))
     }
 
     @ViewBuilder
@@ -2252,28 +2979,12 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func hStackView(alignment: ContentAlignment, distribution: StackDistribution, spacing: Double, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
-        #if canImport(UIKit)
-        if horizontalSizeClass == .compact && modifiers.compactVertical {
-            VStack(alignment: alignment.swiftUIHorizontalAlignment, spacing: spacing) {
-                ForEach(children) { child in
-                    stackItemView(child, axis: .vertical, distribution: distribution, alignment: alignment)
-                }
-            }
-        } else {
-            HStack(alignment: alignment.swiftUIVerticalAlignment, spacing: spacing) {
-                ForEach(children) { child in
-                    stackItemView(child, axis: .horizontal, distribution: distribution, alignment: alignment)
-                }
-            }
-        }
-        #else
+    private func hStackView(alignment: ContentAlignment, distribution: StackDistribution, spacing: Double, modifiers _: ViewModifiers, children: [ViewNode]) -> some View {
         HStack(alignment: alignment.swiftUIVerticalAlignment, spacing: spacing) {
             ForEach(children) { child in
                 stackItemView(child, axis: .horizontal, distribution: distribution, alignment: alignment)
             }
         }
-        #endif
     }
 
     @ViewBuilder
@@ -2571,31 +3282,79 @@ private extension RenderNodeView {
     }
 }
 
-private struct NodeAppearanceModifier: ViewModifier {
-    let modifiers: ViewModifiers
+private struct TabItemLabelModifier: ViewModifier {
+    let title: String
+    let source: ImageSource?
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        let styled = content
+        switch source {
+        case let .system(systemName):
+            content.tabItem { Label(title, systemImage: systemName) }
+        case let .asset(name):
+            content.tabItem {
+                Label {
+                    Text(title)
+                } icon: {
+                    Image(name)
+                }
+            }
+        case nil:
+            content.tabItem { Text(title) }
+        }
+    }
+}
+
+private struct TabBadgeModifier: ViewModifier {
+    let badge: BadgeValue?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        switch badge {
+        case let .string(value):
+            content.badge(value)
+        case let .number(value):
+            content.badge(Int(value))
+        case nil:
+            content
+        }
+    }
+}
+
+private struct TabTagModifier: ViewModifier {
+    let selection: PickerSelectionValue?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let selection {
+            content.tag(selection)
+        } else {
+            content
+        }
+    }
+}
+
+private struct NodeAppearanceModifier: ViewModifier {
+    let modifiers: ViewModifiers
+
+    func body(content: Content) -> some View {
+        content
             .font(modifiers.swiftUIFont)
             .fontWeight(modifiers.swiftUIFontWeight)
             .symbolRenderingMode(modifiers.swiftUISymbolRenderingMode)
-
-        if let foregroundStyle = modifiers.foregroundShapeStyle {
-            styled.foregroundStyle(foregroundStyle)
-        } else if let foregroundColor = modifiers.swiftUIColor {
-            styled.foregroundStyle(foregroundColor)
-        } else {
-            styled
-        }
+            .lineLimit(modifiers.lineLimit)
+            .minimumScaleFactor(CGFloat(modifiers.minimumScaleFactor ?? 1))
+            .modifier(NodeForegroundModifier(shapeStyle: modifiers.foregroundShapeStyle, color: modifiers.swiftUIColor))
+            .modifier(NodeMultilineTextAlignmentModifier(alignment: modifiers.swiftUITextAlignment))
+            .truncationMode(modifiers.swiftUITruncationMode ?? .tail)
     }
 }
 
 private struct CommonNodeModifier: ViewModifier {
     let modifiers: ViewModifiers
     let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         let minWidth = modifiers.frameMinWidth.map { CGFloat($0) }
         let minHeight = modifiers.frameMinHeight.map { CGFloat($0) }
@@ -2605,57 +3364,147 @@ private struct CommonNodeModifier: ViewModifier {
         let maxHeight = modifiers.frameMaxHeight ? CGFloat.infinity : modifiers.frameMaxHeightValue.map { CGFloat($0) }
         let aspectRatio = modifiers.aspectRatio.map { CGFloat($0) }
 
-        let base = content
+        return content
             .padding(modifiers.padding ?? 0)
             .padding(.top, modifiers.paddingTop ?? 0)
             .fixedSize(horizontal: modifiers.fixedSizeHorizontal, vertical: modifiers.fixedSizeVertical)
-        let sized = aspectRatioStyled(base, aspectRatio: aspectRatio)
-        let laidOut = sized
+            .modifier(OptionalAspectRatioModifier(aspectRatio: aspectRatio, contentMode: modifiers.swiftUIAspectRatioContentMode))
             .frame(minWidth: minWidth, maxWidth: maxWidth, minHeight: minHeight, maxHeight: maxHeight, alignment: modifiers.swiftUIAlignment)
             .frame(maxWidth: maxWidth, maxHeight: maxHeight, alignment: modifiers.swiftUIAlignment)
             .frame(width: width, height: height, alignment: modifiers.swiftUIAlignment)
+            .modifier(OptionalSafeAreaPaddingModifier(length: modifiers.safeAreaPaddingLength, edges: modifiers.safeAreaPaddingEdges.swiftUIEdgeSet))
+            .modifier(OptionalIgnoresSafeAreaModifier(isEnabled: modifiers.ignoresSafeArea, edges: modifiers.ignoresSafeAreaEdges.swiftUIEdgeSet))
+            .modifier(OptionalBackgroundModifier(style: modifiers.backgroundShapeStyle))
+            .modifier(OptionalClipModifier(cornerRadius: modifiers.cornerRadius, imageContentMode: modifiers.imageContentMode))
+            .modifier(OptionalGlassEffectModifier(modifiers: modifiers))
+            .modifier(OptionalTintModifier(tint: modifiers.tint.flatMap(Color.named(_:))))
+            .modifier(OptionalNavigationTitleModifier(title: modifiers.navigationTitle))
+            .modifier(OptionalNavigationBarTitleDisplayModeModifier(mode: modifiers.swiftUINavigationBarTitleDisplayMode))
+            .modifier(OptionalToolbarBackgroundModifier(visibility: modifiers.swiftUIToolbarBackgroundVisibility))
+            .modifier(OptionalToolbarColorSchemeModifier(scheme: modifiers.swiftUIColorScheme))
+            .modifier(OptionalScrollContentBackgroundModifier(visibility: modifiers.swiftUIScrollContentBackgroundVisibility))
+            .modifier(OptionalListRowSeparatorModifier(visibility: modifiers.swiftUIListRowSeparatorVisibility))
+            .modifier(OptionalListSectionSeparatorModifier(visibility: modifiers.swiftUIListSectionSeparatorVisibility))
+            .modifier(OptionalListRowInsetsModifier(insets: modifiers.listRowInsets?.swiftUIEdgeInsets))
+            .modifier(OptionalListRowBackgroundModifier(background: modifiers.listRowBackground?.swiftUIShapeStyle))
+            .modifier(ContentMarginsModifier(margins: modifiers.contentMargins))
+            .modifier(SafeAreaInsetsModifier(insets: modifiers.safeAreaInsets, onEvent: onEvent, customHostRegistry: customHostRegistry))
+            .modifier(OptionalNavigationLinkIndicatorModifier(visibility: modifiers.swiftUINavigationLinkIndicatorVisibility))
+            .modifier(ToolbarItemsModifier(items: modifiers.toolbarItems, onEvent: onEvent, customHostRegistry: customHostRegistry))
+            .modifier(OptionalAlertModifier(alert: modifiers.alert, onEvent: onEvent, customHostRegistry: customHostRegistry))
+            .modifier(OptionalConfirmationDialogModifier(dialog: modifiers.confirmationDialog, onEvent: onEvent, customHostRegistry: customHostRegistry))
+            .modifier(OptionalIdentityModifier(viewIdentity: modifiers.viewIdentity))
+            .modifier(OptionalOnAppearModifier(event: modifiers.onAppearEvent, onEvent: onEvent))
+    }
+}
 
-        let styledBackground = backgroundStyled(laidOut)
-        let styledGlass = glassStyled(styledBackground)
-        let titled = titleStyled(styledGlass)
-        let indicatorStyled = navigationLinkIndicatorStyled(titled)
-        let identified = identityStyled(indicatorStyled)
+private struct NodeForegroundModifier: ViewModifier {
+    let shapeStyle: AnyShapeStyle?
+    let color: Color?
 
-        if let onAppearEvent = modifiers.onAppearEvent {
-            identified.onAppear {
-                onEvent(onAppearEvent)
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let shapeStyle {
+            content.foregroundStyle(shapeStyle)
+        } else if let color {
+            content.foregroundStyle(color)
+        } else {
+            content
+        }
+    }
+}
+
+private struct NodeMultilineTextAlignmentModifier: ViewModifier {
+    let alignment: TextAlignment?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let alignment {
+            content.multilineTextAlignment(alignment)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalAspectRatioModifier: ViewModifier {
+    let aspectRatio: CGFloat?
+    let contentMode: ContentMode
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let aspectRatio {
+            content.aspectRatio(aspectRatio, contentMode: contentMode)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalSafeAreaPaddingModifier: ViewModifier {
+    let length: Double?
+    let edges: Edge.Set
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let length {
+            content.safeAreaPadding(edges, length)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalIgnoresSafeAreaModifier: ViewModifier {
+    let isEnabled: Bool
+    let edges: Edge.Set
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.ignoresSafeArea(edges: edges)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalBackgroundModifier: ViewModifier {
+    let style: AnyShapeStyle?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let style {
+            content.background {
+                Rectangle().fill(style)
             }
         } else {
-            identified
+            content
         }
     }
+}
+
+private struct OptionalClipModifier: ViewModifier {
+    let cornerRadius: Double?
+    let imageContentMode: ImageContentMode?
 
     @ViewBuilder
-    private func backgroundStyled<Content: View>(_ content: Content) -> some View {
-        if let backgroundStyle = modifiers.backgroundShapeStyle {
-            clipped(
-                content.background {
-                    Rectangle().fill(backgroundStyle)
-                }
-            )
-        } else {
-            clipped(content)
-        }
-    }
-
-    @ViewBuilder
-    private func clipped<Content: View>(_ content: Content) -> some View {
-        if let cornerRadius = modifiers.cornerRadius {
+    func body(content: Content) -> some View {
+        if let cornerRadius {
             content.clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        } else if modifiers.imageContentMode == .fill {
+        } else if imageContentMode == .fill {
             content.clipped()
         } else {
             content
         }
     }
+}
+
+private struct OptionalGlassEffectModifier: ViewModifier {
+    let modifiers: ViewModifiers
 
     @ViewBuilder
-    private func glassStyled<Content: View>(_ content: Content) -> some View {
+    func body(content: Content) -> some View {
         if modifiers.glassEffect && !modifiers.usesGlassButtonStyle {
             if #available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *) {
                 content.glassEffect(glassValue(for: modifiers))
@@ -2666,28 +3515,66 @@ private struct CommonNodeModifier: ViewModifier {
             content
         }
     }
+}
+
+private struct OptionalTintModifier: ViewModifier {
+    let tint: Color?
 
     @ViewBuilder
-    private func titleStyled<Content: View>(_ content: Content) -> some View {
-        if let navigationTitle = modifiers.navigationTitle {
-            content.navigationTitle(navigationTitle)
+    func body(content: Content) -> some View {
+        if let tint {
+            content.tint(tint)
         } else {
             content
         }
     }
+}
+
+private struct OptionalNavigationTitleModifier: ViewModifier {
+    let title: String?
 
     @ViewBuilder
-    private func navigationLinkIndicatorStyled<Content: View>(_ content: Content) -> some View {
-        if let visibility = modifiers.swiftUINavigationLinkIndicatorVisibility {
+    func body(content: Content) -> some View {
+        if let title {
+            content.navigationTitle(title)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalNavigationBarTitleDisplayModeModifier: ViewModifier {
+    let mode: NavigationBarItem.TitleDisplayMode?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let mode {
+            content.navigationBarTitleDisplayMode(mode)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalNavigationLinkIndicatorModifier: ViewModifier {
+    let visibility: Visibility?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let visibility {
             content.navigationLinkIndicatorVisibility(visibility)
         } else {
             content
         }
     }
+}
+
+private struct OptionalIdentityModifier: ViewModifier {
+    let viewIdentity: CustomHostValue?
 
     @ViewBuilder
-    private func identityStyled<Content: View>(_ content: Content) -> some View {
-        if let viewIdentity = modifiers.viewIdentity {
+    func body(content: Content) -> some View {
+        if let viewIdentity {
             switch viewIdentity {
             case let .string(value):
                 content.id(value)
@@ -2702,15 +3589,356 @@ private struct CommonNodeModifier: ViewModifier {
             content
         }
     }
+}
+
+private struct OptionalToolbarBackgroundModifier: ViewModifier {
+    let visibility: Visibility?
 
     @ViewBuilder
-    private func aspectRatioStyled<Content: View>(_ content: Content, aspectRatio: CGFloat?) -> some View {
-        if let aspectRatio {
-            content.aspectRatio(aspectRatio, contentMode: modifiers.swiftUIAspectRatioContentMode)
+    func body(content: Content) -> some View {
+        if let visibility {
+            content.toolbarBackground(visibility, for: .navigationBar, .tabBar, .bottomBar)
         } else {
             content
         }
     }
+}
+
+private struct OptionalToolbarColorSchemeModifier: ViewModifier {
+    let scheme: ColorScheme?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let scheme {
+            content.toolbarColorScheme(scheme, for: .navigationBar, .tabBar, .bottomBar)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalScrollContentBackgroundModifier: ViewModifier {
+    let visibility: Visibility?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let visibility {
+            content.scrollContentBackground(visibility)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalListRowSeparatorModifier: ViewModifier {
+    let visibility: Visibility?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let visibility {
+            content.listRowSeparator(visibility)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalListSectionSeparatorModifier: ViewModifier {
+    let visibility: Visibility?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let visibility {
+            content.listSectionSeparator(visibility)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalListRowInsetsModifier: ViewModifier {
+    let insets: EdgeInsets?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let insets {
+            content.listRowInsets(insets)
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalListRowBackgroundModifier: ViewModifier {
+    let background: AnyShapeStyle?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let background {
+            content.listRowBackground(Rectangle().fill(background))
+        } else {
+            content
+        }
+    }
+}
+
+private struct ContentMarginsModifier: ViewModifier {
+    let margins: [ContentMarginsValue]
+
+    func body(content: Content) -> some View {
+        content
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .all, placement: .automatic), edges: .all, placement: .automatic))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .horizontal, placement: .automatic), edges: .horizontal, placement: .automatic))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .vertical, placement: .automatic), edges: .vertical, placement: .automatic))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .top, placement: .automatic), edges: .top, placement: .automatic))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .bottom, placement: .automatic), edges: .bottom, placement: .automatic))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .leading, placement: .automatic), edges: .leading, placement: .automatic))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .trailing, placement: .automatic), edges: .trailing, placement: .automatic))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .all, placement: .scrollContent), edges: .all, placement: .scrollContent))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .horizontal, placement: .scrollContent), edges: .horizontal, placement: .scrollContent))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .vertical, placement: .scrollContent), edges: .vertical, placement: .scrollContent))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .top, placement: .scrollContent), edges: .top, placement: .scrollContent))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .bottom, placement: .scrollContent), edges: .bottom, placement: .scrollContent))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .leading, placement: .scrollContent), edges: .leading, placement: .scrollContent))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .trailing, placement: .scrollContent), edges: .trailing, placement: .scrollContent))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .all, placement: .scrollIndicators), edges: .all, placement: .scrollIndicators))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .horizontal, placement: .scrollIndicators), edges: .horizontal, placement: .scrollIndicators))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .vertical, placement: .scrollIndicators), edges: .vertical, placement: .scrollIndicators))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .top, placement: .scrollIndicators), edges: .top, placement: .scrollIndicators))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .bottom, placement: .scrollIndicators), edges: .bottom, placement: .scrollIndicators))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .leading, placement: .scrollIndicators), edges: .leading, placement: .scrollIndicators))
+            .modifier(ContentMarginsEntryModifier(amount: amount(for: .trailing, placement: .scrollIndicators), edges: .trailing, placement: .scrollIndicators))
+    }
+
+    private func amount(for edges: EdgeSetKind, placement: ContentMarginPlacementKind) -> Double? {
+        margins.last(where: { $0.edges == edges && $0.placement == placement })?.amount
+    }
+}
+
+private struct ContentMarginsEntryModifier: ViewModifier {
+    let amount: Double?
+    let edges: Edge.Set
+    let placement: ContentMarginPlacement
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let amount {
+            content.contentMargins(edges, amount, for: placement)
+        } else {
+            content
+        }
+    }
+}
+
+private struct SafeAreaInsetsModifier: ViewModifier {
+    let insets: [SafeAreaInsetValue]
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    func body(content: Content) -> some View {
+        content
+            .modifier(SafeAreaInsetEdgeModifier(edge: .top, insets: entries(for: .top), onEvent: onEvent, customHostRegistry: customHostRegistry))
+            .modifier(SafeAreaInsetEdgeModifier(edge: .bottom, insets: entries(for: .bottom), onEvent: onEvent, customHostRegistry: customHostRegistry))
+            .modifier(SafeAreaInsetEdgeModifier(edge: .leading, insets: entries(for: .leading), onEvent: onEvent, customHostRegistry: customHostRegistry))
+            .modifier(SafeAreaInsetEdgeModifier(edge: .trailing, insets: entries(for: .trailing), onEvent: onEvent, customHostRegistry: customHostRegistry))
+    }
+
+    private func entries(for edge: EdgeKind) -> [SafeAreaInsetValue] {
+        insets.filter { $0.edge == edge }
+    }
+}
+
+private struct SafeAreaInsetEdgeModifier: ViewModifier {
+    let edge: EdgeKind
+    let insets: [SafeAreaInsetValue]
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if insets.isEmpty {
+            content
+        } else {
+            switch edge {
+            case .top:
+                content.safeAreaInset(edge: .top, spacing: insets.last?.spacing.map { CGFloat($0) }) {
+                    SafeAreaInsetGroupContent(edge: edge, insets: insets, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            case .bottom:
+                content.safeAreaInset(edge: .bottom, spacing: insets.last?.spacing.map { CGFloat($0) }) {
+                    SafeAreaInsetGroupContent(edge: edge, insets: insets, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            case .leading:
+                content.safeAreaInset(edge: .leading, spacing: insets.last?.spacing.map { CGFloat($0) }) {
+                    SafeAreaInsetGroupContent(edge: edge, insets: insets, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            case .trailing:
+                content.safeAreaInset(edge: .trailing, spacing: insets.last?.spacing.map { CGFloat($0) }) {
+                    SafeAreaInsetGroupContent(edge: edge, insets: insets, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
+        }
+    }
+}
+
+private struct SafeAreaInsetGroupContent: View {
+    let edge: EdgeKind
+    let insets: [SafeAreaInsetValue]
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    @ViewBuilder
+    var body: some View {
+        if edge == .top || edge == .bottom {
+            VStack(spacing: 0) {
+                renderedInsets
+            }
+        } else {
+            HStack(spacing: 0) {
+                renderedInsets
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var renderedInsets: some View {
+        ForEach(Array(insets.enumerated()), id: \.offset) { entry in
+            RenderNodeView(node: entry.element.content, onEvent: onEvent, customHostRegistry: customHostRegistry)
+        }
+    }
+}
+
+private struct ToolbarItemsModifier: ViewModifier {
+    let items: [ToolbarItemValue]
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if items.isEmpty {
+            content
+        } else {
+            content.toolbar {
+                toolbarGroup(for: .automatic)
+                toolbarGroup(for: .principal)
+                toolbarGroup(for: .topBarLeading)
+                toolbarGroup(for: .topBarTrailing)
+                toolbarGroup(for: .bottomBar)
+                toolbarGroup(for: .status)
+                toolbarGroup(for: .cancellationAction)
+                toolbarGroup(for: .confirmationAction)
+                toolbarGroup(for: .primaryAction)
+            }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private func toolbarGroup(for placement: ToolbarItemPlacementKind) -> some ToolbarContent {
+        let matching = Array(items.enumerated().filter { $0.element.placement == placement })
+        if !matching.isEmpty {
+            ToolbarItemGroup(placement: placement.swiftUIToolbarItemPlacement) {
+                ForEach(matching, id: \.offset) { entry in
+                    RenderNodeView(node: entry.element.content, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            }
+        }
+    }
+}
+
+private struct OptionalAlertModifier: ViewModifier {
+    let alert: AlertValue?
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let alert {
+            content.alert(
+                alert.title,
+                isPresented: .constant(alert.isPresented),
+                actions: {
+                    DialogButtons(actions: alert.actions, onEvent: onEvent)
+                },
+                message: {
+                    if let message = alert.message {
+                        RenderNodeView(node: message, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                    }
+                }
+            )
+        } else {
+            content
+        }
+    }
+}
+
+private struct OptionalConfirmationDialogModifier: ViewModifier {
+    let dialog: ConfirmationDialogValue?
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let dialog {
+            content.confirmationDialog(
+                dialog.title,
+                isPresented: .constant(dialog.isPresented),
+                titleVisibility: dialog.titleVisibility.swiftUIVisibility,
+                actions: {
+                    DialogButtons(actions: dialog.actions, onEvent: onEvent)
+                },
+                message: {
+                    if let message = dialog.message {
+                        RenderNodeView(node: message, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                    }
+                }
+            )
+        } else {
+            content
+        }
+    }
+}
+
+private struct DialogButtons: View {
+    let actions: [DialogActionValue]
+    let onEvent: (SurfaceEvent) -> Void
+
+    var body: some View {
+        ForEach(Array(actions.enumerated()), id: \.offset) { entry in
+            let action = entry.element
+            Button(action.title, role: action.role?.swiftUIRole) {
+                if let event = action.event {
+                    onEvent(SurfaceEvent(event))
+                }
+            }
+        }
+    }
+}
+
+private struct OptionalOnAppearModifier: ViewModifier {
+    let event: SurfaceEvent?
+    let onEvent: (SurfaceEvent) -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let event {
+            content.onAppear {
+                onEvent(event)
+            }
+        } else {
+            content
+        }
+    }
+}
+
+private struct HostToolbarItem: Decodable {
+    let placement: ToolbarItemPlacementKind
+    let content: HostNode
+}
+
+private struct HostSafeAreaInset: Decodable {
+    let edge: EdgeKind
+    let spacing: Double?
+    let content: HostNode
 }
 
 private final class HostNode: Decodable {
@@ -2737,6 +3965,7 @@ private final class HostNode: Decodable {
     let background: ShapeStyleValue?
     let foregroundColor: String?
     let foregroundStyle: ShapeStyleValue?
+    let tint: String?
     let fill: ShapeStyleValue?
     let stroke: ShapeStyleValue?
     let lineWidth: Double?
@@ -2749,26 +3978,67 @@ private final class HostNode: Decodable {
     let buttonBorderShape: ButtonBorderShape?
     let isDisabled: Bool?
     let glassEffect: Bool?
+    let glassVariant: GlassVariantKind?
     let glassTint: String?
     let navigationTitle: String?
+    let navigationBarTitleDisplayMode: NavigationBarTitleDisplayModeKind?
     let navigationLinkIndicatorVisibility: VisibilityKind?
+    let toolbarItems: [HostToolbarItem]?
+    let toolbarBackgroundVisibility: VisibilityKind?
+    let toolbarColorScheme: ColorSchemeKind?
     let listStyle: ListStyleKind?
+    let scrollContentBackground: VisibilityKind?
+    let listRowSeparator: VisibilityKind?
+    let listSectionSeparator: VisibilityKind?
+    let listRowInsetTop: Double?
+    let listRowInsetLeading: Double?
+    let listRowInsetBottom: Double?
+    let listRowInsetTrailing: Double?
+    let listRowBackground: ShapeStyleValue?
+    let contentMargins: [ContentMarginsValue]?
     let imageContentMode: ImageContentMode?
     let imageInterpolation: ImageInterpolation?
     let aspectRatio: Double?
     let aspectRatioContentMode: ImageContentMode?
     let fixedSizeHorizontal: Bool?
     let fixedSizeVertical: Bool?
-    let compactVertical: Bool?
+    let safeAreaPaddingLength: Double?
+    let safeAreaPaddingEdges: EdgeSetKind?
+    let ignoresSafeArea: Bool?
+    let ignoresSafeAreaEdges: EdgeSetKind?
+    let safeAreaInsets: [HostSafeAreaInset]?
+    let lineLimit: Int?
+    let multilineTextAlignment: TextAlignmentKind?
+    let truncationMode: TruncationModeKind?
+    let minimumScaleFactor: Double?
+    let alertTitle: String?
+    let alertIsPresented: Bool?
+    let alertMessage: HostNode?
+    let alertActions: [DialogActionValue]?
+    let confirmationDialogTitle: String?
+    let confirmationDialogIsPresented: Bool?
+    let confirmationDialogTitleVisibility: VisibilityKind?
+    let confirmationDialogMessage: HostNode?
+    let confirmationDialogActions: [DialogActionValue]?
     let onAppearEvent: String?
     let value: String?
     let systemName: String?
     let name: String?
     let title: String?
+    let description: HostNode?
     let event: String?
+    let onDismiss: String?
     let isOn: Bool?
+    let isPresented: Bool?
     let selection: PickerSelectionValue?
+    let badge: BadgeValue?
     let options: [PickerOption]?
+    let presentationDetents: [PresentationDetentValue]?
+    let presentationDragIndicator: VisibilityKind?
+    let presentationCornerRadius: Double?
+    let presentationBackgroundInteractionKind: String?
+    let presentationBackgroundInteractionDetent: PresentationDetentValue?
+    let interactiveDismissDisabled: Bool?
     let colors: [String]?
     let stops: [GradientStopValue]?
     let startPoint: UnitPointValue?
@@ -2780,6 +4050,7 @@ private final class HostNode: Decodable {
     let startAngle: Double?
     let endAngle: Double?
     let destination: HostNode?
+    let content: HostNode?
     let customName: String?
     let customValues: [String: CustomHostValue]?
     let children: [HostNode]?
@@ -2790,7 +4061,7 @@ private final class HostNode: Decodable {
     let customSlots: [String: HostNode]?
 
     func makeViewNode() throws -> ViewNode {
-        let modifiers = makeModifiers()
+        let modifiers = try makeModifiers()
 
         switch type {
         case .vStack:
@@ -2832,6 +4103,13 @@ private final class HostNode: Decodable {
                 alignment: alignment ?? .center,
                 spacing: spacing ?? 8,
                 lineSpacing: lineSpacing ?? spacing ?? 8,
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
+        case .viewThatFits:
+            return .viewThatFits(
+                id: NodeID(id),
+                axis: axis,
                 modifiers: modifiers,
                 children: try mapChildren()
             )
@@ -2911,6 +4189,64 @@ private final class HostNode: Decodable {
                 destination: try mapSlot(destination, name: "destination"),
                 children: try mapChildren()
             )
+        case .sheet:
+            guard let isPresented else {
+                throw JSSurfaceError.invalidTree("Sheet node '\(id)' is missing an isPresented value")
+            }
+
+            return .sheet(
+                id: NodeID(id),
+                isPresented: isPresented,
+                onDismiss: onDismiss.map { SurfaceEvent($0) },
+                modifiers: modifiers,
+                content: try mapSlot(content, name: "content"),
+                children: try mapChildren()
+            )
+        case .fullScreenCover:
+            guard let isPresented else {
+                throw JSSurfaceError.invalidTree("FullScreenCover node '\(id)' is missing an isPresented value")
+            }
+
+            return .fullScreenCover(
+                id: NodeID(id),
+                isPresented: isPresented,
+                onDismiss: onDismiss.map { SurfaceEvent($0) },
+                interactiveDismissDisabled: interactiveDismissDisabled ?? false,
+                modifiers: modifiers,
+                content: try mapSlot(content, name: "content"),
+                children: try mapChildren()
+            )
+        case .tabView:
+            return .tabView(
+                id: NodeID(id),
+                selection: selection,
+                event: event.map { SurfaceEvent($0) },
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
+        case .tab:
+            guard let title else {
+                throw JSSurfaceError.invalidTree("Tab node '\(id)' is missing a title")
+            }
+
+            let source: ImageSource?
+            if let systemName {
+                source = .system(systemName)
+            } else if let name {
+                source = .asset(name)
+            } else {
+                source = nil
+            }
+
+            return .tab(
+                id: NodeID(id),
+                title: title,
+                source: source,
+                badge: badge,
+                selection: selection,
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
         case .navigationSplitView:
             return .navigationSplitView(
                 id: NodeID(id),
@@ -2952,6 +4288,28 @@ private final class HostNode: Decodable {
                 title: title,
                 source: source,
                 modifiers: modifiers
+            )
+        case .contentUnavailable:
+            guard let title else {
+                throw JSSurfaceError.invalidTree("ContentUnavailableView node '\(id)' is missing a title")
+            }
+
+            let source: ImageSource?
+            if let systemName {
+                source = .system(systemName)
+            } else if let name {
+                source = .asset(name)
+            } else {
+                source = nil
+            }
+
+            return .contentUnavailable(
+                id: NodeID(id),
+                title: title,
+                source: source,
+                description: try description?.makeViewNode(),
+                modifiers: modifiers,
+                children: try mapChildren()
             )
         case .image:
             let source: ImageSource
@@ -3053,6 +4411,38 @@ private final class HostNode: Decodable {
                 modifiers: modifiers,
                 children: childNodes
             )
+        case .menu:
+            return .menu(
+                id: NodeID(id),
+                title: title ?? "",
+                modifiers: modifiers,
+                content: try mapSlot(content, name: "content"),
+                children: try mapChildren()
+            )
+        case .disclosureGroup:
+            guard let event else {
+                throw JSSurfaceError.invalidTree("DisclosureGroup node '\(id)' is missing an onExpandedChange event")
+            }
+
+            guard let isPresented else {
+                throw JSSurfaceError.invalidTree("DisclosureGroup node '\(id)' is missing an isExpanded value")
+            }
+
+            return .disclosureGroup(
+                id: NodeID(id),
+                title: title ?? "",
+                isExpanded: isPresented,
+                event: SurfaceEvent(event),
+                modifiers: modifiers,
+                content: try mapSlot(content, name: "content"),
+                children: try mapChildren()
+            )
+        case .controlGroup:
+            return .controlGroup(
+                id: NodeID(id),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
         case .picker:
             guard let event else {
                 throw JSSurfaceError.invalidTree("Picker node '\(id)' is missing an onChange event")
@@ -3117,7 +4507,7 @@ private final class HostNode: Decodable {
         return result
     }
 
-    private func makeModifiers() -> ViewModifiers {
+    private func makeModifiers() throws -> ViewModifiers {
         ViewModifiers(
             alignment: alignment ?? .center,
             viewIdentity: viewIdentity,
@@ -3134,6 +4524,7 @@ private final class HostNode: Decodable {
             background: background,
             foregroundColor: foregroundColor,
             foregroundStyle: foregroundStyle,
+            tint: tint,
             cornerRadius: cornerRadius,
             fontStyle: fontName,
             fontSize: fontSize,
@@ -3143,19 +4534,122 @@ private final class HostNode: Decodable {
             buttonBorderShape: buttonBorderShape,
             isDisabled: isDisabled ?? false,
             glassEffect: glassEffect ?? false,
+            glassVariant: glassVariant ?? .regular,
             glassTint: glassTint,
             navigationTitle: navigationTitle,
+            navigationBarTitleDisplayMode: navigationBarTitleDisplayMode,
             navigationLinkIndicatorVisibility: navigationLinkIndicatorVisibility,
+            toolbarItems: try mapToolbarItems(),
+            toolbarBackgroundVisibility: toolbarBackgroundVisibility,
+            toolbarColorScheme: toolbarColorScheme,
             listStyle: listStyle,
+            scrollContentBackground: scrollContentBackground,
+            listRowSeparator: listRowSeparator,
+            listSectionSeparator: listSectionSeparator,
+            listRowInsets: makeListRowInsets(),
+            listRowBackground: listRowBackground,
+            contentMargins: contentMargins ?? [],
             imageContentMode: imageContentMode,
             imageInterpolation: imageInterpolation,
             aspectRatio: aspectRatio,
             aspectRatioContentMode: aspectRatioContentMode,
             fixedSizeHorizontal: fixedSizeHorizontal ?? false,
             fixedSizeVertical: fixedSizeVertical ?? false,
-            compactVertical: compactVertical ?? false,
+            safeAreaPaddingLength: safeAreaPaddingLength,
+            safeAreaPaddingEdges: safeAreaPaddingEdges ?? .all,
+            ignoresSafeArea: ignoresSafeArea ?? false,
+            ignoresSafeAreaEdges: ignoresSafeAreaEdges ?? .all,
+            safeAreaInsets: try mapSafeAreaInsets(),
+            lineLimit: lineLimit,
+            multilineTextAlignment: multilineTextAlignment,
+            truncationMode: truncationMode,
+            minimumScaleFactor: minimumScaleFactor,
+            presentationDetents: presentationDetents ?? [],
+            presentationDragIndicator: presentationDragIndicator,
+            presentationCornerRadius: presentationCornerRadius,
+            presentationBackgroundInteraction: makePresentationBackgroundInteraction(),
+            alert: try makeAlert(),
+            confirmationDialog: try makeConfirmationDialog(),
             onAppearEvent: onAppearEvent.map { SurfaceEvent($0) }
         )
+    }
+
+    private func mapToolbarItems() throws -> [ToolbarItemValue] {
+        try (toolbarItems ?? []).map { item in
+            ToolbarItemValue(
+                placement: item.placement,
+                content: try item.content.makeViewNode()
+            )
+        }
+    }
+
+    private func makeListRowInsets() -> EdgeInsetsValue? {
+        if listRowInsetTop == nil, listRowInsetLeading == nil, listRowInsetBottom == nil, listRowInsetTrailing == nil {
+            return nil
+        }
+
+        return EdgeInsetsValue(
+            top: listRowInsetTop,
+            leading: listRowInsetLeading,
+            bottom: listRowInsetBottom,
+            trailing: listRowInsetTrailing
+        )
+    }
+
+    private func mapSafeAreaInsets() throws -> [SafeAreaInsetValue] {
+        try (safeAreaInsets ?? []).map { item in
+            SafeAreaInsetValue(
+                edge: item.edge,
+                spacing: item.spacing,
+                content: try item.content.makeViewNode()
+            )
+        }
+    }
+
+    private func makeAlert() throws -> AlertValue? {
+        guard let alertTitle, let alertIsPresented else {
+            return nil
+        }
+
+        return AlertValue(
+            title: alertTitle,
+            isPresented: alertIsPresented,
+            message: try alertMessage?.makeViewNode(),
+            actions: alertActions ?? []
+        )
+    }
+
+    private func makeConfirmationDialog() throws -> ConfirmationDialogValue? {
+        guard let confirmationDialogTitle, let confirmationDialogIsPresented else {
+            return nil
+        }
+
+        return ConfirmationDialogValue(
+            title: confirmationDialogTitle,
+            isPresented: confirmationDialogIsPresented,
+            titleVisibility: confirmationDialogTitleVisibility ?? .automatic,
+            message: try confirmationDialogMessage?.makeViewNode(),
+            actions: confirmationDialogActions ?? []
+        )
+    }
+
+    private func makePresentationBackgroundInteraction() -> PresentationBackgroundInteractionValue? {
+        switch presentationBackgroundInteractionKind {
+        case "automatic":
+            return .automatic
+        case "enabled":
+            return .enabled
+        case "disabled":
+            return .disabled
+        case "upThrough":
+            guard let presentationBackgroundInteractionDetent else {
+                return nil
+            }
+
+            return .upThrough(presentationBackgroundInteractionDetent)
+        default:
+            return nil
+        }
     }
 
     private func makeLinearGradientValue() throws -> LinearGradientValue {
@@ -3203,6 +4697,7 @@ private enum HostComponentType: String, Decodable {
     case zStack = "ZStack"
     case grid = "Grid"
     case flowLayout = "FlowLayout"
+    case viewThatFits = "ViewThatFits"
     case gridRow = "GridRow"
     case scrollView = "ScrollView"
     case geometryReader = "GeometryReader"
@@ -3213,10 +4708,15 @@ private enum HostComponentType: String, Decodable {
     case section = "Section"
     case navigationStack = "NavigationStack"
     case navigationLink = "NavigationLink"
+    case sheet = "Sheet"
+    case fullScreenCover = "FullScreenCover"
+    case tabView = "TabView"
+    case tab = "Tab"
     case navigationSplitView = "NavigationSplitView"
     case spacer = "Spacer"
     case text = "Text"
     case label = "Label"
+    case contentUnavailable = "ContentUnavailableView"
     case image = "Image"
     case rectangle = "Rectangle"
     case roundedRectangle = "RoundedRectangle"
@@ -3228,6 +4728,9 @@ private enum HostComponentType: String, Decodable {
     case angularGradient = "AngularGradient"
     case divider = "Divider"
     case button = "Button"
+    case menu = "Menu"
+    case disclosureGroup = "DisclosureGroup"
+    case controlGroup = "ControlGroup"
     case picker = "Picker"
     case toggle = "Toggle"
 }
@@ -3272,14 +4775,20 @@ private extension ViewModifiers {
             return .title
         case .title2:
             return .title2
+        case .title3:
+            return .title3
         case .headline:
             return .headline
         case .subheadline:
             return .subheadline
         case .body:
             return .body
+        case .callout:
+            return .callout
         case .caption:
             return .caption
+        case .caption2:
+            return .caption2
         case .footnote:
             return .footnote
         }
@@ -3291,6 +4800,12 @@ private extension ViewModifiers {
         }
 
         switch fontWeight {
+        case .ultraLight:
+            return .ultraLight
+        case .thin:
+            return .thin
+        case .light:
+            return .light
         case .regular:
             return .regular
         case .medium:
@@ -3299,6 +4814,10 @@ private extension ViewModifiers {
             return .semibold
         case .bold:
             return .bold
+        case .heavy:
+            return .heavy
+        case .black:
+            return .black
         }
     }
 
@@ -3363,6 +4882,84 @@ private extension ViewModifiers {
         case .hidden:
             return .hidden
         }
+    }
+
+    var swiftUITextAlignment: TextAlignment? {
+        guard let multilineTextAlignment else {
+            return nil
+        }
+
+        switch multilineTextAlignment {
+        case .leading:
+            return .leading
+        case .center:
+            return .center
+        case .trailing:
+            return .trailing
+        }
+    }
+
+    var swiftUITruncationMode: Text.TruncationMode? {
+        guard let truncationMode else {
+            return nil
+        }
+
+        switch truncationMode {
+        case .head:
+            return .head
+        case .middle:
+            return .middle
+        case .tail:
+            return .tail
+        }
+    }
+
+    var swiftUINavigationBarTitleDisplayMode: NavigationBarItem.TitleDisplayMode? {
+        guard let navigationBarTitleDisplayMode else {
+            return nil
+        }
+
+        switch navigationBarTitleDisplayMode {
+        case .automatic:
+            return .automatic
+        case .inline:
+            return .inline
+        case .large:
+            return .large
+        }
+    }
+
+    var swiftUIToolbarBackgroundVisibility: Visibility? {
+        toolbarBackgroundVisibility?.swiftUIVisibility
+    }
+
+    var swiftUIColorScheme: ColorScheme? {
+        guard let toolbarColorScheme else {
+            return nil
+        }
+
+        switch toolbarColorScheme {
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        }
+    }
+
+    var swiftUIScrollContentBackgroundVisibility: Visibility? {
+        scrollContentBackground?.swiftUIVisibility
+    }
+
+    var swiftUIListRowSeparatorVisibility: Visibility? {
+        listRowSeparator?.swiftUIVisibility
+    }
+
+    var swiftUIListSectionSeparatorVisibility: Visibility? {
+        listSectionSeparator?.swiftUIVisibility
+    }
+
+    var swiftUIPresentationDragIndicator: Visibility? {
+        presentationDragIndicator?.swiftUIVisibility
     }
 }
 
@@ -3447,10 +5044,144 @@ private func makeGradient(colors: [String]?, stops: [GradientStopValue]?) -> Gra
 @available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *)
 private func glassValue(for modifiers: ViewModifiers) -> SwiftUI.Glass {
     if let tint = modifiers.glassTint.flatMap(Color.named(_:)) {
-        return .regular.tint(tint)
+        switch modifiers.glassVariant {
+        case .clear:
+            return .clear.tint(tint)
+        case .regular:
+            return .regular.tint(tint)
+        }
     }
 
-    return .regular
+    switch modifiers.glassVariant {
+    case .clear:
+        return .clear
+    case .regular:
+        return .regular
+    }
+}
+
+private extension VisibilityKind {
+    var swiftUIVisibility: Visibility {
+        switch self {
+        case .automatic:
+            return .automatic
+        case .visible:
+            return .visible
+        case .hidden:
+            return .hidden
+        }
+    }
+}
+
+private extension EdgeInsetsValue {
+    var swiftUIEdgeInsets: EdgeInsets {
+        EdgeInsets(
+            top: CGFloat(top ?? 0),
+            leading: CGFloat(leading ?? 0),
+            bottom: CGFloat(bottom ?? 0),
+            trailing: CGFloat(trailing ?? 0)
+        )
+    }
+}
+
+private extension EdgeKind {
+    var swiftUIEdge: Edge {
+        switch self {
+        case .top:
+            return .top
+        case .bottom:
+            return .bottom
+        case .leading:
+            return .leading
+        case .trailing:
+            return .trailing
+        }
+    }
+}
+
+private extension EdgeSetKind {
+    var swiftUIEdgeSet: Edge.Set {
+        switch self {
+        case .all:
+            return .all
+        case .horizontal:
+            return .horizontal
+        case .vertical:
+            return .vertical
+        case .top:
+            return .top
+        case .bottom:
+            return .bottom
+        case .leading:
+            return .leading
+        case .trailing:
+            return .trailing
+        }
+    }
+}
+
+private extension ContentMarginPlacementKind {
+    var swiftUIContentMarginPlacement: ContentMarginPlacement {
+        switch self {
+        case .automatic:
+            return .automatic
+        case .scrollContent:
+            return .scrollContent
+        case .scrollIndicators:
+            return .scrollIndicators
+        }
+    }
+}
+
+private extension ToolbarItemPlacementKind {
+    var swiftUIToolbarItemPlacement: ToolbarItemPlacement {
+        switch self {
+        case .automatic:
+            return .automatic
+        case .principal:
+            return .principal
+        case .topBarLeading:
+            return .topBarLeading
+        case .topBarTrailing:
+            return .topBarTrailing
+        case .bottomBar:
+            return .bottomBar
+        case .status:
+            return .status
+        case .cancellationAction:
+            return .cancellationAction
+        case .confirmationAction:
+            return .confirmationAction
+        case .primaryAction:
+            return .primaryAction
+        }
+    }
+}
+
+private extension DialogActionRoleKind {
+    var swiftUIRole: ButtonRole? {
+        switch self {
+        case .cancel:
+            return .cancel
+        case .destructive:
+            return .destructive
+        }
+    }
+}
+
+private extension PresentationDetentValue {
+    var swiftUIPresentationDetent: PresentationDetent {
+        switch self {
+        case .medium:
+            return .medium
+        case .large:
+            return .large
+        case let .fraction(value):
+            return .fraction(value)
+        case let .height(value):
+            return .height(value)
+        }
+    }
 }
 
 private extension Color {

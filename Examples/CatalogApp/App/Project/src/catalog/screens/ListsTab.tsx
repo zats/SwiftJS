@@ -1,4 +1,4 @@
-import { Form, HStack, Label, List, Picker, ScrollView, Section, Toggle } from "../../swiftjs"
+import { Button, ContentUnavailableView, Form, HStack, Label, List, Picker, ScrollView, Section, Text, Toggle, VStack } from "../../swiftjs"
 import { Card, DemoSection, ListPreview, ScreenShell } from "../components/common"
 import { space } from "../shared"
 import { listsToolbar } from "../toolbars"
@@ -64,6 +64,36 @@ export function ListsTab() {
               <Label title="Offline Cache" systemName="internaldrive" />
             </Section>
           </Form>
+        </Card>
+      </DemoSection>
+
+      <DemoSection title="Unavailable States" detail="ContentUnavailableView with descriptive copy and actions.">
+        <Card title="Search Empty State">
+          <ContentUnavailableView
+            title="No Results"
+            systemName="magnifyingglass"
+            description={<Text>Try a broader term or clear filters.</Text>}
+            frame={{ maxWidth: "infinity", minHeight: 220 }}
+          >
+            <Button action={() => undefined} buttonStyle="borderedProminent">
+              Clear Filters
+            </Button>
+          </ContentUnavailableView>
+        </Card>
+
+        <Card title="Offline State">
+          <VStack background="tertiarySystemBackground" cornerRadius={18} padding={space.md}>
+            <ContentUnavailableView
+              title="Connection Lost"
+              systemName="wifi.slash"
+              description={<Text>Reconnect to load your saved lists.</Text>}
+              frame={{ maxWidth: "infinity", minHeight: 180 }}
+            >
+              <Button action={() => undefined} buttonStyle="bordered">
+                Retry
+              </Button>
+            </ContentUnavailableView>
+          </VStack>
         </Card>
       </DemoSection>
     </ScreenShell>

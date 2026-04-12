@@ -240,6 +240,10 @@
         node.lineSpacing = numericProp(props.lineSpacing, numericProp(props.spacing, 8))
         node.children = hostChildren(children)
         return node
+      case "ViewThatFits":
+        node.axis = typeof props.axis === "string" ? props.axis : undefined
+        node.children = hostChildren(children)
+        return node
       case "GridRow":
         node.alignment = typeof props.alignment === "string" ? props.alignment : "center"
         node.children = hostChildren(children)
@@ -311,6 +315,69 @@
         node.destination = serializeSlot(props.destination, path + ".destination", "destination")
         node.children = hostChildren(children)
         return node
+      case "Sheet":
+        if (typeof props.isPresented !== "boolean") {
+          throw new Error("Sheet requires an isPresented boolean prop")
+        }
+
+        node.isPresented = props.isPresented
+        node.content = serializeSlot(props.content, path + ".content", "content")
+        node.children = hostChildren(children)
+        node.presentationDetents = serializePresentationDetents(props.presentationDetents)
+        if (typeof props.presentationDragIndicator === "string") {
+          node.presentationDragIndicator = props.presentationDragIndicator
+        }
+        if (typeof props.presentationCornerRadius === "number") {
+          node.presentationCornerRadius = props.presentationCornerRadius
+        }
+        serializePresentationBackgroundInteraction(node, props.presentationBackgroundInteraction)
+        node.interactiveDismissDisabled = props.interactiveDismissDisabled === true
+        if (typeof props.onDismiss === "function") {
+          node.onDismiss = registerHandler(props.onDismiss, id + ":dismiss")
+        }
+        return node
+      case "FullScreenCover":
+        if (typeof props.isPresented !== "boolean") {
+          throw new Error("FullScreenCover requires an isPresented boolean prop")
+        }
+
+        node.isPresented = props.isPresented
+        node.content = serializeSlot(props.content, path + ".content", "content")
+        node.children = hostChildren(children)
+        node.interactiveDismissDisabled = props.interactiveDismissDisabled === true
+        if (typeof props.onDismiss === "function") {
+          node.onDismiss = registerHandler(props.onDismiss, id + ":dismiss")
+        }
+        return node
+      case "TabView":
+        if (props.selection !== undefined) {
+          node.selection = serializePickerValue(props.selection)
+        }
+        if (typeof props.onSelectionChange === "function") {
+          node.event = registerHandler(props.onSelectionChange, id + ":selection")
+        }
+        node.children = hostChildren(children)
+        return node
+      case "Tab":
+        if (typeof props.title !== "string" || props.title.length === 0) {
+          throw new Error("Tab requires a title prop")
+        }
+
+        node.title = props.title
+        if (typeof props.value === "string" || typeof props.value === "number") {
+          node.selection = props.value
+        }
+        if (typeof props.systemName === "string") {
+          node.systemName = props.systemName
+        }
+        if (typeof props.name === "string") {
+          node.name = props.name
+        }
+        if (props.badge !== undefined) {
+          node.badge = serializeBadgeValue(props.badge)
+        }
+        node.children = hostChildren(children)
+        return node
       case "NavigationSplitView":
         node.sidebar = serializeSlot(props.sidebar, path + ".sidebar", "sidebar")
         node.detail = serializeSlot(props.detail, path + ".detail", "detail")
@@ -338,6 +405,20 @@
         }
 
         throw new Error("Label requires a systemName or name prop")
+      case "ContentUnavailableView":
+        if (typeof props.title !== "string" || props.title.length === 0) {
+          throw new Error("ContentUnavailableView requires a title prop")
+        }
+
+        node.title = props.title
+        if (typeof props.systemName === "string") {
+          node.systemName = props.systemName
+        } else if (typeof props.name === "string") {
+          node.name = props.name
+        }
+        node.description = serializeOptionalSlot(props.description, path + ".description")
+        node.children = hostChildren(children)
+        return node
       case "Image":
         if (typeof props.systemName === "string") {
           node.systemName = props.systemName
@@ -410,6 +491,25 @@
         node.title = textValue(props.children)
         node.children = hostChildren(children)
         node.event = registerHandler(props.action, id + ":action")
+        return node
+      case "Menu":
+        node.title = textValue(props.children)
+        node.children = hostChildren(children)
+        node.content = serializeSlot(props.content, path + ".content", "content")
+        return node
+      case "DisclosureGroup":
+        if (typeof props.isExpanded !== "boolean") {
+          throw new Error("DisclosureGroup requires an isExpanded boolean prop")
+        }
+
+        node.title = textValue(props.children)
+        node.children = hostChildren(children)
+        node.content = serializeSlot(props.content, path + ".content", "content")
+        node.isPresented = props.isExpanded
+        node.event = registerHandler(props.onExpandedChange, id + ":expanded")
+        return node
+      case "ControlGroup":
+        node.children = hostChildren(children)
         return node
       case "Picker":
         node.title = textValue(props.children)
@@ -493,6 +593,11 @@
 
     node.background = serializeShapeStyle(props.background, id + ".background")
     node.foregroundStyle = serializeShapeStyle(props.foregroundStyle, id + ".foregroundStyle")
+    node.listRowBackground = serializeShapeStyle(props.listRowBackground, id + ".listRowBackground")
+
+    if (typeof props.tint === "string") {
+      node.tint = props.tint
+    }
 
     if (typeof props.cornerRadius === "number") {
       node.cornerRadius = props.cornerRadius
@@ -502,13 +607,42 @@
       node.navigationTitle = props.navigationTitle
     }
 
+    if (typeof props.navigationBarTitleDisplayMode === "string") {
+      node.navigationBarTitleDisplayMode = props.navigationBarTitleDisplayMode
+    }
+
     if (typeof props.navigationLinkIndicatorVisibility === "string") {
       node.navigationLinkIndicatorVisibility = props.navigationLinkIndicatorVisibility
+    }
+
+    node.toolbarItems = serializeToolbarItems(props.toolbar, id + ".toolbar")
+
+    if (typeof props.toolbarBackgroundVisibility === "string") {
+      node.toolbarBackgroundVisibility = props.toolbarBackgroundVisibility
+    }
+
+    if (typeof props.toolbarColorScheme === "string") {
+      node.toolbarColorScheme = props.toolbarColorScheme
     }
 
     if (typeof props.listStyle === "string") {
       node.listStyle = props.listStyle
     }
+
+    if (typeof props.scrollContentBackground === "string") {
+      node.scrollContentBackground = props.scrollContentBackground
+    }
+
+    if (typeof props.listRowSeparator === "string") {
+      node.listRowSeparator = props.listRowSeparator
+    }
+
+    if (typeof props.listSectionSeparator === "string") {
+      node.listSectionSeparator = props.listSectionSeparator
+    }
+
+    serializeEdgeInsets(node, props.listRowInsets)
+    node.contentMargins = serializeContentMargins(props.contentMargins)
 
     if (typeof props.imageContentMode === "string") {
       node.imageContentMode = props.imageContentMode
@@ -546,9 +680,9 @@
       }
     }
 
-    if (props.compactVertical === true) {
-      node.compactVertical = true
-    }
+    serializeSafeAreaPadding(node, props.safeAreaPadding)
+    serializeIgnoresSafeArea(node, props.ignoresSafeArea)
+    node.safeAreaInsets = serializeSafeAreaInsets(props.safeAreaInset, id + ".safeAreaInset")
 
     if (typeof props.onAppear === "function") {
       node.onAppearEvent = registerHandler(props.onAppear, id + ":onAppear")
@@ -587,13 +721,37 @@
 
     if (props.glassEffect === true) {
       node.glassEffect = true
+      node.glassVariant = "regular"
+    } else if (props.glassEffect === "clear") {
+      node.glassEffect = true
+      node.glassVariant = "clear"
     } else if (props.glassEffect && typeof props.glassEffect === "object") {
       node.glassEffect = true
+      node.glassVariant = typeof props.glassEffect.variant === "string" ? props.glassEffect.variant : "regular"
 
       if (typeof props.glassEffect.tint === "string") {
         node.glassTint = props.glassEffect.tint
       }
     }
+
+    if (typeof props.lineLimit === "number") {
+      node.lineLimit = props.lineLimit
+    }
+
+    if (typeof props.multilineTextAlignment === "string") {
+      node.multilineTextAlignment = props.multilineTextAlignment
+    }
+
+    if (typeof props.truncationMode === "string") {
+      node.truncationMode = props.truncationMode
+    }
+
+    if (typeof props.minimumScaleFactor === "number") {
+      node.minimumScaleFactor = props.minimumScaleFactor
+    }
+
+    serializeAlert(node, props.alert, id + ".alert")
+    serializeConfirmationDialog(node, props.confirmationDialog, id + ".confirmationDialog")
 
     return node
   }
@@ -769,6 +927,231 @@
     })
   }
 
+  function serializeBadgeValue(value) {
+    if (typeof value === "string" || typeof value === "number") {
+      return value
+    }
+
+    throw new Error("Tab badge must be a string or number")
+  }
+
+  function serializeToolbarItems(items, path) {
+    if (items === undefined || items === null) {
+      return undefined
+    }
+
+    if (!Array.isArray(items)) {
+      throw new Error("toolbar must be an array of toolbar items")
+    }
+
+    return items.map(function (item, index) {
+      if (!item || typeof item !== "object") {
+        throw new Error("toolbar items must be objects")
+      }
+
+      return {
+        placement: typeof item.placement === "string" ? item.placement : "automatic",
+        content: serializeSlot(item.content, path + "." + index + ".content", "toolbar item content")
+      }
+    })
+  }
+
+  function serializeEdgeInsets(node, value) {
+    if (!value || typeof value !== "object") {
+      return
+    }
+
+    if (typeof value.top === "number") {
+      node.listRowInsetTop = value.top
+    }
+    if (typeof value.leading === "number") {
+      node.listRowInsetLeading = value.leading
+    }
+    if (typeof value.bottom === "number") {
+      node.listRowInsetBottom = value.bottom
+    }
+    if (typeof value.trailing === "number") {
+      node.listRowInsetTrailing = value.trailing
+    }
+  }
+
+  function serializeContentMargins(value) {
+    if (value === undefined || value === null) {
+      return undefined
+    }
+
+    const margins = Array.isArray(value) ? value : [value]
+    return margins.map(function (entry) {
+      if (!entry || typeof entry !== "object" || typeof entry.amount !== "number") {
+        throw new Error("contentMargins entries must be { amount, edges?, placement? } objects")
+      }
+
+      return {
+        edges: typeof entry.edges === "string" ? entry.edges : "all",
+        amount: entry.amount,
+        placement: typeof entry.placement === "string" ? entry.placement : "automatic"
+      }
+    })
+  }
+
+  function serializeSafeAreaPadding(node, value) {
+    if (typeof value === "number") {
+      node.safeAreaPaddingLength = value
+      node.safeAreaPaddingEdges = "all"
+      return
+    }
+
+    if (!value || typeof value !== "object") {
+      return
+    }
+
+    if (typeof value.length !== "number") {
+      throw new Error("safeAreaPadding object form requires a length")
+    }
+
+    node.safeAreaPaddingLength = value.length
+    node.safeAreaPaddingEdges = typeof value.edges === "string" ? value.edges : "all"
+  }
+
+  function serializeIgnoresSafeArea(node, value) {
+    if (value === true) {
+      node.ignoresSafeArea = true
+      node.ignoresSafeAreaEdges = "all"
+      return
+    }
+
+    if (!value || typeof value !== "object") {
+      return
+    }
+
+    node.ignoresSafeArea = true
+    node.ignoresSafeAreaEdges = typeof value.edges === "string" ? value.edges : "all"
+  }
+
+  function serializeSafeAreaInsets(value, path) {
+    if (value === undefined || value === null) {
+      return undefined
+    }
+
+    const insets = Array.isArray(value) ? value : [value]
+    return insets.map(function (entry, index) {
+      if (!entry || typeof entry !== "object" || typeof entry.edge !== "string") {
+        throw new Error("safeAreaInset entries must be { edge, spacing?, content } objects")
+      }
+
+      return {
+        edge: entry.edge,
+        spacing: typeof entry.spacing === "number" ? entry.spacing : undefined,
+        content: serializeSlot(entry.content, path + "." + index + ".content", "safe area inset content")
+      }
+    })
+  }
+
+  function serializeAlert(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (!value || typeof value !== "object" || typeof value.title !== "string" || typeof value.isPresented !== "boolean") {
+      throw new Error("alert must be { title, isPresented, message?, actions? }")
+    }
+
+    node.alertTitle = value.title
+    node.alertIsPresented = value.isPresented
+    node.alertMessage = serializeOptionalSlot(value.message, path + ".message")
+    node.alertActions = serializeDialogActions(value.actions, path + ".actions")
+  }
+
+  function serializeConfirmationDialog(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (!value || typeof value !== "object" || typeof value.title !== "string" || typeof value.isPresented !== "boolean") {
+      throw new Error("confirmationDialog must be { title, isPresented, message?, actions? }")
+    }
+
+    node.confirmationDialogTitle = value.title
+    node.confirmationDialogIsPresented = value.isPresented
+    node.confirmationDialogTitleVisibility =
+      typeof value.titleVisibility === "string" ? value.titleVisibility : "automatic"
+    node.confirmationDialogMessage = serializeOptionalSlot(value.message, path + ".message")
+    node.confirmationDialogActions = serializeDialogActions(value.actions, path + ".actions")
+  }
+
+  function serializeDialogActions(actions, path) {
+    if (actions === undefined || actions === null) {
+      return undefined
+    }
+
+    if (!Array.isArray(actions)) {
+      throw new Error("dialog actions must be an array")
+    }
+
+    return actions.map(function (action, index) {
+      if (!action || typeof action !== "object" || typeof action.title !== "string") {
+        throw new Error("dialog actions must be { title, role?, action? } objects")
+      }
+
+      return {
+        title: action.title,
+        role: typeof action.role === "string" ? action.role : undefined,
+        event:
+          typeof action.action === "function"
+            ? registerHandler(action.action, path + "." + index + ".action")
+            : undefined
+      }
+    })
+  }
+
+  function serializePresentationDetents(value) {
+    if (value === undefined || value === null) {
+      return undefined
+    }
+
+    if (!Array.isArray(value)) {
+      throw new Error("presentationDetents must be an array")
+    }
+
+    return value.map(function (detent) {
+      if (detent === "medium" || detent === "large") {
+        return { kind: detent }
+      }
+
+      if (detent && typeof detent === "object" && typeof detent.fraction === "number") {
+        return { kind: "fraction", value: detent.fraction }
+      }
+
+      if (detent && typeof detent === "object" && typeof detent.height === "number") {
+        return { kind: "height", value: detent.height }
+      }
+
+      throw new Error("presentationDetents entries must be medium, large, { fraction }, or { height }")
+    })
+  }
+
+  function serializePresentationBackgroundInteraction(node, value) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (typeof value === "string") {
+      node.presentationBackgroundInteractionKind = value
+      return
+    }
+
+    if (value && typeof value === "object" && value.upThrough !== undefined) {
+      const detents = serializePresentationDetents([value.upThrough])
+      node.presentationBackgroundInteractionKind = "upThrough"
+      node.presentationBackgroundInteractionDetent = detents[0]
+      return
+    }
+
+    throw new Error(
+      "presentationBackgroundInteraction must be automatic, enabled, disabled, or { upThrough }"
+    )
+  }
+
   function normalizeFont(font) {
     if (typeof font === "string") {
       return { fontName: font }
@@ -785,33 +1168,66 @@
   }
 
   function serializeSlot(value, path, name) {
-    const resolved = resolveElement(value, path)
+    if (value === undefined || value === null) {
+      throw new Error("Missing " + name)
+    }
 
+    const resolved = resolveElement(value, path)
+    const nodes = normalizeResolvedNodes(resolved, path)
+
+    if (nodes.length === 1) {
+      return nodes[0]
+    }
+
+    if (nodes.length > 1) {
+      return {
+        type: "VStack",
+        id: autoID(path),
+        alignment: "leading",
+        spacing: 0,
+        children: nodes
+      }
+    }
+
+    throw new Error("Missing " + name)
+  }
+
+  function serializeOptionalSlot(value, path) {
+    if (value === undefined || value === null) {
+      return undefined
+    }
+
+    return serializeSlot(value, path, "slot")
+  }
+
+  function normalizeResolvedNodes(resolved, path) {
     if (resolved && typeof resolved === "object" && !Array.isArray(resolved)) {
-      return resolved
+      return [resolved]
+    }
+
+    if (typeof resolved === "string" || typeof resolved === "number") {
+      return [makeTextNode(String(resolved), path)]
     }
 
     if (Array.isArray(resolved)) {
-      const nodes = resolved.filter(function (child) {
+      return flatten(
+        resolved.map(function (child, index) {
+          return normalizeResolvedNodes(child, path + "." + index)
+        })
+      ).filter(function (child) {
         return typeof child === "object" && child !== null
       })
-
-      if (nodes.length === 1) {
-        return nodes[0]
-      }
-
-      if (nodes.length > 1) {
-        return {
-          type: "VStack",
-          id: autoID(path),
-          alignment: "leading",
-          spacing: 0,
-          children: nodes
-        }
-      }
     }
 
-    throw new Error("NavigationSplitView requires a " + name + " slot")
+    return []
+  }
+
+  function makeTextNode(value, path) {
+    return {
+      type: "Text",
+      id: autoID(path),
+      value: value
+    }
   }
 
   function currentHookSlot(name) {
