@@ -1,3 +1,9 @@
+/**
+ * Shared value and prop types for the SwiftJS TSX surface.
+ *
+ * const frame: FrameValue = { maxWidth: "infinity", minHeight: 160 }
+ * const detents: PresentationDetentValue[] = ["medium", { height: 220 }]
+ */
 /** Accepts any named or hex color SwiftJS can resolve to `SwiftUI.Color`. */
 export type ColorValue = string
 
@@ -266,7 +272,15 @@ export type AngularGradientValue = { type: "AngularGradient" } & AngularGradient
 /** Shared paint value accepted by view backgrounds and shape styling props. */
 export type ShapeStyleValue = ColorValue | LinearGradientValue | RadialGradientValue | AngularGradientValue
 
-/** Shared modifiers available on all built-in SwiftJS host views in this shim. */
+/**
+ * Shared modifiers available on all built-in SwiftJS host views.
+ *
+ * const props: ViewProps = {
+ *   padding: 16,
+ *   background: "secondarySystemBackground",
+ *   navigationTitle: "Inbox",
+ * }
+ */
 export type ViewProps = {
   id?: string
   key?: string | number
@@ -370,7 +384,6 @@ export type SectionProps = ViewProps & {
 /** Props for `Form`. */
 export type FormProps = ViewProps
 
-/** Props for `NavigationStack`. */
 export type NavigationStackProps = ViewProps
 
 /** Props for `NavigationLink`. */
@@ -474,7 +487,6 @@ export type NavigationSplitViewProps = ViewProps & {
   detail: unknown
 }
 
-/** Props for `Text`. */
 export type TextProps = ViewProps & {
   font?: FontValue
   fontWeight?: FontWeight
@@ -513,7 +525,6 @@ export type RadialGradientProps = ViewProps & RadialGradientBase
 /** Props for `AngularGradient`. */
 export type AngularGradientProps = ViewProps & AngularGradientBase
 
-/** Props for `Button`. */
 export type ButtonProps = ViewProps & {
   action: () => void
   font?: FontValue
@@ -551,11 +562,14 @@ export type LabelProps = ViewProps & {
   fontWeight?: FontWeight
 }
 
-/** Props for `ContentUnavailableView`. */
 export type ContentUnavailableProps = ViewProps & {
+  /** Primary message. */
   title: string
+  /** SF Symbol name. */
   systemName?: string
+  /** Asset image name. */
   name?: string
+  /** Secondary content. */
   description?: unknown
 }
 
