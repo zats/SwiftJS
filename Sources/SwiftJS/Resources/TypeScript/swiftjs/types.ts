@@ -4,8 +4,37 @@
  * const frame: FrameValue = { maxWidth: "infinity", minHeight: 160 }
  * const detents: PresentationDetentValue[] = ["medium", { height: 220 }]
  */
-/** Accepts any named or hex color SwiftJS can resolve to `SwiftUI.Color`. */
-export type ColorValue = string
+/** Named colors SwiftJS resolves directly. */
+export type NamedColorValue =
+  | "red"
+  | "green"
+  | "yellow"
+  | "blue"
+  | "orange"
+  | "pink"
+  | "purple"
+  | "cyan"
+  | "gray"
+  | "grey"
+  | "black"
+  | "mint"
+  | "indigo"
+  | "teal"
+  | "white"
+  | "primary"
+  | "secondary"
+  | "clear"
+  | "systemGroupedBackground"
+  | "secondarySystemBackground"
+  | "tertiarySystemBackground"
+  | "tertiarySystemFill"
+  | "quaternarySystemFill"
+
+/** `#RGB`, `#RGBA`, `#RRGGBB`, or `#RRGGBBAA`. */
+export type HexColorValue = `#${string}`
+
+/** Named colors, `#` hex colors, or custom strings passed through to `SwiftUI.Color`. */
+export type ColorValue = NamedColorValue | HexColorValue | (string & {})
 
 /** Mirrors `SwiftUI.Font.Weight`. */
 export type FontWeight =

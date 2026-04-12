@@ -1,17 +1,3 @@
-/**
- * SwiftJS TSX SDK entrypoint.
- *
- * import { Button, Text, VStack, mount } from "./swiftjs"
- *
- * mount(() => (
- *   <VStack padding={16}>
- *     <Text font="headline">Hello</Text>
- *     <Button action={() => undefined} buttonStyle="borderedProminent">
- *       Continue
- *     </Button>
- *   </VStack>
- * ))
- */
 import type {
   AlertValue,
   AngularGradientProps,
@@ -98,6 +84,8 @@ export type {
   CapsuleProps,
   CircleProps,
   ColorValue,
+  HexColorValue,
+  NamedColorValue,
   ColorSchemeValue,
   ContentAlignment,
   ContentMarginsValue,
@@ -182,24 +170,6 @@ export type {
   ViewProps,
   ViewThatFitsProps,
 } from "./types"
-
-export { EKEventStore } from "./calendar"
-export type {
-  EKAuthorizationStatus,
-  EKCalendar,
-  EKCalendarType,
-  EKEvent,
-  EKEventAvailability,
-  EKEventInput,
-  EKEventPredicate,
-  EKEventStatus,
-  EKSource,
-  EKSourceType,
-  EKSpan,
-} from "./calendar"
-
-export { CLLocationManager } from "./location"
-export type { CLAccuracyAuthorization, CLAuthorizationStatus, CLLocation, CLLocationCoordinate2D } from "./location"
 
 /** Values persisted by `useAppStorage`. */
 export type AppStorageValue = string | number | boolean
