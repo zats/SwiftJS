@@ -1,0 +1,56 @@
+name: CatalogApp
+
+options:
+  minimumXcodeGenVersion: 2.38.0
+  projectFormat: xcode16_0
+  deploymentTarget:
+    iOS: "26.0"
+  defaultSourceDirectoryType: syncedFolder
+
+packages:
+  SwiftJS:
+    path: ../..
+
+targets:
+  CatalogApp:
+    type: application
+    platform: iOS
+    preBuildScripts:
+      - name: Build Catalog Bundle
+        script: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          temp_dir="$(mktemp -d)"
+          trap 'trash "$temp_dir"' EXIT
+          cd "$SRCROOT/JS"
+          pnpm install --frozen-lockfile
+          export SWIFTJS_BUNDLE_OUTFILE="$temp_dir/catalog.bundle.js"
+          pnpm build
+          ditto "$temp_dir/catalog.bundle.js" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/catalog.bundle.js"
+          ditto "$temp_dir/catalog.bundle.js.map" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/catalog.bundle.js.map"
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/catalog.bundle.js
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/catalog.bundle.js.map
+    sources:
+      - path: App
+        type: syncedFolder
+    dependencies:
+      - package: SwiftJS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.swiftjs.catalogapp
+        PRODUCT_NAME: CatalogApp
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: 6.0
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+
+schemes:
+  CatalogApp:
+    build:
+      targets:
+        CatalogApp: all
+    run:
+      config: Debug
