@@ -1,0 +1,12 @@
+{
+  "name": "swiftjs",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./jsx-runtime": "./jsx-runtime.ts",
+    "./types": "./types.ts",
+    "./location": "./location.ts",
+    "./calendar": "./calendar.ts"
+  }
+}
