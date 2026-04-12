@@ -2,6 +2,7 @@ import Foundation
 import JavaScriptCore
 import Observation
 import SwiftUI
+import UIKit
 import SwiftJSCore
 
 public struct SurfaceEvent: Hashable, Sendable, ExpressibleByStringLiteral {
@@ -2091,9 +2092,7 @@ private struct RenderNodeView: View {
     let node: ViewNode
     let onEvent: (SurfaceEvent) -> Void
     let customHostRegistry: CustomHostRegistry
-    #if canImport(UIKit)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    #endif
 
     var body: some View {
         switch node {
@@ -3003,7 +3002,6 @@ private struct RenderNodeView: View {
 
     @ViewBuilder
     private func navigationSplitView(sidebar: ViewNode, detail: ViewNode) -> some View {
-        #if canImport(UIKit)
         if horizontalSizeClass == .compact {
             CompactNavigationSplitHost(sidebar: sidebar, detail: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
         } else {
@@ -3013,13 +3011,6 @@ private struct RenderNodeView: View {
                 RenderNodeView(node: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
         }
-        #else
-        NavigationSplitView {
-            RenderNodeView(node: sidebar, onEvent: onEvent, customHostRegistry: customHostRegistry)
-        } detail: {
-            RenderNodeView(node: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
-        }
-        #endif
     }
 }
 
@@ -5225,7 +5216,6 @@ private extension Color {
             return .secondary
         case "clear":
             return .clear
-        #if canImport(UIKit)
         case "systemGroupedBackground":
             return Color(uiColor: .systemGroupedBackground)
         case "secondarySystemBackground":
@@ -5236,7 +5226,6 @@ private extension Color {
             return Color(uiColor: .tertiarySystemFill)
         case "quaternarySystemFill":
             return Color(uiColor: .quaternarySystemFill)
-        #endif
         default:
             return Color(value)
         }
