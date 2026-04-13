@@ -27,7 +27,11 @@
     }
 
     function setState(nextValue) {
-      slot.value = typeof nextValue === "function" ? nextValue(slot.value) : nextValue
+      const resolvedValue = typeof nextValue === "function" ? nextValue(slot.value) : nextValue
+      if (Object.is(slot.value, resolvedValue)) {
+        return
+      }
+      slot.value = resolvedValue
       render()
     }
 
@@ -125,13 +129,13 @@
 
     if (shouldRun) {
       pendingEffects.push(function () {
+        slot.deps = normalizedDeps
         if (typeof slot.cleanup === "function") {
           slot.cleanup()
         }
 
         const cleanup = effect()
         slot.cleanup = typeof cleanup === "function" ? cleanup : null
-        slot.deps = normalizedDeps
       })
     }
   }
