@@ -1600,6 +1600,68 @@ public enum SwiftJSTypeScriptPackage {
             .url(forResource: "package", withExtension: "json")?
             .deletingLastPathComponent()
     }
+
+    public static func apiReferenceSkillBody() -> String? {
+        guard let files = orderedSourceFiles(), !files.isEmpty else {
+            return nil
+        }
+
+        var sections = [
+            "Read these files before building or editing the app UI.",
+            "They define the SwiftJS TSX API surface used by the app.",
+        ]
+
+        for (name, contents) in files {
+            sections.append(
+                """
+                ## \(name)
+
+                ```ts
+                \(contents)
+                ```
+                """
+            )
+        }
+
+        return sections.joined(separator: "\n\n")
+    }
+
+    private static func orderedSourceFiles() -> [(String, String)]? {
+        guard let directoryURL = packageRootURL,
+              let fileNames = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path)
+        else {
+            return nil
+        }
+
+        let orderedNames = fileNames
+            .filter { $0.hasSuffix(".ts") && $0 != "jsx-runtime.ts" }
+            .sorted { lhs, rhs in
+                let preferredOrder = ["types.ts", "index.ts"]
+                let lhsIndex = preferredOrder.firstIndex(of: lhs)
+                let rhsIndex = preferredOrder.firstIndex(of: rhs)
+
+                switch (lhsIndex, rhsIndex) {
+                case let (.some(l), .some(r)):
+                    return l < r
+                case (.some, .none):
+                    return true
+                case (.none, .some):
+                    return false
+                case (.none, .none):
+                    return lhs < rhs
+                }
+            }
+
+        let contents = orderedNames.compactMap { name -> (String, String)? in
+            let url = directoryURL.appendingPathComponent(name, isDirectory: false)
+            guard let string = try? String(contentsOf: url, encoding: .utf8) else {
+                return nil
+            }
+            return (name, string)
+        }
+
+        return contents.isEmpty ? nil : contents
+    }
 }
 
 public struct JSSurfaceView: View {
