@@ -94,6 +94,9 @@ export type AxisValue = "vertical" | "horizontal"
 /** Mirrors `SwiftUI.Edge`. */
 export type EdgeValue = "top" | "bottom" | "leading" | "trailing"
 
+/** Mirrors `HorizontalEdge`. */
+export type HorizontalEdgeValue = "leading" | "trailing"
+
 /** Mirrors `Edge.Set`. */
 export type EdgeSetValue = EdgeValue | "horizontal" | "vertical" | "all"
 
@@ -121,11 +124,23 @@ export type NavigationBarTitleDisplayMode = "automatic" | "inline" | "large"
 /** Mirrors `ColorScheme`. */
 export type ColorSchemeValue = "light" | "dark"
 
+/** Mirrors `ToolbarRole`. */
+export type ToolbarRole = "automatic" | "browser" | "editor"
+
 /** Mirrors `ContentMarginPlacement`. */
 export type ContentMarginPlacement = "automatic" | "scrollContent" | "scrollIndicators"
 
 /** Mirrors `PresentationDragIndicator`. */
 export type PresentationDragIndicator = VisibilityKind
+
+/** Mirrors the high-value `UIKeyboardType` / SwiftUI `.keyboardType(...)` cases SwiftJS supports. */
+export type KeyboardType = "default" | "asciiCapable" | "numberPad" | "decimalPad" | "phonePad" | "emailAddress" | "URL"
+
+/** Mirrors `TextInputAutocapitalization`. */
+export type TextInputAutocapitalization = "never" | "words" | "sentences" | "characters"
+
+/** Mirrors the `SubmitLabel` cases SwiftJS supports. */
+export type SubmitLabel = "done" | "go" | "send" | "join" | "route" | "search" | "return" | "next" | "continue"
 
 /** Mirrors `fixedSize()` and `fixedSize(horizontal:vertical:)`. */
 export type FixedSizeValue = boolean | { horizontal?: boolean; vertical?: boolean }
@@ -136,8 +151,35 @@ export type AspectRatioValue = number | { value?: number; contentMode?: ImageCon
 /** Picker selection values supported by SwiftJS. */
 export type PickerValue = string | number
 
+/** Mirrors `SwiftUI.EditMode`. */
+export type EditMode = "inactive" | "transient" | "active"
+
+/** Selection values supported by `List(selection:)`. */
+export type ListSelectionValue = PickerValue
+
+/** Mirrors the payload emitted by SwiftUI list reordering. */
+export type MoveAction = {
+  fromOffsets: number[]
+  toOffset: number
+}
+
 /** Picker option values supported by SwiftJS. */
 export type PickerOption = PickerValue | { title: string; value: PickerValue }
+
+/** Mirrors the reusable `PickerStyle` overrides SwiftJS supports. */
+export type PickerStyle = "inline" | "menu" | "segmented"
+
+/** Date values accepted by `DatePicker`. */
+export type DateValue = string | Date
+
+/** Mirrors the common `DatePickerComponents` combinations. */
+export type DatePickerDisplayedComponents = "date" | "hourAndMinute" | "dateAndTime"
+
+/** Optional date bounds for `DatePicker`. */
+export type DatePickerRange<Value extends DateValue = DateValue> = {
+  start?: Value
+  end?: Value
+}
 
 /** Tab selection values supported by SwiftJS. */
 export type TabValue = PickerValue
@@ -219,8 +261,47 @@ export type ToolbarItemValue = {
 /** Mirrors `.toolbar`. */
 export type ToolbarValue = ToolbarItemValue[]
 
+/** Mirrors `SearchFieldPlacement.NavigationBarDrawerDisplayMode`. */
+export type SearchFieldNavigationBarDrawerDisplayMode = "automatic" | "always"
+
+/** Mirrors the common `SearchFieldPlacement` cases SwiftJS supports. */
+export type SearchFieldPlacement =
+  | "automatic"
+  | "toolbar"
+  | "toolbarPrincipal"
+  | "sidebar"
+  | "navigationBarDrawer"
+  | { navigationBarDrawer: SearchFieldNavigationBarDrawerDisplayMode }
+
+/** Mirrors `.searchable(text:prompt:)` with a writable text binding. */
+export type SearchableValue = {
+  text: string
+  onChange: (nextValue: string) => void
+  prompt?: string
+  placement?: SearchFieldPlacement
+}
+
+/** Mirrors `.searchSuggestions { ... }`. */
+export type SearchSuggestionsValue = unknown
+
+/** Mirrors `.searchScopes` with a writable selection binding and tagged scope content. */
+export type SearchScopesValue = {
+  selection: PickerValue
+  onChange: (nextValue: PickerValue) => void
+  content: unknown
+}
+
+/** Mirrors `SwiftUI.ButtonRole`. */
+export type ButtonRole = "cancel" | "destructive"
+
+/** Mirrors `SearchPresentationToolbarBehavior`. */
+export type SearchPresentationToolbarBehavior = "automatic" | "avoidHidingContent"
+
+/** Mirrors `SearchToolbarBehavior`. */
+export type SearchToolbarBehavior = "automatic" | "minimized"
+
 /** Mirrors alert and confirmation dialog action roles. */
-export type DialogActionRole = "cancel" | "destructive"
+export type DialogActionRole = ButtonRole
 
 /** Serializable dialog button description. */
 export type DialogActionValue = {
@@ -245,6 +326,24 @@ export type ConfirmationDialogValue = {
   message?: unknown
   actions?: DialogActionValue[]
 }
+
+/** Mirrors `.contextMenu`, with optional preview content. */
+export type ContextMenuValue =
+  | DialogActionValue[]
+  | {
+      items: DialogActionValue[]
+      preview?: unknown
+    }
+
+/** Mirrors `.swipeActions(edge:allowsFullSwipe:content:)`. */
+export type SwipeActionsEntry = {
+  items: unknown
+  edge?: HorizontalEdgeValue
+  allowsFullSwipe?: boolean
+}
+
+/** Mirrors one or more `.swipeActions(...)` modifiers. */
+export type SwipeActionsValue = SwipeActionsEntry | SwipeActionsEntry[]
 
 /** Mirrors `PresentationDetent`. */
 export type PresentationDetentValue = "medium" | "large" | { fraction: number } | { height: number }
@@ -301,6 +400,53 @@ export type AngularGradientValue = { type: "AngularGradient" } & AngularGradient
 /** Shared paint value accepted by view backgrounds and shape styling props. */
 export type ShapeStyleValue = ColorValue | LinearGradientValue | RadialGradientValue | AngularGradientValue
 
+/** Serializable transfer payload used by `draggable` and `dropDestination`. */
+export type TransferItemValue =
+  | string
+  | {
+      kind: "text"
+      value: string
+      contentType?: string
+      suggestedName?: string
+    }
+  | {
+      kind: "url"
+      value: string
+      contentType?: string
+      suggestedName?: string
+    }
+  | {
+      kind: "file"
+      value: string
+      contentType?: string
+      suggestedName?: string
+    }
+  | {
+      kind: "data"
+      value: string
+      contentType: string
+      suggestedName?: string
+    }
+
+/** Drop location emitted by `dropDestination`. */
+export type DropLocationValue = {
+  x: number
+  y: number
+}
+
+/** Decoded drop items passed to `dropDestination.action`. */
+export type DroppedTransferItemValue = Exclude<TransferItemValue, string>
+
+/**
+ * Reduced `.dropDestination(...)` subset.
+ * SwiftJS notifies JS after accepted providers load, but JS cannot veto the drop result.
+ */
+export type DropDestinationValue = {
+  contentTypes?: string[]
+  action: (items: DroppedTransferItemValue[], location: DropLocationValue) => void
+  isTargeted?: (isTargeted: boolean) => void
+}
+
 /**
  * Shared modifiers available on all built-in SwiftJS host views.
  *
@@ -314,7 +460,10 @@ export type ViewProps = {
   id?: string
   key?: string | number
   viewID?: string | number | boolean
+  tag?: PickerValue
   children?: unknown
+  /** Overrides the spoken label for assistive technologies. */
+  accessibilityLabel?: string
   padding?: number
   paddingTop?: number
   frame?: FrameValue
@@ -328,19 +477,33 @@ export type ViewProps = {
   navigationBarTitleDisplayMode?: NavigationBarTitleDisplayMode
   /** Controls the chevron visibility SwiftUI applies to navigation links. */
   navigationLinkIndicatorVisibility?: VisibilityKind
+  toolbarRole?: ToolbarRole
+  searchSuggestions?: SearchSuggestionsValue
+  searchScopes?: SearchScopesValue
+  searchCompletion?: string
+  searchPresentationToolbarBehavior?: SearchPresentationToolbarBehavior
+  searchToolbarBehavior?: SearchToolbarBehavior
   toolbar?: ToolbarValue
   toolbarBackgroundVisibility?: VisibilityKind
   toolbarColorScheme?: ColorSchemeValue
   listStyle?: ListStyle
+  pickerStyle?: PickerStyle
   scrollContentBackground?: VisibilityKind
   listRowSeparator?: VisibilityKind
   listSectionSeparator?: VisibilityKind
   listRowInsets?: EdgeInsetsValue
   listRowBackground?: ShapeStyleValue
+  draggable?: TransferItemValue
+  dropDestination?: DropDestinationValue
   contentMargins?: ContentMarginsValue | ContentMarginsValue[]
   imageContentMode?: ImageContentMode
   aspectRatio?: AspectRatioValue
   fixedSize?: FixedSizeValue
+  keyboardType?: KeyboardType
+  textInputAutocapitalization?: TextInputAutocapitalization
+  autocorrectionDisabled?: boolean
+  submitLabel?: SubmitLabel
+  onSubmit?: () => void
   safeAreaPadding?: SafeAreaPaddingValue
   ignoresSafeArea?: IgnoresSafeAreaValue
   safeAreaInset?: SafeAreaInsetValue | SafeAreaInsetValue[]
@@ -348,13 +511,18 @@ export type ViewProps = {
   buttonStyle?: ButtonStyle
   buttonBorderShape?: ButtonBorderShape
   disabled?: boolean
+  moveDisabled?: boolean
   glassEffect?: GlassEffectValue
+  editMode?: EditMode
+  onEditModeChange?: (nextValue: EditMode) => void
   lineLimit?: number
   multilineTextAlignment?: TextAlignmentValue
   truncationMode?: TruncationMode
   minimumScaleFactor?: number
   alert?: AlertValue
   confirmationDialog?: ConfirmationDialogValue
+  contextMenu?: ContextMenuValue
+  swipeActions?: SwipeActionsValue
   onAppear?: () => void
 }
 
@@ -387,6 +555,7 @@ export type ViewThatFitsProps = ViewProps & {
 /** Props for `ScrollView`. */
 export type ScrollViewProps = ViewProps & {
   axis?: AxisValue
+  searchable?: SearchableValue
 }
 
 /** Mirrors `GeometryProxy.size`. */
@@ -408,16 +577,55 @@ export type GeometryReaderProps = ViewProps & {
 /** Props for `Section`. */
 export type SectionProps = ViewProps & {
   title?: string
+  header?: unknown
+  footer?: unknown
 }
 
 /** Props for `Form`. */
-export type FormProps = ViewProps
+export type FormProps = ViewProps & {
+  searchable?: SearchableValue
+}
 
-export type NavigationStackProps = ViewProps
+export type NavigationStackProps = ViewProps & {
+  searchable?: SearchableValue
+  path?: CustomValue[]
+  onPathChange?: (nextPath: CustomValue[]) => void
+  navigationDestination?: (value: CustomValue) => unknown
+}
+
+/** Props for `ForEach`, used to carry row-level move handling. */
+export type ForEachProps = ViewProps & {
+  onMove?: (action: MoveAction) => void
+}
 
 /** Props for `NavigationLink`. */
-export type NavigationLinkProps = ViewProps & {
-  destination: unknown
+export type NavigationLinkProps = ViewProps &
+  (
+    | { destination: unknown; value?: never }
+    | { destination?: never; value: CustomValue }
+  )
+
+/** Explicit share payloads supported by `ShareLink`. */
+export type ShareItemValue = string | { kind: "text"; value: string } | { kind: "url"; value: string }
+
+/** Props for `Link`. */
+export type LinkProps = ViewProps & {
+  destination: string
+}
+
+/** Props for `WebView`. */
+export type WebViewProps = ViewProps & {
+  url: string
+}
+
+/** Props for `ShareLink`. */
+export type ShareLinkProps = ViewProps &
+  (
+    | { item: ShareItemValue; items?: never }
+    | { item?: never; items: ShareItemValue[] }
+  ) & {
+  subject?: string
+  message?: string
 }
 
 /** Props for `Sheet`. */
@@ -473,6 +681,13 @@ export type ControlGroupProps = ViewProps
 /** JSON-compatible values passed through custom host props. */
 export type CustomValue = string | number | boolean | CustomValue[] | { [key: string]: CustomValue }
 
+/** Props for `Custom`. */
+export type CustomProps = ViewProps & {
+  name: string
+  values?: Record<string, CustomValue>
+  slots?: Record<string, unknown>
+}
+
 /** Mirrors the subset of `ProposedViewSize` exposed to custom layouts. */
 export type ProposedViewSize = {
   width?: number
@@ -514,6 +729,7 @@ export type CustomLayoutProps = ViewProps & {
 export type NavigationSplitViewProps = ViewProps & {
   sidebar: unknown
   detail: unknown
+  searchable?: SearchableValue
 }
 
 export type TextProps = ViewProps & {
@@ -556,6 +772,35 @@ export type AngularGradientProps = ViewProps & AngularGradientBase
 
 export type ButtonProps = ViewProps & {
   action: () => void
+  role?: ButtonRole
+  font?: FontValue
+  fontWeight?: FontWeight
+}
+
+/** Props for `TextField`. */
+export type TextFieldProps = ViewProps & {
+  text: string
+  onChange: (nextValue: string) => void
+  title?: string
+  prompt?: string
+  font?: FontValue
+  fontWeight?: FontWeight
+}
+
+/** Props for `SecureField`. */
+export type SecureFieldProps = ViewProps & {
+  text: string
+  onChange: (nextValue: string) => void
+  title?: string
+  prompt?: string
+  font?: FontValue
+  fontWeight?: FontWeight
+}
+
+/** Props for `TextEditor`. */
+export type TextEditorProps = ViewProps & {
+  text: string
+  onChange: (nextValue: string) => void
   font?: FontValue
   fontWeight?: FontWeight
 }
@@ -565,6 +810,14 @@ export type PickerProps = ViewProps & {
   selection: PickerValue
   options: PickerOption[]
   onChange: (nextValue: PickerValue) => void
+}
+
+/** Props for `DatePicker`. */
+export type DatePickerProps<Value extends DateValue = DateValue> = ViewProps & {
+  selection: Value
+  onChange: (nextValue: Value) => void
+  displayedComponents?: DatePickerDisplayedComponents
+  range?: DatePickerRange<Value>
 }
 
 /** Props for `Toggle`. */
@@ -602,6 +855,18 @@ export type ContentUnavailableProps = ViewProps & {
   description?: unknown
 }
 
+/** Props for `ProgressView`. */
+export type ProgressViewProps = ViewProps & {
+  /** Optional completed work value. */
+  value?: number
+  /** Optional total work value. Requires `value`. */
+  total?: number
+  /** Optional label content. */
+  label?: unknown
+  /** Optional current-value label content. Requires `value`. */
+  currentValueLabel?: unknown
+}
+
 /** Props for `Divider`. */
 export type DividerProps = ViewProps
 
@@ -609,4 +874,17 @@ export type DividerProps = ViewProps
 export type SpacerProps = ViewProps
 
 /** Props for `List`. */
-export type ListProps = ViewProps
+export type ListProps = ViewProps & {
+  searchable?: SearchableValue
+  selection?: ReadonlySet<ListSelectionValue>
+  onSelectionChange?: (nextValue: Set<ListSelectionValue>) => void
+}
+
+/** Props for `EditButton`. */
+export type EditButtonProps = ViewProps
+export type TabRole = "search"
+
+export interface TabNode {
+  role?: TabRole
+  tabRole?: TabRole
+}

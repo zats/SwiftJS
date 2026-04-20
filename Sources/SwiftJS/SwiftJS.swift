@@ -2,7 +2,9 @@ import Foundation
 import JavaScriptCore
 import Observation
 import SwiftUI
+import UniformTypeIdentifiers
 import UIKit
+import WebKit
 import SwiftJSCore
 
 public struct SurfaceEvent: Hashable, Sendable, ExpressibleByStringLiteral {
@@ -73,6 +75,12 @@ public enum VisibilityKind: String, Codable, Equatable, Sendable {
     case hidden
 }
 
+public enum EditModeKind: String, Codable, Equatable, Sendable {
+    case inactive
+    case transient
+    case active
+}
+
 public enum ButtonStyle: String, Codable, Equatable, Sendable {
     case automatic
     case borderless
@@ -88,6 +96,15 @@ public enum ButtonBorderShape: String, Codable, Equatable, Sendable {
     case capsule
     case roundedRectangle
     case circle
+}
+
+public enum ButtonRoleKind: String, Codable, Equatable, Sendable {
+    case cancel
+    case destructive
+}
+
+public enum TabRoleKind: String, Codable, Equatable, Sendable {
+    case search
 }
 
 public enum AxisKind: String, Codable, Equatable, Sendable {
@@ -133,6 +150,41 @@ public enum ListStyleKind: String, Codable, Equatable, Sendable {
     case sidebar
 }
 
+public enum PickerStyleKind: String, Codable, Equatable, Sendable {
+    case inline
+    case menu
+    case segmented
+}
+
+public enum KeyboardTypeKind: String, Codable, Equatable, Sendable {
+    case `default`
+    case asciiCapable
+    case numberPad
+    case decimalPad
+    case phonePad
+    case emailAddress
+    case URL
+}
+
+public enum TextInputAutocapitalizationKind: String, Codable, Equatable, Sendable {
+    case never
+    case words
+    case sentences
+    case characters
+}
+
+public enum SubmitLabelKind: String, Codable, Equatable, Sendable {
+    case done
+    case go
+    case send
+    case join
+    case route
+    case search
+    case `return`
+    case next
+    case `continue`
+}
+
 public enum TextAlignmentKind: String, Codable, Equatable, Sendable {
     case leading
     case center
@@ -156,6 +208,35 @@ public enum ColorSchemeKind: String, Codable, Equatable, Sendable {
     case dark
 }
 
+public enum ToolbarRoleKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case browser
+    case editor
+}
+
+public enum SearchFieldPlacementKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case toolbar
+    case toolbarPrincipal
+    case sidebar
+    case navigationBarDrawer
+}
+
+public enum SearchFieldNavigationBarDrawerDisplayModeKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case always
+}
+
+public enum SearchPresentationToolbarBehaviorKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case avoidHidingContent
+}
+
+public enum SearchToolbarBehaviorKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case minimized
+}
+
 public enum GlassVariantKind: String, Codable, Equatable, Sendable {
     case regular
     case clear
@@ -164,6 +245,11 @@ public enum GlassVariantKind: String, Codable, Equatable, Sendable {
 public enum EdgeKind: String, Codable, Equatable, Sendable {
     case top
     case bottom
+    case leading
+    case trailing
+}
+
+public enum HorizontalEdgeKind: String, Codable, Equatable, Sendable {
     case leading
     case trailing
 }
@@ -211,6 +297,129 @@ public enum ImageInterpolation: String, Codable, Equatable, Sendable {
 public enum ImageSource: Equatable, Sendable {
     case system(String)
     case asset(String)
+}
+
+public enum ShareItemValue: Equatable, Sendable {
+    case text(String)
+    case url(URL)
+}
+
+public enum TransferItemValue: Equatable, Sendable, Codable {
+    case text(value: String, contentType: String?, suggestedName: String?)
+    case url(value: URL, contentType: String?, suggestedName: String?)
+    case file(value: URL, contentType: String?, suggestedName: String?)
+    case data(value: Data, contentType: String, suggestedName: String?)
+
+    private enum CodingKeys: String, CodingKey {
+        case kind
+        case value
+        case contentType
+        case suggestedName
+    }
+
+    private enum Kind: String, Codable {
+        case text
+        case url
+        case file
+        case data
+    }
+
+    public init(from decoder: Decoder) throws {
+        if let container = try? decoder.singleValueContainer(),
+           let value = try? container.decode(String.self) {
+            self = .text(value: value, contentType: nil, suggestedName: nil)
+            return
+        }
+
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try container.decode(Kind.self, forKey: .kind)
+        let contentType = try container.decodeIfPresent(String.self, forKey: .contentType)
+        let suggestedName = try container.decodeIfPresent(String.self, forKey: .suggestedName)
+
+        switch kind {
+        case .text:
+            self = .text(
+                value: try container.decode(String.self, forKey: .value),
+                contentType: contentType,
+                suggestedName: suggestedName
+            )
+        case .url:
+            self = .url(
+                value: try container.decode(URL.self, forKey: .value),
+                contentType: contentType,
+                suggestedName: suggestedName
+            )
+        case .file:
+            self = .file(
+                value: try container.decode(URL.self, forKey: .value),
+                contentType: contentType,
+                suggestedName: suggestedName
+            )
+        case .data:
+            guard let contentType else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .contentType,
+                    in: container,
+                    debugDescription: "Transfer data items require a contentType"
+                )
+            }
+
+            self = .data(
+                value: try container.decode(Data.self, forKey: .value),
+                contentType: contentType,
+                suggestedName: suggestedName
+            )
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case let .text(value, contentType, suggestedName):
+            try container.encode(Kind.text, forKey: .kind)
+            try container.encode(value, forKey: .value)
+            try container.encodeIfPresent(contentType, forKey: .contentType)
+            try container.encodeIfPresent(suggestedName, forKey: .suggestedName)
+        case let .url(value, contentType, suggestedName):
+            try container.encode(Kind.url, forKey: .kind)
+            try container.encode(value, forKey: .value)
+            try container.encodeIfPresent(contentType, forKey: .contentType)
+            try container.encodeIfPresent(suggestedName, forKey: .suggestedName)
+        case let .file(value, contentType, suggestedName):
+            try container.encode(Kind.file, forKey: .kind)
+            try container.encode(value, forKey: .value)
+            try container.encodeIfPresent(contentType, forKey: .contentType)
+            try container.encodeIfPresent(suggestedName, forKey: .suggestedName)
+        case let .data(value, contentType, suggestedName):
+            try container.encode(Kind.data, forKey: .kind)
+            try container.encode(value, forKey: .value)
+            try container.encode(contentType, forKey: .contentType)
+            try container.encodeIfPresent(suggestedName, forKey: .suggestedName)
+        }
+    }
+}
+
+public struct DropLocationValue: Codable, Equatable, Sendable {
+    public let x: Double
+    public let y: Double
+
+    public init(x: Double, y: Double) {
+        self.x = x
+        self.y = y
+    }
+}
+
+public struct DropDestinationValue: Equatable, Sendable {
+    public let contentTypes: [String]?
+    public let event: SurfaceEvent
+    public let targetedEvent: SurfaceEvent?
+
+    public init(contentTypes: [String]? = nil, event: SurfaceEvent, targetedEvent: SurfaceEvent? = nil) {
+        self.contentTypes = contentTypes
+        self.event = event
+        self.targetedEvent = targetedEvent
+    }
 }
 
 public struct GradientStopValue: Codable, Equatable, Sendable {
@@ -294,6 +503,58 @@ public enum PickerSelectionValue: Equatable, Hashable, Sendable, Codable {
     }
 }
 
+extension PickerSelectionValue {
+    var stableSortKey: String {
+        switch self {
+        case let .number(value):
+            return "0:\(value)"
+        case let .string(value):
+            return "1:\(value)"
+        }
+    }
+}
+
+extension Array where Element == PickerSelectionValue {
+    var payloadJSON: String {
+        let data = try? JSONEncoder().encode(self)
+        return String(decoding: data ?? Data("[]".utf8), as: UTF8.self)
+    }
+}
+
+extension Array where Element == CustomHostValue {
+    var payloadJSON: String {
+        let data = try? JSONEncoder().encode(self)
+        return String(decoding: data ?? Data("[]".utf8), as: UTF8.self)
+    }
+}
+
+extension Array where Element == TransferItemValue {
+    var payloadJSON: String {
+        let data = try? JSONEncoder().encode(self)
+        return String(decoding: data ?? Data("[]".utf8), as: UTF8.self)
+    }
+}
+
+struct MoveActionValue: Codable, Equatable, Sendable {
+    let fromOffsets: [Int]
+    let toOffset: Int
+
+    var payloadJSON: String {
+        let data = try? JSONEncoder().encode(self)
+        return String(decoding: data ?? Data("null".utf8), as: UTF8.self)
+    }
+}
+
+struct DropActionPayloadValue: Codable, Equatable, Sendable {
+    let items: [TransferItemValue]
+    let location: DropLocationValue
+
+    var payloadJSON: String {
+        let data = try? JSONEncoder().encode(self)
+        return String(decoding: data ?? Data("null".utf8), as: UTF8.self)
+    }
+}
+
 public struct PickerOption: Equatable, Hashable, Sendable, Codable {
     public let title: String
     public let value: PickerSelectionValue
@@ -301,6 +562,19 @@ public struct PickerOption: Equatable, Hashable, Sendable, Codable {
     public init(title: String, value: PickerSelectionValue) {
         self.title = title
         self.value = value
+    }
+}
+
+public enum DatePickerDisplayedComponentsKind: String, Codable, Equatable, Sendable {
+    case date
+    case hourAndMinute
+    case dateAndTime
+}
+
+extension String {
+    var payloadJSON: String {
+        let data = try? JSONEncoder().encode(self)
+        return String(decoding: data ?? Data("null".utf8), as: UTF8.self)
     }
 }
 
@@ -330,6 +604,28 @@ public enum BadgeValue: Equatable, Hashable, Sendable, Codable {
     }
 }
 
+private enum HostDateValue {
+    static func makeFractionalFormatter() -> ISO8601DateFormatter {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }
+
+    static func makeStandardFormatter() -> ISO8601DateFormatter {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }
+
+    static func parse(_ value: String) -> Date? {
+        makeFractionalFormatter().date(from: value) ?? makeStandardFormatter().date(from: value)
+    }
+
+    static func stringify(_ value: Date) -> String {
+        makeFractionalFormatter().string(from: value)
+    }
+}
+
 public struct EdgeInsetsValue: Codable, Equatable, Sendable {
     public let top: Double?
     public let leading: Double?
@@ -354,14 +650,11 @@ public struct ToolbarItemValue: Equatable, Sendable {
     public let content: ViewNode
 }
 
-public enum DialogActionRoleKind: String, Codable, Equatable, Sendable {
-    case cancel
-    case destructive
-}
+public typealias DialogActionRoleKind = ButtonRoleKind
 
 public struct DialogActionValue: Codable, Equatable, Sendable {
     public let title: String
-    public let role: DialogActionRoleKind?
+    public let role: ButtonRoleKind?
     public let event: String?
 }
 
@@ -378,6 +671,28 @@ public struct ConfirmationDialogValue: Equatable, Sendable {
     public let titleVisibility: VisibilityKind
     public let message: ViewNode?
     public let actions: [DialogActionValue]
+}
+
+public struct ContextMenuValue: Equatable, Sendable {
+    public let actions: [DialogActionValue]
+    public let preview: ViewNode?
+
+    public init(actions: [DialogActionValue], preview: ViewNode? = nil) {
+        self.actions = actions
+        self.preview = preview
+    }
+}
+
+public struct SwipeActionsValue: Equatable, Sendable {
+    public let items: [ViewNode]
+    public let edge: HorizontalEdgeKind
+    public let allowsFullSwipe: Bool
+
+    public init(items: [ViewNode], edge: HorizontalEdgeKind = .trailing, allowsFullSwipe: Bool = true) {
+        self.items = items
+        self.edge = edge
+        self.allowsFullSwipe = allowsFullSwipe
+    }
 }
 
 public enum PresentationDetentValue: Equatable, Sendable, Codable {
@@ -434,7 +749,7 @@ public enum PresentationBackgroundInteractionValue: Equatable, Sendable {
     case upThrough(PresentationDetentValue)
 }
 
-public enum CustomHostValue: Equatable, Sendable, Codable {
+public enum CustomHostValue: Equatable, Hashable, Sendable, Codable {
     case string(String)
     case number(Double)
     case bool(Bool)
@@ -471,6 +786,34 @@ public enum CustomHostValue: Equatable, Sendable, Codable {
             try container.encode(value)
         case let .object(value):
             try container.encode(value)
+        }
+    }
+
+    var payloadJSON: String {
+        let data = try? JSONEncoder().encode(self)
+        return String(decoding: data ?? Data("null".utf8), as: UTF8.self)
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        switch self {
+        case let .string(value):
+            hasher.combine(0)
+            hasher.combine(value)
+        case let .number(value):
+            hasher.combine(1)
+            hasher.combine(value)
+        case let .bool(value):
+            hasher.combine(2)
+            hasher.combine(value)
+        case let .array(value):
+            hasher.combine(3)
+            hasher.combine(value)
+        case let .object(value):
+            hasher.combine(4)
+            for key in value.keys.sorted() {
+                hasher.combine(key)
+                hasher.combine(value[key])
+            }
         }
     }
 }
@@ -635,24 +978,28 @@ public struct CustomHostRegistry {
     private let layouts: [String: LayoutRenderer]
     fileprivate let javaScriptLayoutBridge: JavaScriptLayoutBridge?
     fileprivate let geometryReaderBridge: GeometryReaderBridge?
+    fileprivate let navigationDestinationBridge: NavigationDestinationBridge?
 
     public init(renderers: [String: Renderer] = [:], layouts: [String: LayoutRenderer] = [:]) {
         self.renderers = renderers
         self.layouts = layouts
         self.javaScriptLayoutBridge = nil
         self.geometryReaderBridge = nil
+        self.navigationDestinationBridge = nil
     }
 
     fileprivate init(
         renderers: [String: Renderer],
         layouts: [String: LayoutRenderer],
         javaScriptLayoutBridge: JavaScriptLayoutBridge?,
-        geometryReaderBridge: GeometryReaderBridge?
+        geometryReaderBridge: GeometryReaderBridge?,
+        navigationDestinationBridge: NavigationDestinationBridge?
     ) {
         self.renderers = renderers
         self.layouts = layouts
         self.javaScriptLayoutBridge = javaScriptLayoutBridge
         self.geometryReaderBridge = geometryReaderBridge
+        self.navigationDestinationBridge = navigationDestinationBridge
     }
 
     public func renderer(named name: String) -> Renderer? {
@@ -663,21 +1010,33 @@ public struct CustomHostRegistry {
         layouts[name]
     }
 
-    fileprivate func withJavaScriptLayoutBridge(_ bridge: JavaScriptLayoutBridge) -> Self {
+    func withJavaScriptLayoutBridge(_ bridge: JavaScriptLayoutBridge) -> Self {
         Self(
             renderers: renderers,
             layouts: layouts,
             javaScriptLayoutBridge: bridge,
-            geometryReaderBridge: geometryReaderBridge
+            geometryReaderBridge: geometryReaderBridge,
+            navigationDestinationBridge: navigationDestinationBridge
         )
     }
 
-    fileprivate func withGeometryReaderBridge(_ bridge: GeometryReaderBridge) -> Self {
+    func withGeometryReaderBridge(_ bridge: GeometryReaderBridge) -> Self {
         Self(
             renderers: renderers,
             layouts: layouts,
             javaScriptLayoutBridge: javaScriptLayoutBridge,
-            geometryReaderBridge: bridge
+            geometryReaderBridge: bridge,
+            navigationDestinationBridge: navigationDestinationBridge
+        )
+    }
+
+    func withNavigationDestinationBridge(_ bridge: NavigationDestinationBridge) -> Self {
+        Self(
+            renderers: renderers,
+            layouts: layouts,
+            javaScriptLayoutBridge: javaScriptLayoutBridge,
+            geometryReaderBridge: geometryReaderBridge,
+            navigationDestinationBridge: bridge
         )
     }
 }
@@ -685,6 +1044,8 @@ public struct CustomHostRegistry {
 public struct ViewModifiers: Equatable, Sendable {
     public var alignment: ContentAlignment
     public var viewIdentity: CustomHostValue?
+    public var tag: PickerSelectionValue?
+    public var accessibilityLabel: String?
     public var padding: Double?
     public var paddingTop: Double?
     public var frameMinWidth: Double?
@@ -707,21 +1068,41 @@ public struct ViewModifiers: Equatable, Sendable {
     public var buttonStyle: ButtonStyle?
     public var buttonBorderShape: ButtonBorderShape?
     public var isDisabled: Bool
+    public var moveDisabled: Bool
     public var glassEffect: Bool
     public var glassVariant: GlassVariantKind
     public var glassTint: String?
+    public var editMode: EditModeKind?
+    public var editModeEvent: SurfaceEvent?
     public var navigationTitle: String?
     public var navigationBarTitleDisplayMode: NavigationBarTitleDisplayModeKind?
     public var navigationLinkIndicatorVisibility: VisibilityKind?
+    public var toolbarRole: ToolbarRoleKind?
+    public var searchable: SearchableValue?
+    public var searchSuggestions: SearchSuggestionsValue?
+    public var searchScopes: SearchScopesValue?
+    public var searchCompletion: String?
+    public var tabRole: TabRoleKind?
+    public var searchPresentationToolbarBehavior: SearchPresentationToolbarBehaviorKind?
+    public var searchToolbarBehavior: SearchToolbarBehaviorKind?
     public var toolbarItems: [ToolbarItemValue]
     public var toolbarBackgroundVisibility: VisibilityKind?
     public var toolbarColorScheme: ColorSchemeKind?
     public var listStyle: ListStyleKind?
+    public var pickerStyle: PickerStyleKind?
+    public var keyboardType: KeyboardTypeKind?
+    public var textInputAutocapitalization: TextInputAutocapitalizationKind?
+    public var autocorrectionDisabled: Bool?
+    public var submitLabel: SubmitLabelKind?
+    public var submitEvent: SurfaceEvent?
     public var scrollContentBackground: VisibilityKind?
     public var listRowSeparator: VisibilityKind?
     public var listSectionSeparator: VisibilityKind?
     public var listRowInsets: EdgeInsetsValue?
     public var listRowBackground: ShapeStyleValue?
+    public var draggable: TransferItemValue?
+    public var dropDestination: DropDestinationValue?
+    public var swipeActions: [SwipeActionsValue]
     public var contentMargins: [ContentMarginsValue]
     public var imageContentMode: ImageContentMode?
     public var imageInterpolation: ImageInterpolation?
@@ -744,11 +1125,14 @@ public struct ViewModifiers: Equatable, Sendable {
     public var presentationBackgroundInteraction: PresentationBackgroundInteractionValue?
     public var alert: AlertValue?
     public var confirmationDialog: ConfirmationDialogValue?
+    public var contextMenu: ContextMenuValue?
     public var onAppearEvent: SurfaceEvent?
 
     public init(
         alignment: ContentAlignment = .center,
         viewIdentity: CustomHostValue? = nil,
+        tag: PickerSelectionValue? = nil,
+        accessibilityLabel: String? = nil,
         padding: Double? = nil,
         paddingTop: Double? = nil,
         frameMinWidth: Double? = nil,
@@ -771,21 +1155,41 @@ public struct ViewModifiers: Equatable, Sendable {
         buttonStyle: ButtonStyle? = nil,
         buttonBorderShape: ButtonBorderShape? = nil,
         isDisabled: Bool = false,
+        moveDisabled: Bool = false,
         glassEffect: Bool = false,
         glassVariant: GlassVariantKind = .regular,
         glassTint: String? = nil,
+        editMode: EditModeKind? = nil,
+        editModeEvent: SurfaceEvent? = nil,
         navigationTitle: String? = nil,
         navigationBarTitleDisplayMode: NavigationBarTitleDisplayModeKind? = nil,
         navigationLinkIndicatorVisibility: VisibilityKind? = nil,
+        toolbarRole: ToolbarRoleKind? = nil,
+        searchable: SearchableValue? = nil,
+        searchSuggestions: SearchSuggestionsValue? = nil,
+        searchScopes: SearchScopesValue? = nil,
+        searchCompletion: String? = nil,
+        tabRole: TabRoleKind? = nil,
+        searchPresentationToolbarBehavior: SearchPresentationToolbarBehaviorKind? = nil,
+        searchToolbarBehavior: SearchToolbarBehaviorKind? = nil,
         toolbarItems: [ToolbarItemValue] = [],
         toolbarBackgroundVisibility: VisibilityKind? = nil,
         toolbarColorScheme: ColorSchemeKind? = nil,
         listStyle: ListStyleKind? = nil,
+        pickerStyle: PickerStyleKind? = nil,
+        keyboardType: KeyboardTypeKind? = nil,
+        textInputAutocapitalization: TextInputAutocapitalizationKind? = nil,
+        autocorrectionDisabled: Bool? = nil,
+        submitLabel: SubmitLabelKind? = nil,
+        submitEvent: SurfaceEvent? = nil,
         scrollContentBackground: VisibilityKind? = nil,
         listRowSeparator: VisibilityKind? = nil,
         listSectionSeparator: VisibilityKind? = nil,
         listRowInsets: EdgeInsetsValue? = nil,
         listRowBackground: ShapeStyleValue? = nil,
+        draggable: TransferItemValue? = nil,
+        dropDestination: DropDestinationValue? = nil,
+        swipeActions: [SwipeActionsValue] = [],
         contentMargins: [ContentMarginsValue] = [],
         imageContentMode: ImageContentMode? = nil,
         imageInterpolation: ImageInterpolation? = nil,
@@ -808,10 +1212,13 @@ public struct ViewModifiers: Equatable, Sendable {
         presentationBackgroundInteraction: PresentationBackgroundInteractionValue? = nil,
         alert: AlertValue? = nil,
         confirmationDialog: ConfirmationDialogValue? = nil,
+        contextMenu: ContextMenuValue? = nil,
         onAppearEvent: SurfaceEvent? = nil
     ) {
         self.alignment = alignment
         self.viewIdentity = viewIdentity
+        self.tag = tag
+        self.accessibilityLabel = accessibilityLabel
         self.padding = padding
         self.paddingTop = paddingTop
         self.frameMinWidth = frameMinWidth
@@ -834,21 +1241,41 @@ public struct ViewModifiers: Equatable, Sendable {
         self.buttonStyle = buttonStyle
         self.buttonBorderShape = buttonBorderShape
         self.isDisabled = isDisabled
+        self.moveDisabled = moveDisabled
         self.glassEffect = glassEffect
         self.glassVariant = glassVariant
         self.glassTint = glassTint
+        self.editMode = editMode
+        self.editModeEvent = editModeEvent
         self.navigationTitle = navigationTitle
         self.navigationBarTitleDisplayMode = navigationBarTitleDisplayMode
         self.navigationLinkIndicatorVisibility = navigationLinkIndicatorVisibility
+        self.toolbarRole = toolbarRole
+        self.searchable = searchable
+        self.searchSuggestions = searchSuggestions
+        self.searchScopes = searchScopes
+        self.searchCompletion = searchCompletion
+        self.tabRole = tabRole
+        self.searchPresentationToolbarBehavior = searchPresentationToolbarBehavior
+        self.searchToolbarBehavior = searchToolbarBehavior
         self.toolbarItems = toolbarItems
         self.toolbarBackgroundVisibility = toolbarBackgroundVisibility
         self.toolbarColorScheme = toolbarColorScheme
         self.listStyle = listStyle
+        self.pickerStyle = pickerStyle
+        self.keyboardType = keyboardType
+        self.textInputAutocapitalization = textInputAutocapitalization
+        self.autocorrectionDisabled = autocorrectionDisabled
+        self.submitLabel = submitLabel
+        self.submitEvent = submitEvent
         self.scrollContentBackground = scrollContentBackground
         self.listRowSeparator = listRowSeparator
         self.listSectionSeparator = listSectionSeparator
         self.listRowInsets = listRowInsets
         self.listRowBackground = listRowBackground
+        self.draggable = draggable
+        self.dropDestination = dropDestination
+        self.swipeActions = swipeActions
         self.contentMargins = contentMargins
         self.imageContentMode = imageContentMode
         self.imageInterpolation = imageInterpolation
@@ -871,7 +1298,60 @@ public struct ViewModifiers: Equatable, Sendable {
         self.presentationBackgroundInteraction = presentationBackgroundInteraction
         self.alert = alert
         self.confirmationDialog = confirmationDialog
+        self.contextMenu = contextMenu
         self.onAppearEvent = onAppearEvent
+    }
+}
+
+public struct SearchFieldPlacementValue: Equatable, Sendable {
+    public let kind: SearchFieldPlacementKind
+    public let navigationBarDrawerDisplayMode: SearchFieldNavigationBarDrawerDisplayModeKind?
+
+    public init(
+        kind: SearchFieldPlacementKind = .automatic,
+        navigationBarDrawerDisplayMode: SearchFieldNavigationBarDrawerDisplayModeKind? = nil
+    ) {
+        self.kind = kind
+        self.navigationBarDrawerDisplayMode = navigationBarDrawerDisplayMode
+    }
+}
+
+public struct SearchableValue: Equatable, Sendable {
+    public let text: String
+    public let prompt: String?
+    public let placement: SearchFieldPlacementValue
+    public let event: SurfaceEvent
+
+    public init(
+        text: String,
+        prompt: String? = nil,
+        placement: SearchFieldPlacementValue = .init(),
+        event: SurfaceEvent
+    ) {
+        self.text = text
+        self.prompt = prompt
+        self.placement = placement
+        self.event = event
+    }
+}
+
+public struct SearchSuggestionsValue: Equatable, Sendable {
+    public let content: [ViewNode]
+
+    public init(content: [ViewNode]) {
+        self.content = content
+    }
+}
+
+public struct SearchScopesValue: Equatable, Sendable {
+    public let selection: PickerSelectionValue
+    public let event: SurfaceEvent
+    public let content: [ViewNode]
+
+    public init(selection: PickerSelectionValue, event: SurfaceEvent, content: [ViewNode]) {
+        self.selection = selection
+        self.event = event
+        self.content = content
     }
 }
 
@@ -950,8 +1430,16 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         values: [String: CustomHostValue],
         children: [ViewNode]
     )
+    case forEach(
+        id: NodeID,
+        moveEvent: SurfaceEvent?,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
     case list(
         id: NodeID,
+        selection: Set<PickerSelectionValue>?,
+        selectionEvent: SurfaceEvent?,
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
@@ -963,19 +1451,36 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
     case section(
         id: NodeID,
         title: String?,
+        header: ViewNode?,
+        footer: ViewNode?,
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
     case navigationStack(
         id: NodeID,
+        path: [CustomHostValue]?,
+        pathEvent: SurfaceEvent?,
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
     case navigationLink(
         id: NodeID,
         modifiers: ViewModifiers,
-        destination: ViewNode,
+        destination: ViewNode?,
+        value: CustomHostValue?,
         children: [ViewNode]
+    )
+    case link(
+        id: NodeID,
+        title: String,
+        destination: URL,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
+    case webView(
+        id: NodeID,
+        url: URL,
+        modifiers: ViewModifiers
     )
     case sheet(
         id: NodeID,
@@ -1038,6 +1543,14 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         description: ViewNode?,
         modifiers: ViewModifiers,
         children: [ViewNode]
+    )
+    case progressView(
+        id: NodeID,
+        value: Double?,
+        total: Double?,
+        label: ViewNode?,
+        currentValueLabel: ViewNode?,
+        modifiers: ViewModifiers
     )
     case image(
         id: NodeID,
@@ -1102,9 +1615,45 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
     case button(
         id: NodeID,
         title: String,
+        role: ButtonRoleKind?,
         event: SurfaceEvent,
         modifiers: ViewModifiers,
         children: [ViewNode]
+    )
+    case editButton(
+        id: NodeID,
+        modifiers: ViewModifiers
+    )
+    case shareLink(
+        id: NodeID,
+        title: String,
+        items: [ShareItemValue],
+        subject: String?,
+        message: String?,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
+    case textField(
+        id: NodeID,
+        title: String,
+        text: String,
+        prompt: String?,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers
+    )
+    case secureField(
+        id: NodeID,
+        title: String,
+        text: String,
+        prompt: String?,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers
+    )
+    case textEditor(
+        id: NodeID,
+        text: String,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers
     )
     case menu(
         id: NodeID,
@@ -1136,6 +1685,17 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
+    case datePicker(
+        id: NodeID,
+        title: String,
+        selection: Date,
+        minimumDate: Date?,
+        maximumDate: Date?,
+        displayedComponents: DatePickerDisplayedComponentsKind,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
     case toggle(
         id: NodeID,
         title: String,
@@ -1158,11 +1718,14 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .geometryReader(id, _),
              let .custom(id, _, _, _, _, _),
              let .customLayout(id, _, _, _, _),
-             let .list(id, _, _),
+             let .forEach(id, _, _, _),
+             let .list(id, _, _, _, _),
              let .form(id, _, _),
-             let .section(id, _, _, _),
-             let .navigationStack(id, _, _),
-             let .navigationLink(id, _, _, _),
+             let .section(id, _, _, _, _, _),
+             let .navigationStack(id, _, _, _, _),
+             let .navigationLink(id, _, _, _, _),
+             let .link(id, _, _, _, _),
+             let .webView(id, _, _),
              let .sheet(id, _, _, _, _, _),
              let .fullScreenCover(id, _, _, _, _, _, _),
              let .tabView(id, _, _, _, _),
@@ -1172,6 +1735,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .text(id, _, _),
              let .label(id, _, _, _),
              let .contentUnavailable(id, _, _, _, _, _),
+             let .progressView(id, _, _, _, _, _),
              let .image(id, _, _),
              let .rectangle(id, _, _, _, _),
              let .roundedRectangle(id, _, _, _, _, _),
@@ -1182,11 +1746,17 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .radialGradient(id, _, _),
              let .angularGradient(id, _, _),
              let .divider(id, _),
-             let .button(id, _, _, _, _),
+             let .button(id, _, _, _, _, _),
+             let .editButton(id, _),
+             let .shareLink(id, _, _, _, _, _, _),
+             let .textField(id, _, _, _, _, _),
+             let .secureField(id, _, _, _, _, _),
+             let .textEditor(id, _, _, _),
              let .menu(id, _, _, _, _),
              let .disclosureGroup(id, _, _, _, _, _, _),
              let .controlGroup(id, _, _),
              let .picker(id, _, _, _, _, _, _),
+             let .datePicker(id, _, _, _, _, _, _, _, _),
              let .toggle(id, _, _, _, _, _):
             id
         }
@@ -1205,11 +1775,14 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .geometryReader(_, modifiers),
              let .custom(_, _, modifiers, _, _, _),
              let .customLayout(_, _, modifiers, _, _),
-             let .list(_, modifiers, _),
+             let .forEach(_, _, modifiers, _),
+             let .list(_, _, _, modifiers, _),
              let .form(_, modifiers, _),
-             let .section(_, _, modifiers, _),
-             let .navigationStack(_, modifiers, _),
-             let .navigationLink(_, modifiers, _, _),
+             let .section(_, _, _, _, modifiers, _),
+             let .navigationStack(_, _, _, modifiers, _),
+             let .navigationLink(_, modifiers, _, _, _),
+             let .link(_, _, _, modifiers, _),
+             let .webView(_, _, modifiers),
              let .sheet(_, _, _, modifiers, _, _),
              let .fullScreenCover(_, _, _, _, modifiers, _, _),
              let .tabView(_, _, _, modifiers, _),
@@ -1219,6 +1792,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .text(_, _, modifiers),
              let .label(_, _, _, modifiers),
              let .contentUnavailable(_, _, _, _, modifiers, _),
+             let .progressView(_, _, _, _, _, modifiers),
              let .image(_, _, modifiers),
              let .rectangle(_, _, _, _, modifiers),
              let .roundedRectangle(_, _, _, _, _, modifiers),
@@ -1229,11 +1803,17 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .radialGradient(_, _, modifiers),
              let .angularGradient(_, _, modifiers),
              let .divider(_, modifiers),
-             let .button(_, _, _, modifiers, _),
+             let .button(_, _, _, _, modifiers, _),
+             let .editButton(_, modifiers),
+             let .shareLink(_, _, _, _, _, modifiers, _),
+             let .textField(_, _, _, _, _, modifiers),
+             let .secureField(_, _, _, _, _, modifiers),
+             let .textEditor(_, _, _, modifiers),
              let .menu(_, _, modifiers, _, _),
              let .disclosureGroup(_, _, _, _, modifiers, _, _),
              let .controlGroup(_, modifiers, _),
              let .picker(_, _, _, _, _, modifiers, _),
+             let .datePicker(_, _, _, _, _, _, _, modifiers, _),
              let .toggle(_, _, _, _, modifiers, _):
             modifiers
         }
@@ -1357,9 +1937,18 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
                   lValues == rValues,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
-        case let (.list(lID, lModifiers, lChildren),
-                  .list(rID, rModifiers, rChildren)):
+        case let (.forEach(lID, lMoveEvent, lModifiers, lChildren),
+                  .forEach(rID, rMoveEvent, rModifiers, rChildren)):
             guard lID == rID,
+                  lMoveEvent == rMoveEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.list(lID, lSelection, lSelectionEvent, lModifiers, lChildren),
+                  .list(rID, rSelection, rSelectionEvent, rModifiers, rChildren)):
+            guard lID == rID,
+                  lSelection == rSelection,
+                  lSelectionEvent == rSelectionEvent,
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
@@ -1369,26 +1958,42 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
-        case let (.section(lID, lTitle, lModifiers, lChildren),
-                  .section(rID, rTitle, rModifiers, rChildren)):
+        case let (.section(lID, lTitle, lHeader, lFooter, lModifiers, lChildren),
+                  .section(rID, rTitle, rHeader, rFooter, rModifiers, rChildren)):
             guard lID == rID,
                   lTitle == rTitle,
+                  enqueueOptionalNode(lhs: lHeader, rhs: rHeader, into: &stack),
+                  enqueueOptionalNode(lhs: lFooter, rhs: rFooter, into: &stack),
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
-        case let (.navigationStack(lID, lModifiers, lChildren),
-                  .navigationStack(rID, rModifiers, rChildren)):
+        case let (.navigationStack(lID, lPath, lPathEvent, lModifiers, lChildren),
+                  .navigationStack(rID, rPath, rPathEvent, rModifiers, rChildren)):
+            guard lID == rID,
+                  lPath == rPath,
+                  lPathEvent == rPathEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.navigationLink(lID, lModifiers, lDestination, lValue, lChildren),
+                  .navigationLink(rID, rModifiers, rDestination, rValue, rChildren)):
             guard lID == rID,
                   lModifiers == rModifiers,
+                  lValue == rValue,
+                  enqueueOptionalNode(lhs: lDestination, rhs: rDestination, into: &stack),
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
-        case let (.navigationLink(lID, lModifiers, lDestination, lChildren),
-                  .navigationLink(rID, rModifiers, rDestination, rChildren)):
+        case let (.link(lID, lTitle, lDestination, lModifiers, lChildren),
+                  .link(rID, rTitle, rDestination, rModifiers, rChildren)):
             guard lID == rID,
+                  lTitle == rTitle,
+                  lDestination == rDestination,
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
-            stack.append(.init(lhs: lDestination, rhs: rDestination))
+        case let (.webView(lID, lURL, lModifiers),
+                  .webView(rID, rURL, rModifiers)):
+            guard lID == rID, lURL == rURL, lModifiers == rModifiers else { return false }
         case let (.sheet(lID, lIsPresented, lOnDismiss, lModifiers, lContent, lChildren),
                   .sheet(rID, rIsPresented, rOnDismiss, rModifiers, rContent, rChildren)):
             guard lID == rID,
@@ -1440,6 +2045,48 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
         case let (.label(lID, lTitle, lSource, lModifiers),
                   .label(rID, rTitle, rSource, rModifiers)):
             guard lID == rID, lTitle == rTitle, lSource == rSource, lModifiers == rModifiers else { return false }
+        case let (.contentUnavailable(lID, lTitle, lSource, lDescription, lModifiers, lChildren),
+                  .contentUnavailable(rID, rTitle, rSource, rDescription, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lSource == rSource,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+
+            switch (lDescription, rDescription) {
+            case let (.some(lhs), .some(rhs)):
+                stack.append(.init(lhs: lhs, rhs: rhs))
+            case (nil, nil):
+                break
+            default:
+                return false
+            }
+        case let (.progressView(lID, lValue, lTotal, lLabel, lCurrentValueLabel, lModifiers),
+                  .progressView(rID, rValue, rTotal, rLabel, rCurrentValueLabel, rModifiers)):
+            guard lID == rID,
+                  lValue == rValue,
+                  lTotal == rTotal,
+                  lModifiers == rModifiers
+            else { return false }
+
+            switch (lLabel, rLabel) {
+            case let (.some(lhs), .some(rhs)):
+                stack.append(.init(lhs: lhs, rhs: rhs))
+            case (nil, nil):
+                break
+            default:
+                return false
+            }
+
+            switch (lCurrentValueLabel, rCurrentValueLabel) {
+            case let (.some(lhs), .some(rhs)):
+                stack.append(.init(lhs: lhs, rhs: rhs))
+            case (nil, nil):
+                break
+            default:
+                return false
+            }
         case let (.image(lID, lSource, lModifiers),
                   .image(rID, rSource, rModifiers)):
             guard lID == rID, lSource == rSource, lModifiers == rModifiers else { return false }
@@ -1470,11 +2117,25 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
         case let (.divider(lID, lModifiers),
                   .divider(rID, rModifiers)):
             guard lID == rID, lModifiers == rModifiers else { return false }
-        case let (.button(lID, lTitle, lEvent, lModifiers, lChildren),
-                  .button(rID, rTitle, rEvent, rModifiers, rChildren)):
+        case let (.button(lID, lTitle, lRole, lEvent, lModifiers, lChildren),
+                  .button(rID, rTitle, rRole, rEvent, rModifiers, rChildren)):
             guard lID == rID,
                   lTitle == rTitle,
+                  lRole == rRole,
                   lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.editButton(lID, lModifiers),
+                  .editButton(rID, rModifiers)):
+            guard lID == rID, lModifiers == rModifiers else { return false }
+        case let (.shareLink(lID, lTitle, lItems, lSubject, lMessage, lModifiers, lChildren),
+                  .shareLink(rID, rTitle, rItems, rSubject, rMessage, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lItems == rItems,
+                  lSubject == rSubject,
+                  lMessage == rMessage,
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
@@ -1512,6 +2173,18 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
+        case let (.datePicker(lID, lTitle, lSelection, lMinimumDate, lMaximumDate, lDisplayedComponents, lEvent, lModifiers, lChildren),
+                  .datePicker(rID, rTitle, rSelection, rMinimumDate, rMaximumDate, rDisplayedComponents, rEvent, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lSelection == rSelection,
+                  lMinimumDate == rMinimumDate,
+                  lMaximumDate == rMaximumDate,
+                  lDisplayedComponents == rDisplayedComponents,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
         case let (.toggle(lID, lTitle, lIsOn, lEvent, lModifiers, lChildren),
                   .toggle(rID, rTitle, rIsOn, rEvent, rModifiers, rChildren)):
             guard lID == rID,
@@ -1541,6 +2214,18 @@ private func enqueueChildren(lhs: [ViewNode], rhs: [ViewNode], into stack: inout
     return true
 }
 
+private func enqueueOptionalNode(lhs: ViewNode?, rhs: ViewNode?, into stack: inout [ViewNodePair]) -> Bool {
+    switch (lhs, rhs) {
+    case let (lhs?, rhs?):
+        stack.append(.init(lhs: lhs, rhs: rhs))
+        return true
+    case (nil, nil):
+        return true
+    default:
+        return false
+    }
+}
+
 private func enqueueSlots(lhs: [String: ViewNode], rhs: [String: ViewNode], into stack: inout [ViewNodePair]) -> Bool {
     guard lhs.count == rhs.count else {
         return false
@@ -1557,600 +2242,7 @@ private func enqueueSlots(lhs: [String: ViewNode], rhs: [String: ViewNode], into
     return true
 }
 
-public enum JSScriptSource {
-    case string(String)
-    case file(URL)
-    case bundleResource(name: String, extension: String, bundle: Bundle)
-
-    fileprivate func load() throws -> String {
-        switch self {
-        case let .string(source):
-            return source
-        case let .file(url):
-            return try String(contentsOf: url, encoding: .utf8)
-        case let .bundleResource(name, ext, bundle):
-            guard let url = bundle.url(forResource: name, withExtension: ext) else {
-                throw JSSurfaceError.missingScriptResource(name: name, ext: ext, bundlePath: bundle.bundlePath)
-            }
-
-            return try String(contentsOf: url, encoding: .utf8)
-        }
-    }
-}
-
-public struct SurfaceView: View {
-    private let root: ViewNode
-    private let onEvent: (SurfaceEvent) -> Void
-    private let customHostRegistry: CustomHostRegistry
-
-    public init(root: ViewNode, onEvent: @escaping (SurfaceEvent) -> Void, customHostRegistry: CustomHostRegistry = .init()) {
-        self.root = root
-        self.onEvent = onEvent
-        self.customHostRegistry = customHostRegistry
-    }
-
-    public var body: some View {
-        RenderNodeView(node: root, onEvent: onEvent, customHostRegistry: customHostRegistry)
-    }
-}
-
-public enum SwiftJSTypeScriptPackage {
-    public static var packageRootURL: URL? {
-        Bundle.module
-            .url(forResource: "package", withExtension: "json")?
-            .deletingLastPathComponent()
-    }
-
-    public static func apiReferenceSkillBody() -> String? {
-        guard let files = orderedSourceFiles(), !files.isEmpty else {
-            return nil
-        }
-
-        var sections = [
-            "Read these files before building or editing the app UI.",
-            "They define the SwiftJS TSX API surface used by the app.",
-        ]
-
-        for (name, contents) in files {
-            sections.append(
-                """
-                ## \(name)
-
-                ```ts
-                \(contents)
-                ```
-                """
-            )
-        }
-
-        return sections.joined(separator: "\n\n")
-    }
-
-    private static func orderedSourceFiles() -> [(String, String)]? {
-        guard let directoryURL = packageRootURL,
-              let fileNames = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path)
-        else {
-            return nil
-        }
-
-        let orderedNames = fileNames
-            .filter { $0.hasSuffix(".ts") && $0 != "jsx-runtime.ts" }
-            .sorted { lhs, rhs in
-                let preferredOrder = ["types.ts", "index.ts"]
-                let lhsIndex = preferredOrder.firstIndex(of: lhs)
-                let rhsIndex = preferredOrder.firstIndex(of: rhs)
-
-                switch (lhsIndex, rhsIndex) {
-                case let (.some(l), .some(r)):
-                    return l < r
-                case (.some, .none):
-                    return true
-                case (.none, .some):
-                    return false
-                case (.none, .none):
-                    return lhs < rhs
-                }
-            }
-
-        let contents = orderedNames.compactMap { name -> (String, String)? in
-            let url = directoryURL.appendingPathComponent(name, isDirectory: false)
-            guard let string = try? String(contentsOf: url, encoding: .utf8) else {
-                return nil
-            }
-            return (name, string)
-        }
-
-        return contents.isEmpty ? nil : contents
-    }
-}
-
-public struct JSSurfaceView: View {
-    @Bindable private var runtime: JSSurfaceRuntime
-
-    public init(runtime: JSSurfaceRuntime) {
-        self.runtime = runtime
-    }
-
-    public var body: some View {
-        let _ = runtime.rootVersion
-        Group {
-            if let rootNode = runtime.rootNode {
-                SurfaceView(root: rootNode, onEvent: runtime.dispatch, customHostRegistry: runtime.customHostRegistry)
-            } else if let errorMessage = runtime.errorMessage {
-                ContentUnavailableView("SwiftJS Error", systemImage: "exclamationmark.triangle", description: Text(errorMessage))
-            } else {
-                ProgressView()
-            }
-        }
-        .task {
-            runtime.start()
-        }
-    }
-}
-
-@Observable
-@MainActor
-public final class JSSurfaceRuntime {
-    @ObservationIgnored private var currentRootNode: ViewNode?
-    @ObservationIgnored private var lastTreePayload: String?
-    public private(set) var rootVersion = 0
-    public private(set) var errorMessage: String?
-    public private(set) var customHostRegistry: CustomHostRegistry
-
-    private let source: JSScriptSource
-    private let modulesByName: [String: any JSRuntimeModule]
-    private var context: JSContext
-    private let decoder = JSONDecoder()
-    private let encoder = JSONEncoder()
-    private var didStart = false
-    private var activeLayoutMeasurementStack: [(Int, ProposedViewSize) -> CGSize] = []
-
-    public var rootNode: ViewNode? {
-        currentRootNode
-    }
-
-    public init(
-        source: JSScriptSource,
-        customHostRegistry: CustomHostRegistry = .init(),
-        modules: [any JSRuntimeModule] = []
-    ) {
-        self.source = source
-        self.customHostRegistry = customHostRegistry
-        self.modulesByName = Self.makeModulesByName(modules)
-        self.context = Self.makeContext()
-        initializeContext()
-    }
-
-    public func start() {
-        guard !didStart else {
-            return
-        }
-
-        didStart = true
-
-        do {
-            try evaluateRuntime()
-            try evaluateApplication()
-        } catch {
-            didStart = false
-            report(error)
-        }
-    }
-
-    public func validate() throws {
-        start()
-
-        if let errorMessage, !errorMessage.isEmpty {
-            throw JSSurfaceError.invalidTree(errorMessage)
-        }
-
-        guard rootNode != nil else {
-            throw JSSurfaceError.missingRootNode
-        }
-    }
-
-    public func dispatch(_ event: SurfaceEvent) {
-        guard didStart else {
-            return
-        }
-
-        context.exception = nil
-        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
-        let dispatch = runtime?.objectForKeyedSubscript("dispatchEvent")
-
-        if let payloadJSON = event.payloadJSON {
-            dispatch?.call(withArguments: [event.name, payloadJSON])
-        } else {
-            dispatch?.call(withArguments: [event.name])
-        }
-
-        if let exception = context.exception?.toString(), !exception.isEmpty {
-            errorMessage = exception
-        }
-    }
-
-    public func reload() {
-        currentRootNode = nil
-        lastTreePayload = nil
-        errorMessage = nil
-        didStart = false
-        context = Self.makeContext()
-        initializeContext()
-        start()
-    }
-
-    private func initializeContext() {
-        installBridge()
-        installGeometryReaderBridge()
-        installJavaScriptLayoutBridge()
-    }
-
-    private func installBridge() {
-        context.exceptionHandler = { [weak self] _, exception in
-            guard let message = exception?.toString(), !message.isEmpty else {
-                self?.errorMessage = "Unknown JavaScript error"
-                return
-            }
-
-            self?.errorMessage = message
-        }
-
-        let commit: @convention(block) (String) -> Void = { [weak self] payload in
-            self?.applyTreeJSON(payload)
-        }
-
-        let report: @convention(block) (String) -> Void = { [weak self] message in
-            self?.errorMessage = message
-        }
-
-        let log: @convention(block) (String) -> Void = { message in
-            print("[SwiftJS] \(message)")
-        }
-
-        let storageGet: @convention(block) (String) -> String? = { key in
-            UserDefaults.standard.string(forKey: key)
-        }
-
-        let storageSet: @convention(block) (String, String) -> Void = { key, payloadJSON in
-            UserDefaults.standard.set(payloadJSON, forKey: key)
-        }
-
-        let invokeModule: @convention(block) (String, String, String, String?) -> Void = { [weak self] callID, moduleName, methodName, payloadJSON in
-            self?.invokeModuleCall(callID: callID, moduleName: moduleName, methodName: methodName, payloadJSON: payloadJSON)
-        }
-
-        let console = JSValue(newObjectIn: context)
-        console?.setObject(log, forKeyedSubscript: "log" as NSString)
-
-        context.setObject(commit, forKeyedSubscript: "__swiftjs_commit" as NSString)
-        context.setObject(report, forKeyedSubscript: "__swiftjs_reportError" as NSString)
-        context.setObject(invokeModule, forKeyedSubscript: "__swiftjs_invokeModule" as NSString)
-        context.setObject(storageGet, forKeyedSubscript: "__swiftjs_storage_get" as NSString)
-        context.setObject(storageSet, forKeyedSubscript: "__swiftjs_storage_set" as NSString)
-        context.setObject(console, forKeyedSubscript: "console" as NSString)
-    }
-
-    private func installGeometryReaderBridge() {
-        customHostRegistry = customHostRegistry.withGeometryReaderBridge(
-            GeometryReaderBridge(
-                hasHandler: { [weak self] id in
-                    self?.hasGeometryReaderHandler(id: id) ?? false
-                },
-                render: { [weak self] id, size in
-                    self?.callJavaScriptGeometryReader(id: id, size: size)
-                }
-            )
-        )
-    }
-
-    private func installJavaScriptLayoutBridge() {
-        customHostRegistry = customHostRegistry.withJavaScriptLayoutBridge(
-            JavaScriptLayoutBridge(
-                hasLayoutHandler: { [weak self] id in
-                    self?.hasJavaScriptLayoutHandler(id: id) ?? false
-                },
-                sizeThatFits: { [weak self] id, proposal, subviewCount, measureSubview in
-                    self?.callJavaScriptLayoutSizeThatFits(
-                        id: id,
-                        proposal: proposal,
-                        subviewCount: subviewCount,
-                        measureSubview: measureSubview
-                    )
-                },
-                placeSubviews: { [weak self] id, bounds, proposal, subviewCount, measureSubview in
-                    self?.callJavaScriptLayoutPlaceSubviews(
-                        id: id,
-                        bounds: bounds,
-                        proposal: proposal,
-                        subviewCount: subviewCount,
-                        measureSubview: measureSubview
-                    )
-                }
-            )
-        )
-
-        let subviewSizeThatFits: @convention(block) (Int, String) -> String = { [weak self] index, proposalJSON in
-            self?.javaScriptLayoutSubviewSizeThatFits(index: index, proposalJSON: proposalJSON) ?? #"{"width":0,"height":0}"#
-        }
-
-        context.setObject(subviewSizeThatFits, forKeyedSubscript: "__swiftjs_layout_subviewSizeThatFits" as NSString)
-    }
-
-    private static func makeContext() -> JSContext {
-        guard let context = JSContext() else {
-            fatalError("JavaScriptCore context could not be created")
-        }
-
-        return context
-    }
-
-    private static func makeModulesByName(_ modules: [any JSRuntimeModule]) -> [String: any JSRuntimeModule] {
-        var byName: [String: any JSRuntimeModule] = [:]
-
-        for module in modules {
-            if byName.updateValue(module, forKey: module.name) != nil {
-                preconditionFailure(JSRuntimeModuleError.duplicateModuleName(module.name).localizedDescription)
-            }
-        }
-
-        return byName
-    }
-
-    private func invokeModuleCall(callID: String, moduleName: String, methodName: String, payloadJSON: String?) {
-        guard let module = modulesByName[moduleName] else {
-            rejectModuleCall(callID: callID, message: JSRuntimeModuleError.missingModule(moduleName).localizedDescription)
-            return
-        }
-
-        MainActor.assumeIsolated {
-            module.invoke(method: methodName, payloadJSON: payloadJSON) { [weak self] result in
-                guard let self else {
-                    return
-                }
-
-                switch result {
-                case let .success(responseJSON):
-                    self.resolveModuleCall(callID: callID, payloadJSON: responseJSON)
-                case let .failure(error):
-                    self.rejectModuleCall(callID: callID, message: error.localizedDescription)
-                }
-            }
-        }
-    }
-
-    private func resolveModuleCall(callID: String, payloadJSON: String?) {
-        context.exception = nil
-        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
-        let resolve = runtime?.objectForKeyedSubscript("resolveModuleCall")
-        resolve?.call(withArguments: [callID, payloadJSON ?? NSNull()])
-
-        if let exception = context.exception?.toString(), !exception.isEmpty {
-            errorMessage = exception
-        }
-    }
-
-    private func rejectModuleCall(callID: String, message: String) {
-        context.exception = nil
-        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
-        let reject = runtime?.objectForKeyedSubscript("rejectModuleCall")
-        reject?.call(withArguments: [callID, message])
-
-        if let exception = context.exception?.toString(), !exception.isEmpty {
-            errorMessage = exception
-        }
-    }
-
-    private func evaluateRuntime() throws {
-        guard let runtimeURL = Bundle.module.url(forResource: "SwiftJSRuntime", withExtension: "js") else {
-            throw JSSurfaceError.missingPackagedRuntime
-        }
-
-        let runtimeSource = try String(contentsOf: runtimeURL, encoding: .utf8)
-        context.evaluateScript(runtimeSource)
-
-        if let exception = context.exception?.toString(), !exception.isEmpty {
-            throw JSSurfaceError.javaScriptException(exception)
-        }
-    }
-
-    private func evaluateApplication() throws {
-        let source = try source.load()
-        context.exception = nil
-        context.evaluateScript(source)
-
-        if let exception = context.exception?.toString(), !exception.isEmpty {
-            throw JSSurfaceError.javaScriptException(exception)
-        }
-
-        if rootNode == nil {
-            throw JSSurfaceError.missingRootNode
-        }
-    }
-
-    private func applyTreeJSON(_ payload: String) {
-        if lastTreePayload == payload {
-            return
-        }
-
-        do {
-            let data = Data(payload.utf8)
-            let hostNode = try decoder.decode(HostNode.self, from: data)
-            currentRootNode = try hostNode.makeViewNode()
-            lastTreePayload = payload
-            rootVersion += 1
-            errorMessage = nil
-        } catch {
-            report(error)
-        }
-    }
-
-    private func report(_ error: Error) {
-        let message = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
-        errorMessage = message
-    }
-
-    private func hasJavaScriptLayoutHandler(id: NodeID) -> Bool {
-        context.exception = nil
-        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
-        let function = runtime?.objectForKeyedSubscript("hasLayoutHandler")
-        let result = function?.call(withArguments: [id.rawValue])
-
-        if let exception = context.exception?.toString(), !exception.isEmpty {
-            errorMessage = exception
-            return false
-        }
-
-        return result?.toBool() ?? false
-    }
-
-    private func hasGeometryReaderHandler(id: NodeID) -> Bool {
-        context.exception = nil
-        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
-        let function = runtime?.objectForKeyedSubscript("hasGeometryReaderHandler")
-        let result = function?.call(withArguments: [id.rawValue])
-
-        if let exception = context.exception?.toString(), !exception.isEmpty {
-            errorMessage = exception
-            return false
-        }
-
-        return result?.toBool() ?? false
-    }
-
-    private func callJavaScriptGeometryReader(id: NodeID, size: CGSize) -> ViewNode? {
-        callJavaScriptLayout(
-            functionName: "renderGeometryReader",
-            arguments: [
-                id.rawValue,
-                encodeJSONObject(JavaScriptLayoutSize(size)) ?? "{}"
-            ],
-            decode: HostNode.self
-        ).flatMap { hostNode in
-            do {
-                return try hostNode.makeViewNode()
-            } catch {
-                report(error)
-                return nil
-            }
-        }
-    }
-
-    private func callJavaScriptLayoutSizeThatFits(
-        id: NodeID,
-        proposal: ProposedViewSize,
-        subviewCount: Int,
-        measureSubview: @escaping (Int, ProposedViewSize) -> CGSize
-    ) -> CGSize? {
-        callWithLayoutMeasurementContext(measureSubview) {
-            callJavaScriptLayout(
-                functionName: "measureLayout",
-                arguments: [
-                    id.rawValue,
-                    encodeJSONObject(JavaScriptLayoutSize(proposal)) ?? "{}",
-                    subviewCount
-                ],
-                decode: JavaScriptLayoutSize.self
-            )?.cgSize
-        }
-    }
-
-    private func callJavaScriptLayoutPlaceSubviews(
-        id: NodeID,
-        bounds: CGRect,
-        proposal: ProposedViewSize,
-        subviewCount: Int,
-        measureSubview: @escaping (Int, ProposedViewSize) -> CGSize
-    ) -> [JavaScriptSubviewPlacement]? {
-        callWithLayoutMeasurementContext(measureSubview) {
-            callJavaScriptLayout(
-                functionName: "placeLayoutSubviews",
-                arguments: [
-                    id.rawValue,
-                    encodeJSONObject(JavaScriptLayoutBounds(bounds)) ?? "{}",
-                    encodeJSONObject(JavaScriptLayoutSize(proposal)) ?? "{}",
-                    subviewCount
-                ],
-                decode: [JavaScriptSubviewPlacement].self
-            )
-        }
-    }
-
-    private func javaScriptLayoutSubviewSizeThatFits(index: Int, proposalJSON: String) -> String {
-        guard let measureSubview = activeLayoutMeasurementStack.last else {
-            return #"{"width":0,"height":0}"#
-        }
-
-        do {
-            let proposal = try decoder.decode(JavaScriptLayoutSize.self, from: Data(proposalJSON.utf8))
-            let size = measureSubview(index, proposal.proposedViewSize)
-            return encodeJSONObject(JavaScriptLayoutSize(size)) ?? #"{"width":0,"height":0}"#
-        } catch {
-            return #"{"width":0,"height":0}"#
-        }
-    }
-
-    private func callWithLayoutMeasurementContext<Value>(
-        _ measureSubview: @escaping (Int, ProposedViewSize) -> CGSize,
-        perform: () -> Value
-    ) -> Value {
-        activeLayoutMeasurementStack.append(measureSubview)
-        defer { _ = activeLayoutMeasurementStack.popLast() }
-        return perform()
-    }
-
-    private func callJavaScriptLayout<Response: Decodable>(
-        functionName: String,
-        arguments: [Any],
-        decode: Response.Type
-    ) -> Response? {
-        context.exception = nil
-        let runtime = context.objectForKeyedSubscript("__swiftjsRuntime")
-        let function = runtime?.objectForKeyedSubscript(functionName)
-        let result = function?.call(withArguments: arguments)
-
-        if let exception = context.exception?.toString(), !exception.isEmpty {
-            errorMessage = exception
-            return nil
-        }
-
-        guard let json = result?.toString(), !json.isEmpty else {
-            return nil
-        }
-
-        do {
-            return try decoder.decode(Response.self, from: Data(json.utf8))
-        } catch {
-            report(error)
-            return nil
-        }
-    }
-
-    private func encodeJSONObject<Value: Encodable>(_ value: Value) -> String? {
-        do {
-            let data = try encoder.encode(value)
-            return String(data: data, encoding: .utf8)
-        } catch {
-            report(error)
-            return nil
-        }
-    }
-}
-
-enum JSRuntimeModuleError: LocalizedError {
-    case duplicateModuleName(String)
-    case missingModule(String)
-
-    var errorDescription: String? {
-        switch self {
-        case let .duplicateModuleName(name):
-            return "Duplicate SwiftJS module '\(name)'"
-        case let .missingModule(name):
-            return "Missing SwiftJS module '\(name)'"
-        }
-    }
-}
-
-private struct RenderNodeView: View {
+struct RenderNodeView: View {
     let node: ViewNode
     let onEvent: (SurfaceEvent) -> Void
     let customHostRegistry: CustomHostRegistry
@@ -2190,9 +2282,9 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 gridRowView(alignment: alignment, modifiers: modifiers, children: children)
             )
-        case let .scrollView(_, axis, _, children):
+        case let .scrollView(_, axis, modifiers, children):
             applyCommonModifiers(
-                scrollView(axis: axis, children: children)
+                scrollView(axis: axis, modifiers: modifiers, children: children)
             )
         case let .geometryReader(id, _):
             applyCommonModifiers(
@@ -2206,23 +2298,40 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 customLayoutView(id: id, name: name, values: values, children: children)
             )
-        case let .list(_, modifiers, children):
-            listView(children: children, modifiers: modifiers)
-        case let .form(_, _, children):
+        case let .forEach(_, moveEvent, _, children):
             applyCommonModifiers(
-                formView(children: children)
+                forEachView(children: children, moveEvent: moveEvent)
             )
-        case let .section(_, title, _, children):
-            applyCommonModifiers(
-                sectionView(title: title, children: children)
+        case let .list(_, selection, selectionEvent, modifiers, children):
+            listView(
+                selection: selection,
+                selectionEvent: selectionEvent,
+                children: children,
+                modifiers: modifiers
             )
-        case let .navigationStack(_, _, children):
+        case let .form(_, modifiers, children):
             applyCommonModifiers(
-                navigationStackView(children: children)
+                formView(children: children, modifiers: modifiers)
             )
-        case let .navigationLink(_, modifiers, destination, children):
+        case let .section(_, title, header, footer, _, children):
             applyCommonModifiers(
-                navigationLinkView(destination: destination, modifiers: modifiers, children: children)
+                sectionView(title: title, header: header, footer: footer, children: children)
+            )
+        case let .navigationStack(id, path, pathEvent, modifiers, children):
+            applyCommonModifiers(
+                navigationStackView(id: id, path: path, pathEvent: pathEvent, children: children, modifiers: modifiers)
+            )
+        case let .navigationLink(_, modifiers, destination, value, children):
+            applyCommonModifiers(
+                navigationLinkView(destination: destination, value: value, modifiers: modifiers, children: children)
+            )
+        case let .link(_, title, destination, modifiers, children):
+            applyCommonModifiers(
+                linkView(title, destination: destination, modifiers: modifiers, children: children)
+            )
+        case let .webView(_, url, modifiers):
+            applyCommonModifiers(
+                webView(url: url, modifiers: modifiers)
             )
         case let .sheet(_, isPresented, onDismiss, modifiers, content, children):
             applyCommonModifiers(
@@ -2247,9 +2356,9 @@ private struct RenderNodeView: View {
             applyCommonModifiers(
                 tabContent(children: children)
             )
-        case let .navigationSplitView(_, _, sidebar, detail):
+        case let .navigationSplitView(_, modifiers, sidebar, detail):
             applyCommonModifiers(
-                navigationSplitView(sidebar: sidebar, detail: detail)
+                navigationSplitView(sidebar: sidebar, detail: detail, modifiers: modifiers)
             )
         case .spacer:
             applyCommonModifiers(Spacer())
@@ -2269,6 +2378,16 @@ private struct RenderNodeView: View {
                     description: description,
                     modifiers: modifiers,
                     children: children
+                )
+            )
+        case let .progressView(_, value, total, label, currentValueLabel, modifiers):
+            applyCommonModifiers(
+                progressView(
+                    value: value,
+                    total: total,
+                    label: label,
+                    currentValueLabel: currentValueLabel,
+                    modifiers: modifiers
                 )
             )
         case let .image(_, source, modifiers):
@@ -2309,9 +2428,29 @@ private struct RenderNodeView: View {
             applyCommonModifiers(angularGradientView(value))
         case .divider:
             applyCommonModifiers(Divider())
-        case let .button(_, title, event, modifiers, children):
+        case let .button(_, title, role, event, modifiers, children):
             applyCommonModifiers(
-                buttonView(title, event: event, modifiers: modifiers, children: children)
+                buttonView(title, role: role, event: event, modifiers: modifiers, children: children)
+            )
+        case let .editButton(_, modifiers):
+            applyCommonModifiers(
+                editButtonView(modifiers: modifiers)
+            )
+        case let .shareLink(_, title, items, subject, message, modifiers, children):
+            applyCommonModifiers(
+                shareLinkView(title, items: items, subject: subject, message: message, modifiers: modifiers, children: children)
+            )
+        case let .textField(_, title, text, prompt, event, modifiers):
+            applyCommonModifiers(
+                textFieldView(title: title, text: text, prompt: prompt, event: event, modifiers: modifiers)
+            )
+        case let .secureField(_, title, text, prompt, event, modifiers):
+            applyCommonModifiers(
+                secureFieldView(title: title, text: text, prompt: prompt, event: event, modifiers: modifiers)
+            )
+        case let .textEditor(_, text, event, modifiers):
+            applyCommonModifiers(
+                textEditorView(text: text, event: event, modifiers: modifiers)
             )
         case let .menu(_, title, modifiers, content, children):
             applyCommonModifiers(
@@ -2335,6 +2474,19 @@ private struct RenderNodeView: View {
         case let .picker(_, title, selection, options, event, modifiers, children):
             applyCommonModifiers(
                 pickerView(title, selection: selection, options: options, event: event, modifiers: modifiers, children: children)
+            )
+        case let .datePicker(_, title, selection, minimumDate, maximumDate, displayedComponents, event, modifiers, children):
+            applyCommonModifiers(
+                datePickerView(
+                    title,
+                    selection: selection,
+                    minimumDate: minimumDate,
+                    maximumDate: maximumDate,
+                    displayedComponents: displayedComponents,
+                    event: event,
+                    modifiers: modifiers,
+                    children: children
+                )
             )
         case let .toggle(_, title, isOn, event, modifiers, children):
             applyCommonModifiers(
@@ -2526,27 +2678,53 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func scrollView(axis: AxisKind, children: [ViewNode]) -> some View {
+    private func scrollView(axis: AxisKind, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
         if axis == .horizontal {
-            ScrollView(axis.swiftUIAxisSet) {
-                HStack(spacing: 0) {
-                    ForEach(children) { child in
-                        RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                    }
-                }
-            }
-        } else {
-            GeometryReader { geometry in
+            searchableStyled(
                 ScrollView(axis.swiftUIAxisSet) {
-                    VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 0) {
                         ForEach(children) { child in
                             RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                         }
                     }
-                    .frame(width: geometry.size.width, alignment: .leading)
-                }
+                },
+                modifiers: modifiers
+            )
+        } else {
+            GeometryReader { geometry in
+                searchableStyled(
+                    ScrollView(axis.swiftUIAxisSet) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(children) { child in
+                                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                            }
+                        }
+                        .frame(width: geometry.size.width, alignment: .leading)
+                    },
+                    modifiers: modifiers
+                )
             }
         }
+    }
+
+    @ViewBuilder
+    private func searchableStyled<Content: View>(_ content: Content, modifiers: ViewModifiers) -> some View {
+        content
+            .modifier(OptionalSearchableModifier(searchable: modifiers.searchable, onEvent: onEvent))
+            .modifier(
+                OptionalSearchSuggestionsModifier(
+                    suggestions: modifiers.searchSuggestions,
+                    onEvent: onEvent,
+                    customHostRegistry: customHostRegistry
+                )
+            )
+            .modifier(
+                OptionalSearchScopesModifier(
+                    searchScopes: modifiers.searchScopes,
+                    onEvent: onEvent,
+                    customHostRegistry: customHostRegistry
+                )
+            )
     }
 
     private func textView(_ value: String, modifiers: ViewModifiers) -> some View {
@@ -2606,45 +2784,168 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func buttonView(_ title: String, event: SurfaceEvent, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
-        let button = Button {
+    private func progressView(
+        value: Double?,
+        total: Double?,
+        label: ViewNode?,
+        currentValueLabel: ViewNode?,
+        modifiers: ViewModifiers
+    ) -> some View {
+        Group {
+            if let value {
+                if label != nil || currentValueLabel != nil {
+                    ProgressView(value: value, total: total ?? 1) {
+                        if let label {
+                            RenderNodeView(node: label, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                        }
+                    } currentValueLabel: {
+                        if let currentValueLabel {
+                            RenderNodeView(node: currentValueLabel, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                        }
+                    }
+                } else {
+                    ProgressView(value: value, total: total ?? 1)
+                }
+            } else if let label {
+                ProgressView {
+                    RenderNodeView(node: label, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            } else {
+                ProgressView()
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+    }
+
+    @ViewBuilder
+    private func buttonView(_ title: String, role: ButtonRoleKind?, event: SurfaceEvent, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
+        let button = Button(role: role?.swiftUIRole) {
             onEvent(event)
         } label: {
-            if children.isEmpty {
-                Text(title)
-            } else {
-                ForEach(children) { child in
-                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
-            }
+            controlLabel(title, fallback: title, children: children)
         }
         .modifier(NodeAppearanceModifier(modifiers: modifiers))
         .disabled(modifiers.isDisabled)
 
-        switch modifiers.buttonStyle ?? .automatic {
-        case .automatic:
-            shapedButton(button, modifiers: modifiers)
-        case .borderless:
-            shapedButton(button.buttonStyle(.borderless), modifiers: modifiers)
-        case .plain:
-            shapedButton(button.buttonStyle(.plain), modifiers: modifiers)
-        case .bordered:
-            shapedButton(button.buttonStyle(.bordered), modifiers: modifiers)
-        case .borderedProminent:
-            shapedButton(button.buttonStyle(.borderedProminent), modifiers: modifiers)
-        case .glass:
-            if #available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *) {
-                shapedButton(button.buttonStyle(.glass(glassValue(for: modifiers))), modifiers: modifiers)
-            } else {
-                shapedButton(button.buttonStyle(.bordered), modifiers: modifiers)
-            }
-        case .glassProminent:
-            if #available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *) {
-                shapedButton(button.buttonStyle(.glassProminent), modifiers: modifiers)
-            } else {
-                shapedButton(button.buttonStyle(.borderedProminent), modifiers: modifiers)
-            }
+        styledControl(button, modifiers: modifiers)
+    }
+
+    @ViewBuilder
+    private func editButtonView(modifiers: ViewModifiers) -> some View {
+        let button = SwiftUI.EditButton()
+            .modifier(NodeAppearanceModifier(modifiers: modifiers))
+            .disabled(modifiers.isDisabled)
+
+        styledControl(button, modifiers: modifiers)
+    }
+
+    @ViewBuilder
+    private func linkView(_ title: String, destination: URL, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
+        let link = Link(destination: destination) {
+            controlLabel(title, fallback: destination.absoluteString, children: children)
         }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
+
+        styledControl(link, modifiers: modifiers)
+    }
+
+    @ViewBuilder
+    private func webView(url: URL, modifiers: ViewModifiers) -> some View {
+        SwiftJSWebView(url: url)
+            .modifier(NodeAppearanceModifier(modifiers: modifiers))
+            .disabled(modifiers.isDisabled)
+    }
+
+    @ViewBuilder
+    private func shareLinkView(
+        _ title: String,
+        items: [ShareItemValue],
+        subject: String?,
+        message: String?,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    ) -> some View {
+        switch shareLinkPayload(items) {
+        case let .text(text):
+            let link = ShareLink(item: text, subject: subject.map(Text.init), message: message.map(Text.init)) {
+                controlLabel(title, fallback: "Share", children: children)
+            }
+            .modifier(NodeAppearanceModifier(modifiers: modifiers))
+            .disabled(modifiers.isDisabled)
+
+            styledControl(link, modifiers: modifiers)
+        case let .texts(texts):
+            let link = ShareLink(items: texts, subject: subject.map(Text.init), message: message.map(Text.init)) {
+                controlLabel(title, fallback: "Share", children: children)
+            }
+            .modifier(NodeAppearanceModifier(modifiers: modifiers))
+            .disabled(modifiers.isDisabled)
+
+            styledControl(link, modifiers: modifiers)
+        case let .url(url):
+            let link = ShareLink(item: url, subject: subject.map(Text.init), message: message.map(Text.init)) {
+                controlLabel(title, fallback: "Share", children: children)
+            }
+            .modifier(NodeAppearanceModifier(modifiers: modifiers))
+            .disabled(modifiers.isDisabled)
+
+            styledControl(link, modifiers: modifiers)
+        case let .urls(urls):
+            let link = ShareLink(items: urls, subject: subject.map(Text.init), message: message.map(Text.init)) {
+                controlLabel(title, fallback: "Share", children: children)
+            }
+            .modifier(NodeAppearanceModifier(modifiers: modifiers))
+            .disabled(modifiers.isDisabled)
+
+            styledControl(link, modifiers: modifiers)
+        }
+    }
+
+    @ViewBuilder
+    private func textFieldView(title: String, text: String, prompt: String?, event: SurfaceEvent, modifiers: ViewModifiers) -> some View {
+        TextField(
+            title,
+            text: Binding(
+                get: { text },
+                set: { nextValue in
+                    onEvent(SurfaceEvent(event.name, payloadJSON: nextValue.payloadJSON))
+                }
+            ),
+            prompt: prompt.map(Text.init)
+        )
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
+    }
+
+    @ViewBuilder
+    private func secureFieldView(title: String, text: String, prompt: String?, event: SurfaceEvent, modifiers: ViewModifiers) -> some View {
+        SecureField(
+            title,
+            text: Binding(
+                get: { text },
+                set: { nextValue in
+                    onEvent(SurfaceEvent(event.name, payloadJSON: nextValue.payloadJSON))
+                }
+            ),
+            prompt: prompt.map(Text.init)
+        )
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
+    }
+
+    @ViewBuilder
+    private func textEditorView(text: String, event: SurfaceEvent, modifiers: ViewModifiers) -> some View {
+        TextEditor(
+            text: Binding(
+                get: { text },
+                set: { nextValue in
+                    onEvent(SurfaceEvent(event.name, payloadJSON: nextValue.payloadJSON))
+                }
+            )
+        )
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
     }
 
     @ViewBuilder
@@ -2660,6 +2961,7 @@ private struct RenderNodeView: View {
                 }
             }
         }
+        .modifier(OptionalPickerStyleModifier(style: modifiers.pickerStyle))
         .modifier(NodeAppearanceModifier(modifiers: modifiers))
         .disabled(modifiers.isDisabled)
     }
@@ -2736,62 +3038,156 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func sectionView(title: String?, children: [ViewNode]) -> some View {
-        if let title, !title.isEmpty {
+    private func forEachView(children: [ViewNode], moveEvent: SurfaceEvent?) -> some View {
+        movableContent(children: children, moveEvent: moveEvent)
+    }
+
+    @ViewBuilder
+    private func sectionView(title: String?, header: ViewNode?, footer: ViewNode?, children: [ViewNode]) -> some View {
+        if header != nil || footer != nil {
+            Section {
+                sectionContent(children: children)
+            } header: {
+                sectionHeader(title: title, header: header)
+            } footer: {
+                sectionFooter(footer)
+            }
+        } else if let title, !title.isEmpty {
             Section(title) {
-                ForEach(children) { child in
-                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
+                sectionContent(children: children)
             }
         } else {
             Section {
-                ForEach(children) { child in
+                sectionContent(children: children)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sectionContent(children: [ViewNode]) -> some View {
+        ForEach(children) { child in
+            RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+        }
+    }
+
+    @ViewBuilder
+    private func movableContent(children: [ViewNode], moveEvent: SurfaceEvent?) -> some View {
+        if let moveEvent {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+            .onMove { fromOffsets, toOffset in
+                let payload = MoveActionValue(fromOffsets: Array(fromOffsets), toOffset: toOffset)
+                onEvent(SurfaceEvent(moveEvent.name, payloadJSON: payload.payloadJSON))
+            }
+        } else {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sectionHeader(title: String?, header: ViewNode?) -> some View {
+        if let header {
+            RenderNodeView(node: header, onEvent: onEvent, customHostRegistry: customHostRegistry)
+        } else if let title, !title.isEmpty {
+            Text(title)
+        }
+    }
+
+    @ViewBuilder
+    private func sectionFooter(_ footer: ViewNode?) -> some View {
+        if let footer {
+            RenderNodeView(node: footer, onEvent: onEvent, customHostRegistry: customHostRegistry)
+        }
+    }
+
+    @ViewBuilder
+    private func listView(
+        selection: Set<PickerSelectionValue>?,
+        selectionEvent: SurfaceEvent?,
+        children: [ViewNode],
+        modifiers: ViewModifiers
+    ) -> some View {
+        let list = Group {
+            if let selection {
+                if let selectionEvent {
+                    List(
+                        selection: Binding(
+                            get: { selection },
+                            set: { nextValue in
+                                let orderedSelection = Array(nextValue).sorted { $0.stableSortKey < $1.stableSortKey }
+                                onEvent(SurfaceEvent(selectionEvent.name, payloadJSON: orderedSelection.payloadJSON))
+                            }
+                        )
+                    ) {
+                        ForEach(children) { child in
+                            RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                        }
+                    }
+                } else {
+                    List(selection: .constant(selection)) {
+                        ForEach(children) { child in
+                            RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                        }
+                    }
+                }
+            } else {
+                List {
+                    ForEach(children) { child in
                         RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                     }
                 }
             }
         }
-
-    @ViewBuilder
-    private func listView(children: [ViewNode], modifiers: ViewModifiers) -> some View {
-        let list = List {
-            ForEach(children) { child in
-                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-            }
-        }
+        let searchableList = searchableStyled(list, modifiers: modifiers)
 
         switch modifiers.listStyle ?? .automatic {
         case .automatic:
-            applyCommonModifiers(list)
+            applyCommonModifiers(searchableList)
         case .plain:
-            applyCommonModifiers(list.listStyle(.plain))
+            applyCommonModifiers(searchableList.listStyle(.plain))
         case .grouped:
-            applyCommonModifiers(list.listStyle(.grouped))
+            applyCommonModifiers(searchableList.listStyle(.grouped))
         case .inset:
-            applyCommonModifiers(list.listStyle(.inset))
+            applyCommonModifiers(searchableList.listStyle(.inset))
         case .insetGrouped:
-            applyCommonModifiers(list.listStyle(.insetGrouped))
+            applyCommonModifiers(searchableList.listStyle(.insetGrouped))
         case .sidebar:
-            applyCommonModifiers(list.listStyle(.sidebar))
+            applyCommonModifiers(searchableList.listStyle(.sidebar))
         }
     }
 
     @ViewBuilder
-    private func formView(children: [ViewNode]) -> some View {
-        Form {
-            ForEach(children) { child in
-                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-            }
-        }
+    private func formView(children: [ViewNode], modifiers: ViewModifiers) -> some View {
+        searchableStyled(
+            Form {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+            },
+            modifiers: modifiers
+        )
     }
 
     @ViewBuilder
-    private func navigationStackView(children: [ViewNode]) -> some View {
-        NavigationStack {
-            ForEach(children) { child in
-                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-            }
-        }
+    private func navigationStackView(
+        id: NodeID,
+        path: [CustomHostValue]?,
+        pathEvent: SurfaceEvent?,
+        children: [ViewNode],
+        modifiers: ViewModifiers
+    ) -> some View {
+        NavigationStackHost(
+            id: id,
+            path: path,
+            pathEvent: pathEvent,
+            modifiers: modifiers,
+            children: children,
+            onEvent: onEvent,
+            customHostRegistry: customHostRegistry
+        )
     }
 
     @ViewBuilder
@@ -2828,13 +3224,109 @@ private struct RenderNodeView: View {
 
     @ViewBuilder
     private func tabItemView(_ node: ViewNode) -> some View {
-        if case let .tab(_, title, source, badge, selection, _, children) = node {
-            tabContent(children: children)
+        if case let .tab(_, title, source, badge, selection, modifiers, children) = node {
+            let content = tabContent(children: children)
+
+            if let tabRole = modifiers.tabRole {
+                roleTabItemView(
+                    content: content,
+                    title: title,
+                    source: source,
+                    badge: badge,
+                    selection: selection,
+                    role: tabRole
+                )
+            } else {
+                content
+                    .modifier(TabItemLabelModifier(title: title, source: source))
+                    .modifier(TabBadgeModifier(badge: badge))
+                    .modifier(TabTagModifier(selection: selection))
+            }
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func roleTabItemView<Content: View>(
+        content: Content,
+        title: String,
+        source: ImageSource?,
+        badge: BadgeValue?,
+        selection: PickerSelectionValue?,
+        role: TabRoleKind
+    ) -> some View {
+        if #available(iOS 26.0, *) {
+            roleTabItem(content: content, title: title, source: source, badge: badge, selection: selection, role: role)
+        } else {
+            content
                 .modifier(TabItemLabelModifier(title: title, source: source))
                 .modifier(TabBadgeModifier(badge: badge))
                 .modifier(TabTagModifier(selection: selection))
+        }
+    }
+
+    @available(iOS 26.0, *)
+    @ViewBuilder
+    private func roleTabItem<Content: View>(
+        content: Content,
+        title: String,
+        source: ImageSource?,
+        badge: BadgeValue?,
+        selection: PickerSelectionValue?,
+        role: TabRoleKind
+    ) -> some View {
+        let swiftUIRole = role.swiftUIRole
+
+        if !title.isEmpty {
+            if let source {
+                switch source {
+                case .system(let systemName):
+                    if let selection {
+                        roleTabView(Tab(title, systemImage: systemName, value: selection, role: swiftUIRole) {
+                            content
+                        }, badge: badge)
+                    } else {
+                        roleTabView(Tab(title, systemImage: systemName, role: swiftUIRole) {
+                            content
+                        }, badge: badge)
+                    }
+                case .asset(let imageName):
+                    if let selection {
+                        roleTabView(Tab(title, image: imageName, value: selection, role: swiftUIRole) {
+                            content
+                        }, badge: badge)
+                    } else {
+                        roleTabView(Tab(title, image: imageName, role: swiftUIRole) {
+                            content
+                        }, badge: badge)
+                    }
+                }
+            } else {
+                if let selection {
+                    roleTabView(Tab(value: selection, role: swiftUIRole) {
+                        content
+                    } label: {
+                        Text(title)
+                    }, badge: badge)
+                } else {
+                    roleTabView(Tab(role: swiftUIRole) {
+                        content
+                    } label: {
+                        Text(title)
+                    }, badge: badge)
+                }
+            }
         } else {
-            EmptyView()
+            if let selection {
+                roleTabView(Tab(value: selection, role: swiftUIRole) {
+                    content
+                }, badge: badge)
+            } else {
+                roleTabView(Tab(role: swiftUIRole) {
+                    content
+                }, badge: badge)
+            }
         }
     }
 
@@ -2850,18 +3342,64 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func navigationLinkView(destination: ViewNode, modifiers _: ViewModifiers, children: [ViewNode]) -> some View {
-        NavigationLink {
-            RenderNodeView(node: destination, onEvent: onEvent, customHostRegistry: customHostRegistry)
-        } label: {
-            if children.isEmpty {
-                Text("Open")
-            } else {
-                ForEach(children) { child in
-                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
+    private func navigationLinkView(destination: ViewNode?, value: CustomHostValue?, modifiers _: ViewModifiers, children: [ViewNode]) -> some View {
+        if let destination {
+            NavigationLink {
+                RenderNodeView(node: destination, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            } label: {
+                controlLabel("", fallback: "Open", children: children)
+            }
+        } else if let value {
+            NavigationLink(value: value) {
+                controlLabel("", fallback: "Open", children: children)
+            }
+        } else {
+            controlLabel("", fallback: "Open", children: children)
+        }
+    }
+
+    @ViewBuilder
+    private func controlLabel(_ title: String, fallback: String, children: [ViewNode]) -> some View {
+        if children.isEmpty {
+            Text(title.isEmpty ? fallback : title)
+        } else {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
         }
+    }
+
+    private func shareLinkPayload(_ items: [ShareItemValue]) -> ShareLinkPayload {
+        if items.count == 1 {
+            switch items[0] {
+            case let .text(value):
+                return .text(value)
+            case let .url(value):
+                return .url(value)
+            }
+        }
+
+        let texts = items.compactMap { item -> String? in
+            if case let .text(value) = item {
+                return value
+            }
+
+            return nil
+        }
+
+        if texts.count == items.count {
+            return .texts(texts)
+        }
+
+        let urls = items.compactMap { item -> URL? in
+            if case let .url(value) = item {
+                return value
+            }
+
+            return nil
+        }
+
+        return .urls(urls)
     }
 
     @ViewBuilder
@@ -3006,6 +3544,36 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
+    private func datePickerView(
+        _ title: String,
+        selection: Date,
+        minimumDate: Date?,
+        maximumDate: Date?,
+        displayedComponents: DatePickerDisplayedComponentsKind,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    ) -> some View {
+        let binding = Binding(
+            get: { selection },
+            set: { nextValue in
+                onEvent(SurfaceEvent(event.name, payloadJSON: HostDateValue.stringify(nextValue).payloadJSON))
+            }
+        )
+
+        datePicker(
+            selection: binding,
+            minimumDate: minimumDate,
+            maximumDate: maximumDate,
+            displayedComponents: displayedComponents,
+            title: title,
+            children: children
+        )
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
+    }
+
+    @ViewBuilder
     private func toggleView(_ title: String, isOn: Bool, event: SurfaceEvent, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
         Toggle(
             isOn: Binding(
@@ -3022,6 +3590,61 @@ private struct RenderNodeView: View {
                 ForEach(children) { child in
                     RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func datePicker(
+        selection: Binding<Date>,
+        minimumDate: Date?,
+        maximumDate: Date?,
+        displayedComponents: DatePickerDisplayedComponentsKind,
+        title: String,
+        children: [ViewNode]
+    ) -> some View {
+        switch (minimumDate, maximumDate) {
+        case let (.some(minimumDate), .some(maximumDate)):
+            SwiftUI.DatePicker(
+                selection: selection,
+                in: minimumDate ... maximumDate,
+                displayedComponents: displayedComponents.swiftUIDatePickerComponents
+            ) {
+                datePickerLabel(title: title, children: children)
+            }
+        case let (.some(minimumDate), nil):
+            SwiftUI.DatePicker(
+                selection: selection,
+                in: minimumDate...,
+                displayedComponents: displayedComponents.swiftUIDatePickerComponents
+            ) {
+                datePickerLabel(title: title, children: children)
+            }
+        case let (nil, .some(maximumDate)):
+            SwiftUI.DatePicker(
+                selection: selection,
+                in: ...maximumDate,
+                displayedComponents: displayedComponents.swiftUIDatePickerComponents
+            ) {
+                datePickerLabel(title: title, children: children)
+            }
+        case (nil, nil):
+            SwiftUI.DatePicker(
+                selection: selection,
+                displayedComponents: displayedComponents.swiftUIDatePickerComponents
+            ) {
+                datePickerLabel(title: title, children: children)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func datePickerLabel(title: String, children: [ViewNode]) -> some View {
+        if children.isEmpty {
+            Text(title)
+        } else {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
         }
     }
@@ -3063,15 +3686,21 @@ private struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func navigationSplitView(sidebar: ViewNode, detail: ViewNode) -> some View {
+    private func navigationSplitView(sidebar: ViewNode, detail: ViewNode, modifiers: ViewModifiers) -> some View {
         if horizontalSizeClass == .compact {
-            CompactNavigationSplitHost(sidebar: sidebar, detail: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            searchableStyled(
+                CompactNavigationSplitHost(sidebar: sidebar, detail: detail, onEvent: onEvent, customHostRegistry: customHostRegistry),
+                modifiers: modifiers
+            )
         } else {
-            NavigationSplitView {
-                RenderNodeView(node: sidebar, onEvent: onEvent, customHostRegistry: customHostRegistry)
-            } detail: {
-                RenderNodeView(node: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
-            }
+            searchableStyled(
+                NavigationSplitView {
+                    RenderNodeView(node: sidebar, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                } detail: {
+                    RenderNodeView(node: detail, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                },
+                modifiers: modifiers
+            )
         }
     }
 }
@@ -3174,7 +3803,7 @@ private struct SwiftJSFlowLayout: Layout {
     }
 }
 
-private struct JavaScriptLayoutSize: Codable {
+struct JavaScriptLayoutSize: Codable {
     let width: Double?
     let height: Double?
 
@@ -3204,7 +3833,7 @@ private struct JavaScriptLayoutSize: Codable {
     }
 }
 
-private struct JavaScriptLayoutBounds: Codable {
+struct JavaScriptLayoutBounds: Codable {
     let minX: Double
     let minY: Double
     let width: Double
@@ -3218,7 +3847,7 @@ private struct JavaScriptLayoutBounds: Codable {
     }
 }
 
-private struct JavaScriptSubviewPlacement: Codable {
+struct JavaScriptSubviewPlacement: Codable {
     let x: Double
     let y: Double
     let anchor: ContentAlignment
@@ -3226,7 +3855,7 @@ private struct JavaScriptSubviewPlacement: Codable {
     let height: Double?
 }
 
-private final class JavaScriptLayoutBridge: @unchecked Sendable {
+final class JavaScriptLayoutBridge: @unchecked Sendable {
     let hasLayoutHandler: (_ id: NodeID) -> Bool
     let sizeThatFits: (_ id: NodeID, _ proposal: ProposedViewSize, _ subviewCount: Int, _ measureSubview: @escaping (Int, ProposedViewSize) -> CGSize) -> CGSize?
     let placeSubviews: (_ id: NodeID, _ bounds: CGRect, _ proposal: ProposedViewSize, _ subviewCount: Int, _ measureSubview: @escaping (Int, ProposedViewSize) -> CGSize) -> [JavaScriptSubviewPlacement]?
@@ -3242,13 +3871,26 @@ private final class JavaScriptLayoutBridge: @unchecked Sendable {
     }
 }
 
-private final class GeometryReaderBridge: @unchecked Sendable {
+final class GeometryReaderBridge: @unchecked Sendable {
     let hasHandler: (_ id: NodeID) -> Bool
     let render: (_ id: NodeID, _ size: CGSize) -> ViewNode?
 
     init(
         hasHandler: @escaping (_ id: NodeID) -> Bool,
         render: @escaping (_ id: NodeID, _ size: CGSize) -> ViewNode?
+    ) {
+        self.hasHandler = hasHandler
+        self.render = render
+    }
+}
+
+final class NavigationDestinationBridge: @unchecked Sendable {
+    let hasHandler: (_ id: NodeID) -> Bool
+    let render: (_ id: NodeID, _ value: CustomHostValue) -> ViewNode?
+
+    init(
+        hasHandler: @escaping (_ id: NodeID) -> Bool,
+        render: @escaping (_ id: NodeID, _ value: CustomHostValue) -> ViewNode?
     ) {
         self.hasHandler = hasHandler
         self.render = render
@@ -3319,7 +3961,146 @@ private struct CompactNavigationSplitHost: View {
     }
 }
 
+private struct NavigationStackHost: View {
+    let id: NodeID
+    let path: [CustomHostValue]?
+    let pathEvent: SurfaceEvent?
+    let modifiers: ViewModifiers
+    let children: [ViewNode]
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    @State private var localPath: [CustomHostValue]
+
+    init(
+        id: NodeID,
+        path: [CustomHostValue]?,
+        pathEvent: SurfaceEvent?,
+        modifiers: ViewModifiers,
+        children: [ViewNode],
+        onEvent: @escaping (SurfaceEvent) -> Void,
+        customHostRegistry: CustomHostRegistry
+    ) {
+        self.id = id
+        self.path = path
+        self.pathEvent = pathEvent
+        self.modifiers = modifiers
+        self.children = children
+        self.onEvent = onEvent
+        self.customHostRegistry = customHostRegistry
+        _localPath = State(initialValue: path ?? [])
+    }
+
+    var body: some View {
+        searchableStyled(
+            NavigationStack(path: pathBinding) {
+                ForEach(children) { child in
+                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                }
+                .modifier(NavigationDestinationModifier(id: id, onEvent: onEvent, customHostRegistry: customHostRegistry))
+            },
+            modifiers: modifiers
+        )
+        .onChange(of: path ?? []) { _, nextPath in
+            guard localPath != nextPath else {
+                return
+            }
+
+            localPath = nextPath
+        }
+    }
+
+    private var pathBinding: Binding<[CustomHostValue]> {
+        Binding(
+            get: { localPath },
+            set: { nextPath in
+                localPath = nextPath
+
+                if let pathEvent {
+                    onEvent(SurfaceEvent(pathEvent.name, payloadJSON: nextPath.payloadJSON))
+                }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func searchableStyled<Content: View>(_ content: Content, modifiers: ViewModifiers) -> some View {
+        content
+            .modifier(OptionalSearchableModifier(searchable: modifiers.searchable, onEvent: onEvent))
+            .modifier(
+                OptionalSearchSuggestionsModifier(
+                    suggestions: modifiers.searchSuggestions,
+                    onEvent: onEvent,
+                    customHostRegistry: customHostRegistry
+                )
+            )
+            .modifier(
+                OptionalSearchScopesModifier(
+                    searchScopes: modifiers.searchScopes,
+                    onEvent: onEvent,
+                    customHostRegistry: customHostRegistry
+                )
+            )
+    }
+}
+
+private struct NavigationDestinationModifier: ViewModifier {
+    let id: NodeID
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let bridge = customHostRegistry.navigationDestinationBridge, bridge.hasHandler(id) {
+            content.navigationDestination(for: CustomHostValue.self) { value in
+                if let node = bridge.render(id, value) {
+                    RenderNodeView(node: node, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                } else {
+                    EmptyView()
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
+private enum ShareLinkPayload {
+    case text(String)
+    case texts([String])
+    case url(URL)
+    case urls([URL])
+}
+
 private extension RenderNodeView {
+    @ViewBuilder
+    func styledControl<Content: View>(_ content: Content, modifiers: ViewModifiers) -> some View {
+        switch modifiers.buttonStyle ?? .automatic {
+        case .automatic:
+            shapedButton(content, modifiers: modifiers)
+        case .borderless:
+            shapedButton(content.buttonStyle(.borderless), modifiers: modifiers)
+        case .plain:
+            shapedButton(content.buttonStyle(.plain), modifiers: modifiers)
+        case .bordered:
+            shapedButton(content.buttonStyle(.bordered), modifiers: modifiers)
+        case .borderedProminent:
+            shapedButton(content.buttonStyle(.borderedProminent), modifiers: modifiers)
+        case .glass:
+            if #available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *) {
+                shapedButton(content.buttonStyle(.glass(glassValue(for: modifiers))), modifiers: modifiers)
+            } else {
+                shapedButton(content.buttonStyle(.bordered), modifiers: modifiers)
+            }
+        case .glassProminent:
+            if #available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *) {
+                shapedButton(content.buttonStyle(.glassProminent), modifiers: modifiers)
+            } else {
+                shapedButton(content.buttonStyle(.borderedProminent), modifiers: modifiers)
+            }
+        }
+    }
+
     @ViewBuilder
     func shapedButton<Content: View>(_ content: Content, modifiers: ViewModifiers) -> some View {
         switch modifiers.buttonBorderShape ?? .automatic {
@@ -3335,670 +4116,48 @@ private extension RenderNodeView {
     }
 }
 
-private struct TabItemLabelModifier: ViewModifier {
-    let title: String
-    let source: ImageSource?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        switch source {
-        case let .system(systemName):
-            content.tabItem { Label(title, systemImage: systemName) }
-        case let .asset(name):
-            content.tabItem {
-                Label {
-                    Text(title)
-                } icon: {
-                    Image(name)
-                }
-            }
-        case nil:
-            content.tabItem { Text(title) }
-        }
-    }
-}
-
-private struct TabBadgeModifier: ViewModifier {
-    let badge: BadgeValue?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        switch badge {
-        case let .string(value):
-            content.badge(value)
-        case let .number(value):
-            content.badge(Int(value))
-        case nil:
-            content
-        }
-    }
-}
-
-private struct TabTagModifier: ViewModifier {
-    let selection: PickerSelectionValue?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let selection {
-            content.tag(selection)
-        } else {
-            content
-        }
-    }
-}
-
-private struct NodeAppearanceModifier: ViewModifier {
-    let modifiers: ViewModifiers
-
-    func body(content: Content) -> some View {
-        content
-            .font(modifiers.swiftUIFont)
-            .fontWeight(modifiers.swiftUIFontWeight)
-            .symbolRenderingMode(modifiers.swiftUISymbolRenderingMode)
-            .lineLimit(modifiers.lineLimit)
-            .minimumScaleFactor(CGFloat(modifiers.minimumScaleFactor ?? 1))
-            .modifier(NodeForegroundModifier(shapeStyle: modifiers.foregroundShapeStyle, color: modifiers.swiftUIColor))
-            .modifier(NodeMultilineTextAlignmentModifier(alignment: modifiers.swiftUITextAlignment))
-            .truncationMode(modifiers.swiftUITruncationMode ?? .tail)
-    }
-}
-
-private struct CommonNodeModifier: ViewModifier {
-    let modifiers: ViewModifiers
-    let onEvent: (SurfaceEvent) -> Void
-    let customHostRegistry: CustomHostRegistry
-
-    func body(content: Content) -> some View {
-        let minWidth = modifiers.frameMinWidth.map { CGFloat($0) }
-        let minHeight = modifiers.frameMinHeight.map { CGFloat($0) }
-        let width = modifiers.frameWidth.map { CGFloat($0) }
-        let height = modifiers.frameHeight.map { CGFloat($0) }
-        let maxWidth = modifiers.frameMaxWidth ? CGFloat.infinity : modifiers.frameMaxWidthValue.map { CGFloat($0) }
-        let maxHeight = modifiers.frameMaxHeight ? CGFloat.infinity : modifiers.frameMaxHeightValue.map { CGFloat($0) }
-        let aspectRatio = modifiers.aspectRatio.map { CGFloat($0) }
-
-        return content
-            .padding(modifiers.padding ?? 0)
-            .padding(.top, modifiers.paddingTop ?? 0)
-            .fixedSize(horizontal: modifiers.fixedSizeHorizontal, vertical: modifiers.fixedSizeVertical)
-            .modifier(OptionalAspectRatioModifier(aspectRatio: aspectRatio, contentMode: modifiers.swiftUIAspectRatioContentMode))
-            .frame(minWidth: minWidth, maxWidth: maxWidth, minHeight: minHeight, maxHeight: maxHeight, alignment: modifiers.swiftUIAlignment)
-            .frame(maxWidth: maxWidth, maxHeight: maxHeight, alignment: modifiers.swiftUIAlignment)
-            .frame(width: width, height: height, alignment: modifiers.swiftUIAlignment)
-            .modifier(OptionalSafeAreaPaddingModifier(length: modifiers.safeAreaPaddingLength, edges: modifiers.safeAreaPaddingEdges.swiftUIEdgeSet))
-            .modifier(OptionalIgnoresSafeAreaModifier(isEnabled: modifiers.ignoresSafeArea, edges: modifiers.ignoresSafeAreaEdges.swiftUIEdgeSet))
-            .modifier(OptionalBackgroundModifier(style: modifiers.backgroundShapeStyle))
-            .modifier(OptionalClipModifier(cornerRadius: modifiers.cornerRadius, imageContentMode: modifiers.imageContentMode))
-            .modifier(OptionalGlassEffectModifier(modifiers: modifiers))
-            .modifier(OptionalTintModifier(tint: modifiers.tint.flatMap(Color.named(_:))))
-            .modifier(OptionalNavigationTitleModifier(title: modifiers.navigationTitle))
-            .modifier(OptionalNavigationBarTitleDisplayModeModifier(mode: modifiers.swiftUINavigationBarTitleDisplayMode))
-            .modifier(OptionalToolbarBackgroundModifier(visibility: modifiers.swiftUIToolbarBackgroundVisibility))
-            .modifier(OptionalToolbarColorSchemeModifier(scheme: modifiers.swiftUIColorScheme))
-            .modifier(OptionalScrollContentBackgroundModifier(visibility: modifiers.swiftUIScrollContentBackgroundVisibility))
-            .modifier(OptionalListRowSeparatorModifier(visibility: modifiers.swiftUIListRowSeparatorVisibility))
-            .modifier(OptionalListSectionSeparatorModifier(visibility: modifiers.swiftUIListSectionSeparatorVisibility))
-            .modifier(OptionalListRowInsetsModifier(insets: modifiers.listRowInsets?.swiftUIEdgeInsets))
-            .modifier(OptionalListRowBackgroundModifier(background: modifiers.listRowBackground?.swiftUIShapeStyle))
-            .modifier(ContentMarginsModifier(margins: modifiers.contentMargins))
-            .modifier(SafeAreaInsetsModifier(insets: modifiers.safeAreaInsets, onEvent: onEvent, customHostRegistry: customHostRegistry))
-            .modifier(OptionalNavigationLinkIndicatorModifier(visibility: modifiers.swiftUINavigationLinkIndicatorVisibility))
-            .modifier(ToolbarItemsModifier(items: modifiers.toolbarItems, onEvent: onEvent, customHostRegistry: customHostRegistry))
-            .modifier(OptionalAlertModifier(alert: modifiers.alert, onEvent: onEvent, customHostRegistry: customHostRegistry))
-            .modifier(OptionalConfirmationDialogModifier(dialog: modifiers.confirmationDialog, onEvent: onEvent, customHostRegistry: customHostRegistry))
-            .modifier(OptionalIdentityModifier(viewIdentity: modifiers.viewIdentity))
-            .modifier(OptionalOnAppearModifier(event: modifiers.onAppearEvent, onEvent: onEvent))
-    }
-}
-
-private struct NodeForegroundModifier: ViewModifier {
-    let shapeStyle: AnyShapeStyle?
-    let color: Color?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let shapeStyle {
-            content.foregroundStyle(shapeStyle)
-        } else if let color {
-            content.foregroundStyle(color)
-        } else {
-            content
-        }
-    }
-}
-
-private struct NodeMultilineTextAlignmentModifier: ViewModifier {
-    let alignment: TextAlignment?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let alignment {
-            content.multilineTextAlignment(alignment)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalAspectRatioModifier: ViewModifier {
-    let aspectRatio: CGFloat?
-    let contentMode: ContentMode
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let aspectRatio {
-            content.aspectRatio(aspectRatio, contentMode: contentMode)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalSafeAreaPaddingModifier: ViewModifier {
-    let length: Double?
-    let edges: Edge.Set
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let length {
-            content.safeAreaPadding(edges, length)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalIgnoresSafeAreaModifier: ViewModifier {
-    let isEnabled: Bool
-    let edges: Edge.Set
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if isEnabled {
-            content.ignoresSafeArea(edges: edges)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalBackgroundModifier: ViewModifier {
-    let style: AnyShapeStyle?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let style {
-            content.background {
-                Rectangle().fill(style)
-            }
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalClipModifier: ViewModifier {
-    let cornerRadius: Double?
-    let imageContentMode: ImageContentMode?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let cornerRadius {
-            content.clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        } else if imageContentMode == .fill {
-            content.clipped()
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalGlassEffectModifier: ViewModifier {
-    let modifiers: ViewModifiers
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if modifiers.glassEffect && !modifiers.usesGlassButtonStyle {
-            if #available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *) {
-                content.glassEffect(glassValue(for: modifiers))
-            } else {
-                content
-            }
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalTintModifier: ViewModifier {
-    let tint: Color?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let tint {
-            content.tint(tint)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalNavigationTitleModifier: ViewModifier {
-    let title: String?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let title {
-            content.navigationTitle(title)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalNavigationBarTitleDisplayModeModifier: ViewModifier {
-    let mode: NavigationBarItem.TitleDisplayMode?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let mode {
-            content.navigationBarTitleDisplayMode(mode)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalNavigationLinkIndicatorModifier: ViewModifier {
-    let visibility: Visibility?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let visibility {
-            content.navigationLinkIndicatorVisibility(visibility)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalIdentityModifier: ViewModifier {
-    let viewIdentity: CustomHostValue?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let viewIdentity {
-            switch viewIdentity {
-            case let .string(value):
-                content.id(value)
-            case let .number(value):
-                content.id(value)
-            case let .bool(value):
-                content.id(value)
-            case .array, .object:
-                content
-            }
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalToolbarBackgroundModifier: ViewModifier {
-    let visibility: Visibility?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let visibility {
-            content.toolbarBackground(visibility, for: .navigationBar, .tabBar, .bottomBar)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalToolbarColorSchemeModifier: ViewModifier {
-    let scheme: ColorScheme?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let scheme {
-            content.toolbarColorScheme(scheme, for: .navigationBar, .tabBar, .bottomBar)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalScrollContentBackgroundModifier: ViewModifier {
-    let visibility: Visibility?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let visibility {
-            content.scrollContentBackground(visibility)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalListRowSeparatorModifier: ViewModifier {
-    let visibility: Visibility?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let visibility {
-            content.listRowSeparator(visibility)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalListSectionSeparatorModifier: ViewModifier {
-    let visibility: Visibility?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let visibility {
-            content.listSectionSeparator(visibility)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalListRowInsetsModifier: ViewModifier {
-    let insets: EdgeInsets?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let insets {
-            content.listRowInsets(insets)
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalListRowBackgroundModifier: ViewModifier {
-    let background: AnyShapeStyle?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let background {
-            content.listRowBackground(Rectangle().fill(background))
-        } else {
-            content
-        }
-    }
-}
-
-private struct ContentMarginsModifier: ViewModifier {
-    let margins: [ContentMarginsValue]
-
-    func body(content: Content) -> some View {
-        content
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .all, placement: .automatic), edges: .all, placement: .automatic))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .horizontal, placement: .automatic), edges: .horizontal, placement: .automatic))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .vertical, placement: .automatic), edges: .vertical, placement: .automatic))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .top, placement: .automatic), edges: .top, placement: .automatic))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .bottom, placement: .automatic), edges: .bottom, placement: .automatic))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .leading, placement: .automatic), edges: .leading, placement: .automatic))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .trailing, placement: .automatic), edges: .trailing, placement: .automatic))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .all, placement: .scrollContent), edges: .all, placement: .scrollContent))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .horizontal, placement: .scrollContent), edges: .horizontal, placement: .scrollContent))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .vertical, placement: .scrollContent), edges: .vertical, placement: .scrollContent))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .top, placement: .scrollContent), edges: .top, placement: .scrollContent))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .bottom, placement: .scrollContent), edges: .bottom, placement: .scrollContent))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .leading, placement: .scrollContent), edges: .leading, placement: .scrollContent))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .trailing, placement: .scrollContent), edges: .trailing, placement: .scrollContent))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .all, placement: .scrollIndicators), edges: .all, placement: .scrollIndicators))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .horizontal, placement: .scrollIndicators), edges: .horizontal, placement: .scrollIndicators))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .vertical, placement: .scrollIndicators), edges: .vertical, placement: .scrollIndicators))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .top, placement: .scrollIndicators), edges: .top, placement: .scrollIndicators))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .bottom, placement: .scrollIndicators), edges: .bottom, placement: .scrollIndicators))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .leading, placement: .scrollIndicators), edges: .leading, placement: .scrollIndicators))
-            .modifier(ContentMarginsEntryModifier(amount: amount(for: .trailing, placement: .scrollIndicators), edges: .trailing, placement: .scrollIndicators))
-    }
-
-    private func amount(for edges: EdgeSetKind, placement: ContentMarginPlacementKind) -> Double? {
-        margins.last(where: { $0.edges == edges && $0.placement == placement })?.amount
-    }
-}
-
-private struct ContentMarginsEntryModifier: ViewModifier {
-    let amount: Double?
-    let edges: Edge.Set
-    let placement: ContentMarginPlacement
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let amount {
-            content.contentMargins(edges, amount, for: placement)
-        } else {
-            content
-        }
-    }
-}
-
-private struct SafeAreaInsetsModifier: ViewModifier {
-    let insets: [SafeAreaInsetValue]
-    let onEvent: (SurfaceEvent) -> Void
-    let customHostRegistry: CustomHostRegistry
-
-    func body(content: Content) -> some View {
-        content
-            .modifier(SafeAreaInsetEdgeModifier(edge: .top, insets: entries(for: .top), onEvent: onEvent, customHostRegistry: customHostRegistry))
-            .modifier(SafeAreaInsetEdgeModifier(edge: .bottom, insets: entries(for: .bottom), onEvent: onEvent, customHostRegistry: customHostRegistry))
-            .modifier(SafeAreaInsetEdgeModifier(edge: .leading, insets: entries(for: .leading), onEvent: onEvent, customHostRegistry: customHostRegistry))
-            .modifier(SafeAreaInsetEdgeModifier(edge: .trailing, insets: entries(for: .trailing), onEvent: onEvent, customHostRegistry: customHostRegistry))
-    }
-
-    private func entries(for edge: EdgeKind) -> [SafeAreaInsetValue] {
-        insets.filter { $0.edge == edge }
-    }
-}
-
-private struct SafeAreaInsetEdgeModifier: ViewModifier {
-    let edge: EdgeKind
-    let insets: [SafeAreaInsetValue]
-    let onEvent: (SurfaceEvent) -> Void
-    let customHostRegistry: CustomHostRegistry
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if insets.isEmpty {
-            content
-        } else {
-            switch edge {
-            case .top:
-                content.safeAreaInset(edge: .top, spacing: insets.last?.spacing.map { CGFloat($0) }) {
-                    SafeAreaInsetGroupContent(edge: edge, insets: insets, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
-            case .bottom:
-                content.safeAreaInset(edge: .bottom, spacing: insets.last?.spacing.map { CGFloat($0) }) {
-                    SafeAreaInsetGroupContent(edge: edge, insets: insets, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
-            case .leading:
-                content.safeAreaInset(edge: .leading, spacing: insets.last?.spacing.map { CGFloat($0) }) {
-                    SafeAreaInsetGroupContent(edge: edge, insets: insets, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
-            case .trailing:
-                content.safeAreaInset(edge: .trailing, spacing: insets.last?.spacing.map { CGFloat($0) }) {
-                    SafeAreaInsetGroupContent(edge: edge, insets: insets, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
-            }
-        }
-    }
-}
-
-private struct SafeAreaInsetGroupContent: View {
-    let edge: EdgeKind
-    let insets: [SafeAreaInsetValue]
-    let onEvent: (SurfaceEvent) -> Void
-    let customHostRegistry: CustomHostRegistry
-
-    @ViewBuilder
-    var body: some View {
-        if edge == .top || edge == .bottom {
-            VStack(spacing: 0) {
-                renderedInsets
-            }
-        } else {
-            HStack(spacing: 0) {
-                renderedInsets
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var renderedInsets: some View {
-        ForEach(Array(insets.enumerated()), id: \.offset) { entry in
-            RenderNodeView(node: entry.element.content, onEvent: onEvent, customHostRegistry: customHostRegistry)
-        }
-    }
-}
-
-private struct ToolbarItemsModifier: ViewModifier {
-    let items: [ToolbarItemValue]
-    let onEvent: (SurfaceEvent) -> Void
-    let customHostRegistry: CustomHostRegistry
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if items.isEmpty {
-            content
-        } else {
-            content.toolbar {
-                toolbarGroup(for: .automatic)
-                toolbarGroup(for: .principal)
-                toolbarGroup(for: .topBarLeading)
-                toolbarGroup(for: .topBarTrailing)
-                toolbarGroup(for: .bottomBar)
-                toolbarGroup(for: .status)
-                toolbarGroup(for: .cancellationAction)
-                toolbarGroup(for: .confirmationAction)
-                toolbarGroup(for: .primaryAction)
-            }
-        }
-    }
-
-    @ToolbarContentBuilder
-    private func toolbarGroup(for placement: ToolbarItemPlacementKind) -> some ToolbarContent {
-        let matching = Array(items.enumerated().filter { $0.element.placement == placement })
-        if !matching.isEmpty {
-            ToolbarItemGroup(placement: placement.swiftUIToolbarItemPlacement) {
-                ForEach(matching, id: \.offset) { entry in
-                    RenderNodeView(node: entry.element.content, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
-            }
-        }
-    }
-}
-
-private struct OptionalAlertModifier: ViewModifier {
-    let alert: AlertValue?
-    let onEvent: (SurfaceEvent) -> Void
-    let customHostRegistry: CustomHostRegistry
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let alert {
-            content.alert(
-                alert.title,
-                isPresented: .constant(alert.isPresented),
-                actions: {
-                    DialogButtons(actions: alert.actions, onEvent: onEvent)
-                },
-                message: {
-                    if let message = alert.message {
-                        RenderNodeView(node: message, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                    }
-                }
-            )
-        } else {
-            content
-        }
-    }
-}
-
-private struct OptionalConfirmationDialogModifier: ViewModifier {
-    let dialog: ConfirmationDialogValue?
-    let onEvent: (SurfaceEvent) -> Void
-    let customHostRegistry: CustomHostRegistry
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let dialog {
-            content.confirmationDialog(
-                dialog.title,
-                isPresented: .constant(dialog.isPresented),
-                titleVisibility: dialog.titleVisibility.swiftUIVisibility,
-                actions: {
-                    DialogButtons(actions: dialog.actions, onEvent: onEvent)
-                },
-                message: {
-                    if let message = dialog.message {
-                        RenderNodeView(node: message, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                    }
-                }
-            )
-        } else {
-            content
-        }
-    }
-}
-
-private struct DialogButtons: View {
-    let actions: [DialogActionValue]
-    let onEvent: (SurfaceEvent) -> Void
-
-    var body: some View {
-        ForEach(Array(actions.enumerated()), id: \.offset) { entry in
-            let action = entry.element
-            Button(action.title, role: action.role?.swiftUIRole) {
-                if let event = action.event {
-                    onEvent(SurfaceEvent(event))
-                }
-            }
-        }
-    }
-}
-
-private struct OptionalOnAppearModifier: ViewModifier {
-    let event: SurfaceEvent?
-    let onEvent: (SurfaceEvent) -> Void
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let event {
-            content.onAppear {
-                onEvent(event)
-            }
-        } else {
-            content
-        }
-    }
-}
-
-private struct HostToolbarItem: Decodable {
+struct HostToolbarItem: Decodable {
     let placement: ToolbarItemPlacementKind
     let content: HostNode
 }
 
-private struct HostSafeAreaInset: Decodable {
+struct HostSafeAreaInset: Decodable {
     let edge: EdgeKind
     let spacing: Double?
     let content: HostNode
 }
 
-private final class HostNode: Decodable {
+enum HostShareItemKind: String, Decodable {
+    case text
+    case url
+}
+
+struct HostShareItem: Decodable {
+    let kind: HostShareItemKind
+    let value: String
+}
+
+struct HostSwipeActions: Decodable {
+    let items: [HostNode]
+    let edge: HorizontalEdgeKind?
+    let allowsFullSwipe: Bool?
+
+    func makeValue() throws -> SwipeActionsValue {
+        SwipeActionsValue(
+            items: try items.map { try $0.makeViewNode() },
+            edge: edge ?? .trailing,
+            allowsFullSwipe: allowsFullSwipe ?? true
+        )
+    }
+}
+
+final class HostNode: Decodable {
     let type: HostComponentType
     let id: String
     let alignment: ContentAlignment?
     let viewIdentity: CustomHostValue?
+    let tag: PickerSelectionValue?
+    let accessibilityLabel: String?
     let distribution: StackDistribution?
     let axis: AxisKind?
     let spacing: Double?
@@ -4030,16 +4189,39 @@ private final class HostNode: Decodable {
     let buttonStyle: ButtonStyle?
     let buttonBorderShape: ButtonBorderShape?
     let isDisabled: Bool?
+    let moveDisabled: Bool?
     let glassEffect: Bool?
     let glassVariant: GlassVariantKind?
     let glassTint: String?
+    let editMode: EditModeKind?
+    let editModeEvent: String?
     let navigationTitle: String?
     let navigationBarTitleDisplayMode: NavigationBarTitleDisplayModeKind?
     let navigationLinkIndicatorVisibility: VisibilityKind?
+    let toolbarRole: ToolbarRoleKind?
+    let searchableText: String?
+    let searchablePrompt: String?
+    let searchableEvent: String?
+    let searchSuggestionsContent: [HostNode]?
+    let searchScopesSelection: PickerSelectionValue?
+    let searchScopesEvent: String?
+    let searchScopesContent: [HostNode]?
+    let searchCompletion: String?
+    let tabRole: String?
+    let searchablePlacement: SearchFieldPlacementKind?
+    let searchablePlacementNavigationBarDrawerDisplayMode: SearchFieldNavigationBarDrawerDisplayModeKind?
+    let searchPresentationToolbarBehavior: SearchPresentationToolbarBehaviorKind?
+    let searchToolbarBehavior: SearchToolbarBehaviorKind?
     let toolbarItems: [HostToolbarItem]?
     let toolbarBackgroundVisibility: VisibilityKind?
     let toolbarColorScheme: ColorSchemeKind?
     let listStyle: ListStyleKind?
+    let pickerStyle: PickerStyleKind?
+    let keyboardType: KeyboardTypeKind?
+    let textInputAutocapitalization: TextInputAutocapitalizationKind?
+    let autocorrectionDisabled: Bool?
+    let submitLabel: SubmitLabelKind?
+    let submitEvent: String?
     let scrollContentBackground: VisibilityKind?
     let listRowSeparator: VisibilityKind?
     let listSectionSeparator: VisibilityKind?
@@ -4048,6 +4230,11 @@ private final class HostNode: Decodable {
     let listRowInsetBottom: Double?
     let listRowInsetTrailing: Double?
     let listRowBackground: ShapeStyleValue?
+    let draggable: TransferItemValue?
+    let dropDestinationContentTypes: [String]?
+    let dropDestinationEvent: String?
+    let dropDestinationTargetedEvent: String?
+    let swipeActions: [HostSwipeActions]?
     let contentMargins: [ContentMarginsValue]?
     let imageContentMode: ImageContentMode?
     let imageInterpolation: ImageInterpolation?
@@ -4073,17 +4260,36 @@ private final class HostNode: Decodable {
     let confirmationDialogTitleVisibility: VisibilityKind?
     let confirmationDialogMessage: HostNode?
     let confirmationDialogActions: [DialogActionValue]?
+    let contextMenuActions: [DialogActionValue]?
+    let contextMenuPreview: HostNode?
+    let role: ButtonRoleKind?
     let onAppearEvent: String?
     let value: String?
+    let prompt: String?
     let systemName: String?
     let name: String?
     let title: String?
+    let header: HostNode?
+    let footer: HostNode?
     let description: HostNode?
+    let label: HostNode?
+    let currentValueLabel: HostNode?
     let event: String?
     let onDismiss: String?
     let isOn: Bool?
     let isPresented: Bool?
+    let path: [CustomHostValue]?
+    let pathEvent: String?
+    let progressValue: Double?
+    let progressTotal: Double?
+    let selectionValues: [PickerSelectionValue]?
+    let selectionEvent: String?
+    let moveEvent: String?
     let selection: PickerSelectionValue?
+    let dateSelection: String?
+    let minimumDate: String?
+    let maximumDate: String?
+    let displayedComponents: DatePickerDisplayedComponentsKind?
     let badge: BadgeValue?
     let options: [PickerOption]?
     let presentationDetents: [PresentationDetentValue]?
@@ -4102,7 +4308,14 @@ private final class HostNode: Decodable {
     let angle: Double?
     let startAngle: Double?
     let endAngle: Double?
+    let destinationURL: String?
+    let url: String?
+    let shareItem: HostShareItem?
+    let shareItems: [HostShareItem]?
+    let shareSubject: String?
+    let shareMessage: String?
     let destination: HostNode?
+    let navigationValue: CustomHostValue?
     let content: HostNode?
     let customName: String?
     let customValues: [String: CustomHostValue]?
@@ -4210,9 +4423,18 @@ private final class HostNode: Decodable {
                 values: customValues ?? [:],
                 children: try mapChildren()
             )
+        case .forEach:
+            return .forEach(
+                id: NodeID(id),
+                moveEvent: moveEvent.map { SurfaceEvent($0) },
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
         case .list:
             return .list(
                 id: NodeID(id),
+                selection: selectionValues.map(Set.init),
+                selectionEvent: selectionEvent.map { SurfaceEvent($0) },
                 modifiers: modifiers,
                 children: try mapChildren()
             )
@@ -4226,21 +4448,44 @@ private final class HostNode: Decodable {
             return .section(
                 id: NodeID(id),
                 title: title,
+                header: try header?.makeViewNode(),
+                footer: try footer?.makeViewNode(),
                 modifiers: modifiers,
                 children: try mapChildren()
             )
         case .navigationStack:
             return .navigationStack(
                 id: NodeID(id),
+                path: path,
+                pathEvent: pathEvent.map { SurfaceEvent($0) },
                 modifiers: modifiers,
                 children: try mapChildren()
             )
         case .navigationLink:
+            if destination == nil, navigationValue == nil {
+                throw JSSurfaceError.invalidTree("NavigationLink node '\(id)' is missing a destination or value")
+            }
+
             return .navigationLink(
                 id: NodeID(id),
                 modifiers: modifiers,
-                destination: try mapSlot(destination, name: "destination"),
+                destination: try destination?.makeViewNode(),
+                value: navigationValue,
                 children: try mapChildren()
+            )
+        case .link:
+            return .link(
+                id: NodeID(id),
+                title: title ?? "",
+                destination: try makeURL(destinationURL, name: "destination"),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
+        case .webView:
+            return .webView(
+                id: NodeID(id),
+                url: try makeURL(url, name: "url"),
+                modifiers: modifiers
             )
         case .sheet:
             guard let isPresented else {
@@ -4364,6 +4609,15 @@ private final class HostNode: Decodable {
                 modifiers: modifiers,
                 children: try mapChildren()
             )
+        case .progressView:
+            return .progressView(
+                id: NodeID(id),
+                value: progressValue,
+                total: progressTotal,
+                label: try label?.makeViewNode(),
+                currentValueLabel: try currentValueLabel?.makeViewNode(),
+                modifiers: modifiers
+            )
         case .image:
             let source: ImageSource
             if let systemName {
@@ -4460,9 +4714,75 @@ private final class HostNode: Decodable {
             return .button(
                 id: NodeID(id),
                 title: title ?? "",
+                role: role,
                 event: SurfaceEvent(event),
                 modifiers: modifiers,
                 children: childNodes
+            )
+        case .editButton:
+            return .editButton(
+                id: NodeID(id),
+                modifiers: modifiers
+            )
+        case .shareLink:
+            let childNodes = try mapChildren()
+            return .shareLink(
+                id: NodeID(id),
+                title: title ?? "",
+                items: try makeShareItems(),
+                subject: shareSubject,
+                message: shareMessage,
+                modifiers: modifiers,
+                children: childNodes
+            )
+        case .textField:
+            guard let event else {
+                throw JSSurfaceError.invalidTree("TextField node '\(id)' is missing an onChange event")
+            }
+
+            guard let value else {
+                throw JSSurfaceError.invalidTree("TextField node '\(id)' is missing a text value")
+            }
+
+            return .textField(
+                id: NodeID(id),
+                title: title ?? "",
+                text: value,
+                prompt: prompt,
+                event: SurfaceEvent(event),
+                modifiers: modifiers
+            )
+        case .secureField:
+            guard let event else {
+                throw JSSurfaceError.invalidTree("SecureField node '\(id)' is missing an onChange event")
+            }
+
+            guard let value else {
+                throw JSSurfaceError.invalidTree("SecureField node '\(id)' is missing a text value")
+            }
+
+            return .secureField(
+                id: NodeID(id),
+                title: title ?? "",
+                text: value,
+                prompt: prompt,
+                event: SurfaceEvent(event),
+                modifiers: modifiers
+            )
+        case .textEditor:
+            guard let event else {
+                throw JSSurfaceError.invalidTree("TextEditor node '\(id)' is missing an onChange event")
+            }
+
+            guard let value else {
+                throw JSSurfaceError.invalidTree("TextEditor node '\(id)' is missing a text value")
+            }
+
+            return .textEditor(
+                id: NodeID(id),
+                text: value,
+                event: SurfaceEvent(event),
+                modifiers: modifiers
             )
         case .menu:
             return .menu(
@@ -4518,6 +4838,44 @@ private final class HostNode: Decodable {
                 modifiers: modifiers,
                 children: try mapChildren()
             )
+        case .datePicker:
+            guard let event else {
+                throw JSSurfaceError.invalidTree("DatePicker node '\(id)' is missing an onChange event")
+            }
+
+            guard let dateSelection else {
+                throw JSSurfaceError.invalidTree("DatePicker node '\(id)' is missing a selection value")
+            }
+
+            guard let selection = HostDateValue.parse(dateSelection) else {
+                throw JSSurfaceError.invalidTree("DatePicker node '\(id)' has an invalid selection value '\(dateSelection)'")
+            }
+
+            let parsedMinimumDate = minimumDate.flatMap(HostDateValue.parse)
+            if minimumDate != nil, parsedMinimumDate == nil {
+                throw JSSurfaceError.invalidTree("DatePicker node '\(id)' has an invalid minimumDate value '\(minimumDate!)'")
+            }
+
+            let parsedMaximumDate = maximumDate.flatMap(HostDateValue.parse)
+            if maximumDate != nil, parsedMaximumDate == nil {
+                throw JSSurfaceError.invalidTree("DatePicker node '\(id)' has an invalid maximumDate value '\(maximumDate!)'")
+            }
+
+            if let parsedMinimumDate, let parsedMaximumDate, parsedMinimumDate > parsedMaximumDate {
+                throw JSSurfaceError.invalidTree("DatePicker node '\(id)' has a minimumDate later than maximumDate")
+            }
+
+            return .datePicker(
+                id: NodeID(id),
+                title: title ?? "",
+                selection: selection,
+                minimumDate: parsedMinimumDate,
+                maximumDate: parsedMaximumDate,
+                displayedComponents: displayedComponents ?? .dateAndTime,
+                event: SurfaceEvent(event),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
         case .toggle:
             guard let event else {
                 throw JSSurfaceError.invalidTree("Toggle node '\(id)' is missing an onChange event")
@@ -4564,6 +4922,8 @@ private final class HostNode: Decodable {
         ViewModifiers(
             alignment: alignment ?? .center,
             viewIdentity: viewIdentity,
+            tag: tag,
+            accessibilityLabel: accessibilityLabel,
             padding: padding,
             paddingTop: paddingTop,
             frameMinWidth: frameMinWidth,
@@ -4586,21 +4946,41 @@ private final class HostNode: Decodable {
             buttonStyle: buttonStyle,
             buttonBorderShape: buttonBorderShape,
             isDisabled: isDisabled ?? false,
+            moveDisabled: moveDisabled ?? false,
             glassEffect: glassEffect ?? false,
             glassVariant: glassVariant ?? .regular,
             glassTint: glassTint,
+            editMode: editMode,
+            editModeEvent: editModeEvent.map { SurfaceEvent($0) },
             navigationTitle: navigationTitle,
             navigationBarTitleDisplayMode: navigationBarTitleDisplayMode,
             navigationLinkIndicatorVisibility: navigationLinkIndicatorVisibility,
+            toolbarRole: toolbarRole,
+            searchable: makeSearchable(),
+            searchSuggestions: try makeSearchSuggestions(),
+            searchScopes: try makeSearchScopes(),
+            searchCompletion: searchCompletion,
+            tabRole: try makeTabRole(),
+            searchPresentationToolbarBehavior: searchPresentationToolbarBehavior,
+            searchToolbarBehavior: searchToolbarBehavior,
             toolbarItems: try mapToolbarItems(),
             toolbarBackgroundVisibility: toolbarBackgroundVisibility,
             toolbarColorScheme: toolbarColorScheme,
             listStyle: listStyle,
+            pickerStyle: pickerStyle,
+            keyboardType: keyboardType,
+            textInputAutocapitalization: textInputAutocapitalization,
+            autocorrectionDisabled: autocorrectionDisabled,
+            submitLabel: submitLabel,
+            submitEvent: submitEvent.map { SurfaceEvent($0) },
             scrollContentBackground: scrollContentBackground,
             listRowSeparator: listRowSeparator,
             listSectionSeparator: listSectionSeparator,
             listRowInsets: makeListRowInsets(),
             listRowBackground: listRowBackground,
+            draggable: draggable,
+            dropDestination: try makeDropDestination(),
+            swipeActions: try mapSwipeActions(),
             contentMargins: contentMargins ?? [],
             imageContentMode: imageContentMode,
             imageInterpolation: imageInterpolation,
@@ -4623,6 +5003,7 @@ private final class HostNode: Decodable {
             presentationBackgroundInteraction: makePresentationBackgroundInteraction(),
             alert: try makeAlert(),
             confirmationDialog: try makeConfirmationDialog(),
+            contextMenu: try makeContextMenu(),
             onAppearEvent: onAppearEvent.map { SurfaceEvent($0) }
         )
     }
@@ -4634,6 +5015,86 @@ private final class HostNode: Decodable {
                 content: try item.content.makeViewNode()
             )
         }
+    }
+
+    private func mapSwipeActions() throws -> [SwipeActionsValue] {
+        try (swipeActions ?? []).map { try $0.makeValue() }
+    }
+
+    private func makeDropDestination() throws -> DropDestinationValue? {
+        if dropDestinationContentTypes == nil, dropDestinationEvent == nil, dropDestinationTargetedEvent == nil {
+            return nil
+        }
+
+        guard let dropDestinationEvent else {
+            throw JSSurfaceError.invalidTree("Node '\(id)' is missing a drop destination action")
+        }
+
+        return DropDestinationValue(
+            contentTypes: dropDestinationContentTypes,
+            event: SurfaceEvent(dropDestinationEvent),
+            targetedEvent: dropDestinationTargetedEvent.map { SurfaceEvent($0) }
+        )
+    }
+
+    private func makeSearchable() -> SearchableValue? {
+        guard let searchableText, let searchableEvent else {
+            return nil
+        }
+
+        return SearchableValue(
+            text: searchableText,
+            prompt: searchablePrompt,
+            placement: SearchFieldPlacementValue(
+                kind: searchablePlacement ?? .automatic,
+                navigationBarDrawerDisplayMode: searchablePlacementNavigationBarDrawerDisplayMode
+            ),
+            event: SurfaceEvent(searchableEvent)
+        )
+    }
+
+    private func makeSearchSuggestions() throws -> SearchSuggestionsValue? {
+        guard let searchSuggestionsContent else {
+            return nil
+        }
+
+        return SearchSuggestionsValue(content: try searchSuggestionsContent.map { try $0.makeViewNode() })
+    }
+
+    private func makeSearchScopes() throws -> SearchScopesValue? {
+        if searchScopesSelection == nil, searchScopesEvent == nil, searchScopesContent == nil {
+            return nil
+        }
+
+        guard let searchScopesSelection else {
+            throw JSSurfaceError.invalidTree("Node '\(id)' is missing a search scopes selection")
+        }
+
+        guard let searchScopesEvent else {
+            throw JSSurfaceError.invalidTree("Node '\(id)' is missing a search scopes event")
+        }
+
+        guard let searchScopesContent else {
+            throw JSSurfaceError.invalidTree("Node '\(id)' is missing search scopes content")
+        }
+
+        return SearchScopesValue(
+            selection: searchScopesSelection,
+            event: SurfaceEvent(searchScopesEvent),
+            content: try searchScopesContent.map { try $0.makeViewNode() }
+        )
+    }
+
+    private func makeTabRole() throws -> TabRoleKind? {
+        guard let tabRole else {
+            return nil
+        }
+
+        guard let role = TabRoleKind(rawValue: tabRole) else {
+            throw JSSurfaceError.invalidTree("Node '\(id)' has an invalid tab role '\(tabRole)'")
+        }
+
+        return role
     }
 
     private func makeListRowInsets() -> EdgeInsetsValue? {
@@ -4686,6 +5147,17 @@ private final class HostNode: Decodable {
         )
     }
 
+    private func makeContextMenu() throws -> ContextMenuValue? {
+        guard contextMenuActions != nil || contextMenuPreview != nil else {
+            return nil
+        }
+
+        return ContextMenuValue(
+            actions: contextMenuActions ?? [],
+            preview: try contextMenuPreview?.makeViewNode()
+        )
+    }
+
     private func makePresentationBackgroundInteraction() -> PresentationBackgroundInteractionValue? {
         switch presentationBackgroundInteractionKind {
         case "automatic":
@@ -4735,6 +5207,60 @@ private final class HostNode: Decodable {
         )
     }
 
+    private func makeURL(_ value: String?, name: String) throws -> URL {
+        guard let value, let url = URL(string: value), url.scheme != nil else {
+            throw JSSurfaceError.invalidTree("\(type.rawValue) node '\(id)' has an invalid \(name) URL")
+        }
+
+        return url
+    }
+
+    private func makeShareItems() throws -> [ShareItemValue] {
+        if shareItem != nil, shareItems != nil {
+            throw JSSurfaceError.invalidTree("ShareLink node '\(id)' cannot define both item and items")
+        }
+
+        let serializedItems: [HostShareItem]
+        if let shareItem {
+            serializedItems = [shareItem]
+        } else if let shareItems, !shareItems.isEmpty {
+            serializedItems = shareItems
+        } else {
+            throw JSSurfaceError.invalidTree("ShareLink node '\(id)' is missing an item")
+        }
+
+        let items = try serializedItems.map { item in
+            switch item.kind {
+            case .text:
+                return ShareItemValue.text(item.value)
+            case .url:
+                return ShareItemValue.url(try makeURL(item.value, name: "item"))
+            }
+        }
+
+        let hasText = items.contains { item in
+            if case .text = item {
+                return true
+            }
+
+            return false
+        }
+
+        let hasURL = items.contains { item in
+            if case .url = item {
+                return true
+            }
+
+            return false
+        }
+
+        if hasText, hasURL {
+            throw JSSurfaceError.invalidTree("ShareLink node '\(id)' cannot mix text and URL items")
+        }
+
+        return items
+    }
+
     private func required<Value>(_ value: Value?, name: String) throws -> Value {
         guard let value else {
             throw JSSurfaceError.invalidTree("\(type.rawValue) node '\(id)' is missing a \(name)")
@@ -4744,7 +5270,7 @@ private final class HostNode: Decodable {
     }
 }
 
-private enum HostComponentType: String, Decodable {
+enum HostComponentType: String, Decodable {
     case vStack = "VStack"
     case hStack = "HStack"
     case zStack = "ZStack"
@@ -4756,11 +5282,14 @@ private enum HostComponentType: String, Decodable {
     case geometryReader = "GeometryReader"
     case custom = "Custom"
     case customLayout = "CustomLayout"
+    case forEach = "ForEach"
     case list = "List"
     case form = "Form"
     case section = "Section"
     case navigationStack = "NavigationStack"
     case navigationLink = "NavigationLink"
+    case link = "Link"
+    case webView = "WebView"
     case sheet = "Sheet"
     case fullScreenCover = "FullScreenCover"
     case tabView = "TabView"
@@ -4770,6 +5299,7 @@ private enum HostComponentType: String, Decodable {
     case text = "Text"
     case label = "Label"
     case contentUnavailable = "ContentUnavailableView"
+    case progressView = "ProgressView"
     case image = "Image"
     case rectangle = "Rectangle"
     case roundedRectangle = "RoundedRectangle"
@@ -4781,14 +5311,45 @@ private enum HostComponentType: String, Decodable {
     case angularGradient = "AngularGradient"
     case divider = "Divider"
     case button = "Button"
+    case editButton = "EditButton"
+    case shareLink = "ShareLink"
+    case textField = "TextField"
+    case secureField = "SecureField"
+    case textEditor = "TextEditor"
     case menu = "Menu"
     case disclosureGroup = "DisclosureGroup"
     case controlGroup = "ControlGroup"
     case picker = "Picker"
+    case datePicker = "DatePicker"
     case toggle = "Toggle"
 }
 
-private enum JSSurfaceError: LocalizedError {
+private struct SwiftJSWebView: UIViewRepresentable {
+    let url: URL
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView(frame: .zero)
+        context.coordinator.loadedURL = url
+        webView.load(URLRequest(url: url))
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        guard context.coordinator.loadedURL != url else { return }
+        context.coordinator.loadedURL = url
+        webView.load(URLRequest(url: url))
+    }
+
+    final class Coordinator {
+        var loadedURL: URL?
+    }
+}
+
+enum JSSurfaceError: LocalizedError {
     case javaScriptException(String)
     case missingPackagedRuntime
     case missingScriptResource(name: String, ext: String, bundlePath: String)
@@ -4807,678 +5368,6 @@ private enum JSSurfaceError: LocalizedError {
             "The JavaScript bundle finished without mounting a root component."
         case let .invalidTree(message):
             "Invalid host tree: \(message)"
-        }
-    }
-}
-
-private extension ViewModifiers {
-    var swiftUIFont: Font? {
-        if let fontSize {
-            return .system(size: fontSize, weight: swiftUIFontWeight ?? .regular)
-        }
-
-        guard let fontStyle else {
-            return nil
-        }
-
-        switch fontStyle {
-        case .largeTitle:
-            return .largeTitle
-        case .title:
-            return .title
-        case .title2:
-            return .title2
-        case .title3:
-            return .title3
-        case .headline:
-            return .headline
-        case .subheadline:
-            return .subheadline
-        case .body:
-            return .body
-        case .callout:
-            return .callout
-        case .caption:
-            return .caption
-        case .caption2:
-            return .caption2
-        case .footnote:
-            return .footnote
-        }
-    }
-
-    var swiftUIFontWeight: SwiftUI.Font.Weight? {
-        guard let fontWeight else {
-            return nil
-        }
-
-        switch fontWeight {
-        case .ultraLight:
-            return .ultraLight
-        case .thin:
-            return .thin
-        case .light:
-            return .light
-        case .regular:
-            return .regular
-        case .medium:
-            return .medium
-        case .semibold:
-            return .semibold
-        case .bold:
-            return .bold
-        case .heavy:
-            return .heavy
-        case .black:
-            return .black
-        }
-    }
-
-    var swiftUIColor: Color? {
-        foregroundColor.flatMap(Color.named(_:))
-    }
-
-    var backgroundShapeStyle: AnyShapeStyle? {
-        background?.swiftUIShapeStyle
-    }
-
-    var foregroundShapeStyle: AnyShapeStyle? {
-        foregroundStyle?.swiftUIShapeStyle
-    }
-
-    var defaultShapeStyle: AnyShapeStyle {
-        foregroundShapeStyle ?? swiftUIColor.map(AnyShapeStyle.init) ?? AnyShapeStyle(.foreground)
-    }
-
-    var swiftUISymbolRenderingMode: SwiftUI.SymbolRenderingMode? {
-        guard let symbolRenderingMode else {
-            return nil
-        }
-
-        switch symbolRenderingMode {
-        case .monochrome:
-            return .monochrome
-        case .hierarchical:
-            return .hierarchical
-        case .multicolor:
-            return .multicolor
-        }
-    }
-
-    var usesGlassButtonStyle: Bool {
-        switch buttonStyle {
-        case .glass, .glassProminent:
-            return true
-        default:
-            return false
-        }
-    }
-
-    var swiftUIAlignment: Alignment {
-        alignment.swiftUIAlignment
-    }
-
-    var swiftUIAspectRatioContentMode: SwiftUI.ContentMode {
-        (aspectRatioContentMode ?? .fit).swiftUIContentMode
-    }
-
-    var swiftUINavigationLinkIndicatorVisibility: SwiftUI.Visibility? {
-        guard let navigationLinkIndicatorVisibility else {
-            return nil
-        }
-
-        switch navigationLinkIndicatorVisibility {
-        case .automatic:
-            return .automatic
-        case .visible:
-            return .visible
-        case .hidden:
-            return .hidden
-        }
-    }
-
-    var swiftUITextAlignment: TextAlignment? {
-        guard let multilineTextAlignment else {
-            return nil
-        }
-
-        switch multilineTextAlignment {
-        case .leading:
-            return .leading
-        case .center:
-            return .center
-        case .trailing:
-            return .trailing
-        }
-    }
-
-    var swiftUITruncationMode: Text.TruncationMode? {
-        guard let truncationMode else {
-            return nil
-        }
-
-        switch truncationMode {
-        case .head:
-            return .head
-        case .middle:
-            return .middle
-        case .tail:
-            return .tail
-        }
-    }
-
-    var swiftUINavigationBarTitleDisplayMode: NavigationBarItem.TitleDisplayMode? {
-        guard let navigationBarTitleDisplayMode else {
-            return nil
-        }
-
-        switch navigationBarTitleDisplayMode {
-        case .automatic:
-            return .automatic
-        case .inline:
-            return .inline
-        case .large:
-            return .large
-        }
-    }
-
-    var swiftUIToolbarBackgroundVisibility: Visibility? {
-        toolbarBackgroundVisibility?.swiftUIVisibility
-    }
-
-    var swiftUIColorScheme: ColorScheme? {
-        guard let toolbarColorScheme else {
-            return nil
-        }
-
-        switch toolbarColorScheme {
-        case .light:
-            return .light
-        case .dark:
-            return .dark
-        }
-    }
-
-    var swiftUIScrollContentBackgroundVisibility: Visibility? {
-        scrollContentBackground?.swiftUIVisibility
-    }
-
-    var swiftUIListRowSeparatorVisibility: Visibility? {
-        listRowSeparator?.swiftUIVisibility
-    }
-
-    var swiftUIListSectionSeparatorVisibility: Visibility? {
-        listSectionSeparator?.swiftUIVisibility
-    }
-
-    var swiftUIPresentationDragIndicator: Visibility? {
-        presentationDragIndicator?.swiftUIVisibility
-    }
-}
-
-private extension ShapeStyleValue {
-    var swiftUIShapeStyle: AnyShapeStyle {
-        switch self {
-        case let .color(value):
-            AnyShapeStyle(Color.named(value) ?? Color(value))
-        case let .linearGradient(value):
-            AnyShapeStyle(
-                LinearGradient(
-                    gradient: value.swiftUIGradient,
-                    startPoint: value.startPoint.swiftUIUnitPoint,
-                    endPoint: value.endPoint.swiftUIUnitPoint
-                )
-            )
-        case let .radialGradient(value):
-            AnyShapeStyle(
-                RadialGradient(
-                    gradient: value.swiftUIGradient,
-                    center: value.center.swiftUIUnitPoint,
-                    startRadius: value.startRadius,
-                    endRadius: value.endRadius
-                )
-            )
-        case let .angularGradient(value):
-            if let angle = value.angle {
-                AnyShapeStyle(
-                    AngularGradient(
-                        gradient: value.swiftUIGradient,
-                        center: value.center.swiftUIUnitPoint,
-                        angle: .degrees(angle)
-                    )
-                )
-            } else {
-                AnyShapeStyle(
-                    AngularGradient(
-                        gradient: value.swiftUIGradient,
-                        center: value.center.swiftUIUnitPoint,
-                        startAngle: .degrees(value.startAngle ?? 0),
-                        endAngle: .degrees(value.endAngle ?? 360)
-                    )
-                )
-            }
-        }
-    }
-}
-
-private extension LinearGradientValue {
-    var swiftUIGradient: Gradient {
-        makeGradient(colors: colors, stops: stops)
-    }
-}
-
-private extension RadialGradientValue {
-    var swiftUIGradient: Gradient {
-        makeGradient(colors: colors, stops: stops)
-    }
-}
-
-private extension AngularGradientValue {
-    var swiftUIGradient: Gradient {
-        makeGradient(colors: colors, stops: stops)
-    }
-}
-
-private func makeGradient(colors: [String]?, stops: [GradientStopValue]?) -> Gradient {
-    if let stops, !stops.isEmpty {
-        return Gradient(
-            stops: stops.map { stop in
-                Gradient.Stop(
-                    color: Color.named(stop.color) ?? Color(stop.color),
-                    location: stop.location
-                )
-            }
-        )
-    }
-
-    return Gradient(colors: (colors ?? ["clear", "clear"]).map { Color.named($0) ?? Color($0) })
-}
-
-@available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *)
-private func glassValue(for modifiers: ViewModifiers) -> SwiftUI.Glass {
-    if let tint = modifiers.glassTint.flatMap(Color.named(_:)) {
-        switch modifiers.glassVariant {
-        case .clear:
-            return .clear.tint(tint)
-        case .regular:
-            return .regular.tint(tint)
-        }
-    }
-
-    switch modifiers.glassVariant {
-    case .clear:
-        return .clear
-    case .regular:
-        return .regular
-    }
-}
-
-private extension VisibilityKind {
-    var swiftUIVisibility: Visibility {
-        switch self {
-        case .automatic:
-            return .automatic
-        case .visible:
-            return .visible
-        case .hidden:
-            return .hidden
-        }
-    }
-}
-
-private extension EdgeInsetsValue {
-    var swiftUIEdgeInsets: EdgeInsets {
-        EdgeInsets(
-            top: CGFloat(top ?? 0),
-            leading: CGFloat(leading ?? 0),
-            bottom: CGFloat(bottom ?? 0),
-            trailing: CGFloat(trailing ?? 0)
-        )
-    }
-}
-
-private extension EdgeKind {
-    var swiftUIEdge: Edge {
-        switch self {
-        case .top:
-            return .top
-        case .bottom:
-            return .bottom
-        case .leading:
-            return .leading
-        case .trailing:
-            return .trailing
-        }
-    }
-}
-
-private extension EdgeSetKind {
-    var swiftUIEdgeSet: Edge.Set {
-        switch self {
-        case .all:
-            return .all
-        case .horizontal:
-            return .horizontal
-        case .vertical:
-            return .vertical
-        case .top:
-            return .top
-        case .bottom:
-            return .bottom
-        case .leading:
-            return .leading
-        case .trailing:
-            return .trailing
-        }
-    }
-}
-
-private extension ContentMarginPlacementKind {
-    var swiftUIContentMarginPlacement: ContentMarginPlacement {
-        switch self {
-        case .automatic:
-            return .automatic
-        case .scrollContent:
-            return .scrollContent
-        case .scrollIndicators:
-            return .scrollIndicators
-        }
-    }
-}
-
-private extension ToolbarItemPlacementKind {
-    var swiftUIToolbarItemPlacement: ToolbarItemPlacement {
-        switch self {
-        case .automatic:
-            return .automatic
-        case .principal:
-            return .principal
-        case .topBarLeading:
-            return .topBarLeading
-        case .topBarTrailing:
-            return .topBarTrailing
-        case .bottomBar:
-            return .bottomBar
-        case .status:
-            return .status
-        case .cancellationAction:
-            return .cancellationAction
-        case .confirmationAction:
-            return .confirmationAction
-        case .primaryAction:
-            return .primaryAction
-        }
-    }
-}
-
-private extension DialogActionRoleKind {
-    var swiftUIRole: ButtonRole? {
-        switch self {
-        case .cancel:
-            return .cancel
-        case .destructive:
-            return .destructive
-        }
-    }
-}
-
-private extension PresentationDetentValue {
-    var swiftUIPresentationDetent: PresentationDetent {
-        switch self {
-        case .medium:
-            return .medium
-        case .large:
-            return .large
-        case let .fraction(value):
-            return .fraction(value)
-        case let .height(value):
-            return .height(value)
-        }
-    }
-}
-
-private extension Color {
-    static func named(_ value: String) -> Color? {
-        if let hexColor = hex(value) {
-            return hexColor
-        }
-
-        switch value {
-        case "red":
-            return .red
-        case "green":
-            return .green
-        case "yellow":
-            return .yellow
-        case "blue":
-            return .blue
-        case "orange":
-            return .orange
-        case "pink":
-            return .pink
-        case "purple":
-            return .purple
-        case "cyan":
-            return .cyan
-        case "gray", "grey":
-            return .gray
-        case "black":
-            return .black
-        case "mint":
-            return .mint
-        case "indigo":
-            return .indigo
-        case "teal":
-            return .teal
-        case "white":
-            return .white
-        case "primary":
-            return .primary
-        case "secondary":
-            return .secondary
-        case "clear":
-            return .clear
-        case "systemGroupedBackground":
-            return Color(uiColor: .systemGroupedBackground)
-        case "secondarySystemBackground":
-            return Color(uiColor: .secondarySystemBackground)
-        case "tertiarySystemBackground":
-            return Color(uiColor: .tertiarySystemBackground)
-        case "tertiarySystemFill":
-            return Color(uiColor: .tertiarySystemFill)
-        case "quaternarySystemFill":
-            return Color(uiColor: .quaternarySystemFill)
-        default:
-            return Color(value)
-        }
-    }
-
-    static func hex(_ value: String) -> Color? {
-        guard let digits = value.stripHexPrefix else {
-            return nil
-        }
-
-        let expanded: String
-        switch digits.count {
-        case 3, 4:
-            expanded = digits.reduce(into: "") { partialResult, character in
-                partialResult.append(character)
-                partialResult.append(character)
-            }
-        case 6, 8:
-            expanded = digits
-        default:
-            return nil
-        }
-
-        guard let hex = UInt64(expanded, radix: 16) else {
-            return nil
-        }
-
-        let red: Double
-        let green: Double
-        let blue: Double
-        let alpha: Double
-
-        if expanded.count == 6 {
-            red = Double((hex >> 16) & 0xFF) / 255
-            green = Double((hex >> 8) & 0xFF) / 255
-            blue = Double(hex & 0xFF) / 255
-            alpha = 1
-        } else {
-            red = Double((hex >> 24) & 0xFF) / 255
-            green = Double((hex >> 16) & 0xFF) / 255
-            blue = Double((hex >> 8) & 0xFF) / 255
-            alpha = Double(hex & 0xFF) / 255
-        }
-
-        return Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha)
-    }
-}
-
-private extension String {
-    var stripHexPrefix: String? {
-        guard hasPrefix("#") else {
-            return nil
-        }
-
-        let digits = String(dropFirst())
-        guard !digits.isEmpty, digits.allSatisfy(\.isHexDigit) else {
-            return nil
-        }
-
-        return digits
-    }
-}
-
-private extension AxisKind {
-    var swiftUIAxisSet: Axis.Set {
-        switch self {
-        case .vertical:
-            return .vertical
-        case .horizontal:
-            return .horizontal
-        }
-    }
-}
-
-private extension UnitPointValue {
-    var swiftUIUnitPoint: UnitPoint {
-        switch self {
-        case .center:
-            .center
-        case .leading:
-            .leading
-        case .trailing:
-            .trailing
-        case .top:
-            .top
-        case .bottom:
-            .bottom
-        case .topLeading:
-            .topLeading
-        case .topTrailing:
-            .topTrailing
-        case .bottomLeading:
-            .bottomLeading
-        case .bottomTrailing:
-            .bottomTrailing
-        }
-    }
-}
-
-private extension ImageContentMode {
-    var swiftUIContentMode: SwiftUI.ContentMode {
-        switch self {
-        case .fit:
-            return .fit
-        case .fill:
-            return .fill
-        }
-    }
-}
-
-private extension ImageInterpolation {
-    var swiftUIImageInterpolation: SwiftUI.Image.Interpolation {
-        switch self {
-        case .none:
-            return .none
-        case .low:
-            return .low
-        case .medium:
-            return .medium
-        case .high:
-            return .high
-        }
-    }
-}
-
-private extension ContentAlignment {
-    var swiftUIUnitPoint: UnitPoint {
-        switch self {
-        case .leading:
-            return .leading
-        case .center:
-            return .center
-        case .trailing:
-            return .trailing
-        case .top:
-            return .top
-        case .bottom:
-            return .bottom
-        case .topLeading:
-            return .topLeading
-        case .topTrailing:
-            return .topTrailing
-        case .bottomLeading:
-            return .bottomLeading
-        case .bottomTrailing:
-            return .bottomTrailing
-        }
-    }
-
-    var swiftUIAlignment: Alignment {
-        switch self {
-        case .leading:
-            return .leading
-        case .center:
-            return .center
-        case .trailing:
-            return .trailing
-        case .top:
-            return .top
-        case .bottom:
-            return .bottom
-        case .topLeading:
-            return .topLeading
-        case .topTrailing:
-            return .topTrailing
-        case .bottomLeading:
-            return .bottomLeading
-        case .bottomTrailing:
-            return .bottomTrailing
-        }
-    }
-
-    var swiftUIHorizontalAlignment: HorizontalAlignment {
-        switch self {
-        case .leading, .topLeading, .bottomLeading:
-            return .leading
-        case .trailing, .topTrailing, .bottomTrailing:
-            return .trailing
-        default:
-            return .center
-        }
-    }
-
-    var swiftUIVerticalAlignment: VerticalAlignment {
-        switch self {
-        case .top, .topLeading, .topTrailing:
-            return .top
-        case .bottom, .bottomLeading, .bottomTrailing:
-            return .bottom
-        default:
-            return .center
         }
     }
 }

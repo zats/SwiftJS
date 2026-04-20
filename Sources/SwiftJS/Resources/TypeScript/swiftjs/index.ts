@@ -3,8 +3,10 @@ import type {
   AngularGradientProps,
   AspectRatioValue,
   BadgeValue,
+  ButtonRole,
   ButtonProps,
   ConfirmationDialogValue,
+  ContextMenuValue,
   ContentUnavailableProps,
   ContentMarginsValue,
   ControlGroupProps,
@@ -12,16 +14,27 @@ import type {
   CircleProps,
   ColorSchemeValue,
   CustomValue,
+  CustomProps,
   CustomLayoutProps,
+  DatePickerDisplayedComponents,
+  DatePickerProps,
+  DatePickerRange,
+  DateValue,
   DialogActionRole,
   DialogActionValue,
   DividerProps,
+  DropDestinationValue,
+  DropLocationValue,
+  DroppedTransferItemValue,
   DisclosureGroupProps,
+  EditButtonProps,
+  EditMode,
   EdgeInsetsValue,
   EdgeSetValue,
   EdgeValue,
   EllipseProps,
   FlowLayoutProps,
+  ForEachProps,
   FormProps,
   FullScreenCoverProps,
   IgnoresSafeAreaValue,
@@ -31,17 +44,22 @@ import type {
   ImageInterpolation,
   ImageProps,
   LabelProps,
+  KeyboardType,
   LayoutBounds,
   LayoutPlacement,
   LayoutSubview,
+  LinkProps,
   LinearGradientProps,
   ListProps,
+  ListSelectionValue,
   MenuProps,
+  MoveAction,
   NavigationLinkProps,
   NavigationBarTitleDisplayMode,
   NavigationSplitViewProps,
   NavigationStackProps,
   PickerProps,
+  ProgressViewProps,
   PresentationBackgroundInteractionValue,
   PresentationDetentValue,
   PresentationDragIndicator,
@@ -52,16 +70,24 @@ import type {
   SafeAreaInsetValue,
   SafeAreaPaddingValue,
   ScrollViewProps,
+  SecureFieldProps,
   SectionProps,
+  ShareLinkProps,
+  ShareItemValue,
   SheetProps,
   SpacerProps,
   StackDistribution,
   StackProps,
+  SubmitLabel,
   TabProps,
   TabValue,
   TabViewProps,
   TextAlignmentValue,
+  TextInputAutocapitalization,
+  TextEditorProps,
+  TextFieldProps,
   TextProps,
+  TransferItemValue,
   ToggleProps,
   ToolbarItemPlacement,
   ToolbarItemValue,
@@ -69,6 +95,7 @@ import type {
   TruncationMode,
   VisibilityKind,
   ViewThatFitsProps,
+  WebViewProps,
 } from "./types"
 
 export type {
@@ -78,6 +105,7 @@ export type {
   AspectRatioValue,
   AxisValue,
   BadgeValue,
+  ButtonRole,
   ButtonBorderShape,
   ButtonProps,
   ButtonStyle,
@@ -91,18 +119,30 @@ export type {
   ContentMarginsValue,
   ContentMarginPlacement,
   ContentUnavailableProps,
+  ContextMenuValue,
   ControlGroupProps,
+  CustomProps,
   DialogActionRole,
   DialogActionValue,
   CustomValue,
   CustomLayoutProps,
+  DatePickerDisplayedComponents,
+  DatePickerProps,
+  DatePickerRange,
+  DateValue,
   DividerProps,
+  DropDestinationValue,
+  DropLocationValue,
+  DroppedTransferItemValue,
   DisclosureGroupProps,
+  EditButtonProps,
+  EditMode,
   EdgeInsetsValue,
   EdgeSetValue,
   EdgeValue,
   EllipseProps,
   FlowLayoutProps,
+  ForEachProps,
   FontValue,
   FontWeight,
   FormProps,
@@ -115,26 +155,33 @@ export type {
   GridProps,
   GridRowProps,
   FixedSizeValue,
+  HorizontalEdgeValue,
   IgnoresSafeAreaValue,
   ImageContentMode,
   ImageInterpolation,
   ImageProps,
   LabelProps,
+  KeyboardType,
   LayoutBounds,
   LayoutPlacement,
   LayoutSubview,
+  LinkProps,
   LinearGradientProps,
   LinearGradientValue,
   ListProps,
   ListStyle,
+  ListSelectionValue,
   MenuProps,
+  MoveAction,
   NavigationLinkProps,
   NavigationBarTitleDisplayMode,
   NavigationSplitViewProps,
   NavigationStackProps,
   PickerOption,
   PickerProps,
+  PickerStyle,
   PickerValue,
+  ProgressViewProps,
   PresentationBackgroundInteractionValue,
   PresentationDetentValue,
   PresentationDragIndicator,
@@ -146,19 +193,30 @@ export type {
   SafeAreaInsetValue,
   SafeAreaPaddingValue,
   ScrollViewProps,
+  SearchableValue,
+  SecureFieldProps,
   SectionProps,
+  ShareLinkProps,
+  ShareItemValue,
   ShapeProps,
   ShapeStyleValue,
   SheetProps,
   SpacerProps,
   StackDistribution,
   StackProps,
+  SubmitLabel,
+  SwipeActionsEntry,
+  SwipeActionsValue,
   SymbolRenderingMode,
   TabProps,
   TabValue,
   TabViewProps,
   TextAlignmentValue,
+  TextInputAutocapitalization,
+  TextEditorProps,
+  TextFieldProps,
   TextProps,
+  TransferItemValue,
   ToggleProps,
   ToolbarItemPlacement,
   ToolbarItemValue,
@@ -169,10 +227,19 @@ export type {
   VisibilityKind,
   ViewProps,
   ViewThatFitsProps,
+  WebViewProps,
 } from "./types"
 
 /** Values persisted by `useAppStorage`. */
 export type AppStorageValue = string | number | boolean
+
+export type {
+  SearchFieldNavigationBarDrawerDisplayMode,
+  SearchFieldPlacement,
+  SearchPresentationToolbarBehavior,
+  SearchToolbarBehavior,
+  ToolbarRole,
+} from "./types"
 
 /** Runtime bridge injected by SwiftJS into the JavaScript global scope. */
 export type Runtime = {
@@ -211,6 +278,42 @@ function hostComponent<Props>(name: string) {
   return function HostComponent(props: Props) {
     return runtime().createElement(name, props as Record<string, unknown>)
   }
+}
+
+function normalizeDateValue(value: DateValue, label: string) {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      throw new Error(label + " must be a valid Date")
+    }
+
+    return value.toISOString()
+  }
+
+  if (typeof value === "string" && value.length > 0) {
+    return value
+  }
+
+  throw new Error(label + " must be a Date or non-empty ISO 8601 string")
+}
+
+function normalizeDateRange<Value extends DateValue>(range: DatePickerRange<Value> | undefined) {
+  return {
+    minimumDate: range?.start === undefined ? undefined : normalizeDateValue(range.start, "DatePicker range start"),
+    maximumDate: range?.end === undefined ? undefined : normalizeDateValue(range.end, "DatePicker range end"),
+  }
+}
+
+function restoreDateValue<Value extends DateValue>(value: string, template: Value) {
+  if (typeof template !== "string" && template instanceof Date) {
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) {
+      throw new Error("DatePicker emitted an invalid ISO 8601 value")
+    }
+
+    return parsed as Value
+  }
+
+  return value as Value
 }
 
 export const Fragment = runtime().Fragment
@@ -265,7 +368,7 @@ export const HStack = hostComponent<StackProps>("HStack")
  * Overlays children in the same bounds.
  *
  * <ZStack alignment="bottomTrailing">
- *   <Image name="mountains" frame={{ height: 180, maxWidth: "infinity" }} imageContentMode="fill" />
+ *   <Image name="mountains" frame={{ height: 180 }} imageContentMode="fill" />
  *   <Text background="black" foregroundColor="white" padding={8} cornerRadius={4}>
  *     Featured
  *   </Text>
@@ -337,6 +440,18 @@ export const FlowLayout = hostComponent<FlowLayoutProps>("FlowLayout")
  */
 export const ViewThatFits = hostComponent<ViewThatFitsProps>("ViewThatFits")
 /**
+ * Renders a named native custom host with JSON values and named slots.
+ *
+ * <Custom
+ *   name="Card"
+ *   values={{ emphasized: true }}
+ *   slots={{ accessory: <Text>New</Text> }}
+ * >
+ *   <Text>Inbox</Text>
+ * </Custom>
+ */
+export const Custom = hostComponent<CustomProps>("Custom")
+/**
  * Delegates measurement and placement to a named JS layout.
  *
  * <CustomLayout name="Waterfall" values={{ columns: 2, spacing: 12 }}>
@@ -374,7 +489,12 @@ export const GeometryReader = hostComponent<GeometryReaderProps>("GeometryReader
 /**
  * Renders rows using platform list chrome.
  *
- * <List listStyle="insetGrouped">
+ * <List
+ *   listStyle="insetGrouped"
+ *   searchable={{ text: query, onChange: setQuery, prompt: "Search" }}
+ *   searchSuggestions={<Text searchCompletion="Ada">Ada</Text>}
+ *   searchScopes={{ selection: scope, onChange: setScope, content: [<Text tag="all">All</Text>, <Text tag="people">People</Text>] }}
+ * >
  *   <Section title="Pinned">
  *     <NavigationLink destination={<Text>Engineering room</Text>}>
  *       <Label title="Engineering" systemName="bubble.left.and.bubble.right" />
@@ -397,7 +517,18 @@ export const List = hostComponent<ListProps>("List")
  */
 export const Form = hostComponent<FormProps>("Form")
 /**
- * Groups list or form content under an optional title.
+ * Groups repeated rows and carries move handling, mirroring SwiftUI's `ForEach` role in editable lists.
+ *
+ * <List selection={selectedIDs} onSelectionChange={setSelectedIDs}>
+ *   <ForEach onMove={handleMove}>
+ *     {rows}
+ *   </ForEach>
+ * </List>
+ */
+export const ForEach = hostComponent<ForEachProps>("ForEach")
+/**
+ * Groups list or form content under an optional header and footer.
+ * `title` remains shorthand for a text header when `header` is omitted.
  *
  * <Section title="Notifications">
  *   <Toggle isOn={mentionsOnly} onChange={setMentionsOnly}>
@@ -409,9 +540,14 @@ export const Section = hostComponent<SectionProps>("Section")
 /**
  * Provides stack-based navigation and navigation bar chrome.
  *
- * <NavigationStack navigationTitle="Library">
+ * <NavigationStack
+ *   navigationTitle="Library"
+ *   path={path}
+ *   onPathChange={setPath}
+ *   navigationDestination={(value) => <Text>{String(value)}</Text>}
+ * >
  *   <List>
- *     <NavigationLink destination={<Text>Detail</Text>}>
+ *     <NavigationLink value="detail">
  *       <Text>Open</Text>
  *     </NavigationLink>
  *   </List>
@@ -422,13 +558,28 @@ export const NavigationStack = hostComponent<NavigationStackProps>("NavigationSt
  * Triggers navigation to a destination view.
  *
  * <NavigationLink
- *   destination={<Text>Operations updates</Text>}
+ *   value="operations"
  *   navigationLinkIndicatorVisibility="visible"
  * >
  *   <Label title="Operations" systemName="tray.full" />
  * </NavigationLink>
  */
 export const NavigationLink = hostComponent<NavigationLinkProps>("NavigationLink")
+/**
+ * Opens an external URL.
+ *
+ * <Link destination="https://www.apple.com">
+ *   <Label title="Apple" systemName="safari" />
+ * </Link>
+ */
+export const Link = hostComponent<LinkProps>("Link")
+/**
+ * SwiftJS-specific primitive for embedding web content.
+ * This is not a SwiftUI-parity control.
+ *
+ * <WebView url="https://example.com" />
+ */
+export const WebView = hostComponent<WebViewProps>("WebView")
 /**
  * Presents content in a modal sheet.
  *
@@ -527,7 +678,28 @@ export const Label = hostComponent<LabelProps>("Label")
  *   </Button>
  * </ContentUnavailableView>
  */
-export const ContentUnavailableView = hostComponent<ContentUnavailableProps>("ContentUnavailableView")
+const ContentUnavailableViewBase = hostComponent<ContentUnavailableProps>("ContentUnavailableView")
+export const ContentUnavailableView: typeof ContentUnavailableViewBase & { search: (text: string) => unknown } =
+  Object.assign(ContentUnavailableViewBase, {
+    search(text: string) {
+      const query = text.trim()
+      return createElement(ContentUnavailableViewBase, {
+        title: query.length === 0 ? "No Results" : `No Results for "${text}"`,
+        systemName: "magnifyingglass",
+      })
+    },
+  })
+/**
+ * Displays indeterminate or determinate progress with optional labels.
+ *
+ * <ProgressView
+ *   value={0.42}
+ *   total={1}
+ *   label={<Text>Syncing Files</Text>}
+ *   currentValueLabel={<Text>42%</Text>}
+ * />
+ */
+export const ProgressView = hostComponent<ProgressViewProps>("ProgressView")
 /**
  * Displays an SF Symbol or asset image.
  *
@@ -630,8 +802,52 @@ export const Divider = hostComponent<DividerProps>("Divider")
  * <Button action={() => saveChanges()} buttonStyle="borderedProminent">
  *   Save Changes
  * </Button>
+ *
+ * <Button action={() => deleteItem()} role="destructive">
+ *   Delete
+ * </Button>
  */
 export const Button = hostComponent<ButtonProps>("Button")
+/**
+ * Toggles the nearest bound `editMode` environment.
+ *
+ * <NavigationStack editMode={editMode} onEditModeChange={setEditMode}>
+ *   <EditButton />
+ *   <List selection={selectedIDs} onSelectionChange={setSelectedIDs}>
+ *     <Text tag="draft">Draft</Text>
+ *   </List>
+ * </NavigationStack>
+ */
+export const EditButton = hostComponent<EditButtonProps>("EditButton")
+/**
+ * Presents the system share sheet for text or URLs.
+ *
+ * <ShareLink
+ *   item={{ kind: "url", value: "https://example.com/report" }}
+ *   subject="Quarterly Report"
+ * >
+ *   <Label title="Share" systemName="square.and.arrow.up" />
+ * </ShareLink>
+ */
+export const ShareLink = hostComponent<ShareLinkProps>("ShareLink")
+/**
+ * Binds editable plain text to a single-line field.
+ *
+ * <TextField title="Email" text={email} onChange={setEmail} prompt="name@example.com" />
+ */
+export const TextField = hostComponent<TextFieldProps>("TextField")
+/**
+ * Binds editable plain text to a secure single-line field.
+ *
+ * <SecureField title="Password" text={password} onChange={setPassword} />
+ */
+export const SecureField = hostComponent<SecureFieldProps>("SecureField")
+/**
+ * Binds editable plain text to a multiline editor.
+ *
+ * <TextEditor text={notes} onChange={setNotes} frame={{ minHeight: 160 }} />
+ */
+export const TextEditor = hostComponent<TextEditorProps>("TextEditor")
 /**
  * Presents secondary actions from a trigger view.
  *
@@ -691,6 +907,39 @@ export const ControlGroup = hostComponent<ControlGroupProps>("ControlGroup")
  * </Picker>
  */
 export const Picker = hostComponent<PickerProps>("Picker")
+const DatePickerBase = hostComponent<
+  Omit<DatePickerProps<string>, "onChange" | "range"> & {
+    minimumDate?: string
+    maximumDate?: string
+    onChange: (nextValue: string) => void
+  }
+>("DatePicker")
+/**
+ * Binds a date or time selection to native `DatePicker` controls.
+ *
+ * <DatePicker
+ *   selection={start}
+ *   onChange={setStart}
+ *   displayedComponents="dateAndTime"
+ *   range={{ start: new Date() }}
+ * >
+ *   <Label title="Start" systemName="calendar" />
+ * </DatePicker>
+ */
+export function DatePicker<Value extends DateValue>(props: DatePickerProps<Value>) {
+  const { selection, onChange, range, ...rest } = props
+  const { minimumDate, maximumDate } = normalizeDateRange(range)
+
+  return createElement(DatePickerBase, {
+    ...rest,
+    selection: normalizeDateValue(selection, "DatePicker selection"),
+    minimumDate,
+    maximumDate,
+    onChange(nextValue: string) {
+      onChange(restoreDateValue(nextValue, selection))
+    },
+  })
+}
 /**
  * Binds a boolean value to an on/off control.
  *

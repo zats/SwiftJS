@@ -10,6 +10,7 @@
   const pendingModuleCalls = new Map()
   let layoutHandlers = Object.create(null)
   let geometryReaderHandlers = Object.create(null)
+  let navigationDestinationHandlers = Object.create(null)
 
   function createElement(type, props) {
     const extraChildren = Array.prototype.slice.call(arguments, 2)
@@ -162,6 +163,7 @@
     eventHandlers = Object.create(null)
     layoutHandlers = Object.create(null)
     geometryReaderHandlers = Object.create(null)
+    navigationDestinationHandlers = Object.create(null)
     pendingEffects = []
     seenComponents = new Set()
 
@@ -303,21 +305,83 @@
         node.customValues = serializeCustomValues(props.values)
         return node
       case "List":
+        if (props.selection !== undefined) {
+          node.selectionValues = serializePickerValues(props.selection)
+        }
+        if (typeof props.onSelectionChange === "function") {
+          node.selectionEvent = registerHandler(function (payload) {
+            props.onSelectionChange(new Set(Array.isArray(payload) ? payload : []))
+          }, id + ":selection")
+        }
         node.children = hostChildren(children)
         return node
       case "Form":
         node.children = hostChildren(children)
         return node
+      case "ForEach":
+        if (typeof props.onMove === "function") {
+          node.moveEvent = registerHandler(props.onMove, id + ":move")
+        }
+        node.children = hostChildren(children)
+        return node
       case "Section":
         node.title = typeof props.title === "string" ? props.title : undefined
+        node.header = serializeOptionalSlot(props.header, path + ".header")
+        node.footer = serializeOptionalSlot(props.footer, path + ".footer")
         node.children = hostChildren(children)
         return node
       case "NavigationStack":
+        if (props.path !== undefined) {
+          if (!Array.isArray(props.path)) {
+            throw new Error("NavigationStack path must be an array")
+          }
+
+          node.path = props.path.map(function (value) {
+            return serializeCustomValue(value)
+          })
+        }
+        if (typeof props.onPathChange === "function") {
+          node.pathEvent = registerHandler(props.onPathChange, id + ":path")
+        }
+        if (props.navigationDestination !== undefined) {
+          if (typeof props.navigationDestination !== "function") {
+            throw new Error("NavigationStack navigationDestination must be a function")
+          }
+
+          navigationDestinationHandlers[id] = props.navigationDestination
+        }
         node.children = hostChildren(children)
         return node
       case "NavigationLink":
-        node.destination = serializeSlot(props.destination, path + ".destination", "destination")
+        if (props.destination !== undefined) {
+          node.destination = serializeSlot(props.destination, path + ".destination", "destination")
+        }
+        if (props.value !== undefined) {
+          node.navigationValue = serializeCustomValue(props.value)
+        }
+        if (node.destination === undefined && node.navigationValue === undefined) {
+          throw new Error("NavigationLink requires a destination or value prop")
+        }
+        if (node.destination !== undefined && node.navigationValue !== undefined) {
+          throw new Error("NavigationLink accepts either destination or value")
+        }
         node.children = hostChildren(children)
+        return node
+      case "Link":
+        if (typeof props.destination !== "string" || props.destination.length === 0) {
+          throw new Error("Link requires a destination string prop")
+        }
+
+        node.title = textValue(props.children)
+        node.children = hostChildren(children)
+        node.destinationURL = props.destination
+        return node
+      case "WebView":
+        if (typeof props.url !== "string" || props.url.length === 0) {
+          throw new Error("WebView requires a url string prop")
+        }
+
+        node.url = props.url
         return node
       case "Sheet":
         if (typeof props.isPresented !== "boolean") {
@@ -423,6 +487,34 @@
         node.description = serializeOptionalSlot(props.description, path + ".description")
         node.children = hostChildren(children)
         return node
+      case "ProgressView":
+        if (props.value !== undefined) {
+          if (typeof props.value !== "number") {
+            throw new Error("ProgressView value must be a number")
+          }
+
+          node.progressValue = props.value
+        }
+
+        if (props.total !== undefined) {
+          if (typeof props.total !== "number") {
+            throw new Error("ProgressView total must be a number")
+          }
+
+          if (typeof props.value !== "number") {
+            throw new Error("ProgressView total requires a value")
+          }
+
+          node.progressTotal = props.total
+        }
+
+        if (props.currentValueLabel !== undefined && typeof props.value !== "number") {
+          throw new Error("ProgressView currentValueLabel requires a value")
+        }
+
+        node.label = serializeOptionalSlot(props.label, path + ".label")
+        node.currentValueLabel = serializeOptionalSlot(props.currentValueLabel, path + ".currentValueLabel")
+        return node
       case "Image":
         if (typeof props.systemName === "string") {
           node.systemName = props.systemName
@@ -494,7 +586,54 @@
       case "Button":
         node.title = textValue(props.children)
         node.children = hostChildren(children)
+        node.role = serializeButtonRole(props.role, id + ".role")
         node.event = registerHandler(props.action, id + ":action")
+        return node
+      case "EditButton":
+        return node
+      case "ShareLink":
+        node.title = textValue(props.children)
+        node.children = hostChildren(children)
+        if (typeof props.subject === "string") {
+          node.shareSubject = props.subject
+        }
+        if (typeof props.message === "string") {
+          node.shareMessage = props.message
+        }
+        if (props.item !== undefined) {
+          node.shareItem = serializeShareItem(props.item, path + ".item")
+        }
+        if (props.items !== undefined) {
+          node.shareItems = serializeShareItems(props.items, path + ".items")
+        }
+        return node
+      case "TextField":
+        if (typeof props.text !== "string") {
+          throw new Error("TextField requires a text string prop")
+        }
+
+        node.title = typeof props.title === "string" ? props.title : textValue(props.children)
+        node.prompt = typeof props.prompt === "string" ? props.prompt : undefined
+        node.value = props.text
+        node.event = registerHandler(props.onChange, id + ":change")
+        return node
+      case "SecureField":
+        if (typeof props.text !== "string") {
+          throw new Error("SecureField requires a text string prop")
+        }
+
+        node.title = typeof props.title === "string" ? props.title : textValue(props.children)
+        node.prompt = typeof props.prompt === "string" ? props.prompt : undefined
+        node.value = props.text
+        node.event = registerHandler(props.onChange, id + ":change")
+        return node
+      case "TextEditor":
+        if (typeof props.text !== "string") {
+          throw new Error("TextEditor requires a text string prop")
+        }
+
+        node.value = props.text
+        node.event = registerHandler(props.onChange, id + ":change")
         return node
       case "Menu":
         node.title = textValue(props.children)
@@ -522,6 +661,21 @@
         node.options = serializePickerOptions(props.options)
         node.event = registerHandler(props.onChange, id + ":change")
         return node
+      case "DatePicker":
+        node.title = textValue(props.children)
+        node.children = hostChildren(children)
+        node.dateSelection = serializeDateValue(props.selection, "DatePicker selection")
+        if (props.displayedComponents !== undefined) {
+          node.displayedComponents = serializeDatePickerDisplayedComponents(props.displayedComponents)
+        }
+        if (props.minimumDate !== undefined) {
+          node.minimumDate = serializeDateValue(props.minimumDate, "DatePicker minimumDate")
+        }
+        if (props.maximumDate !== undefined) {
+          node.maximumDate = serializeDateValue(props.maximumDate, "DatePicker maximumDate")
+        }
+        node.event = registerHandler(props.onChange, id + ":change")
+        return node
       case "Toggle":
         if (typeof props.isOn !== "boolean") {
           throw new Error("Toggle requires an isOn boolean prop")
@@ -543,6 +697,10 @@
       id: id
     }
 
+    if (typeof props.accessibilityLabel === "string") {
+      node.accessibilityLabel = props.accessibilityLabel
+    }
+
     if (typeof props.alignment === "string") {
       node.alignment = props.alignment
     }
@@ -553,6 +711,10 @@
       typeof props.viewID === "boolean"
     ) {
       node.viewIdentity = serializeCustomValue(props.viewID)
+    }
+
+    if (props.tag !== undefined) {
+      node.tag = serializePickerValue(props.tag)
     }
 
     if (typeof props.padding === "number") {
@@ -619,6 +781,34 @@
       node.navigationLinkIndicatorVisibility = props.navigationLinkIndicatorVisibility
     }
 
+    if (props.toolbarRole !== undefined) {
+      node.toolbarRole = serializeToolbarRole(props.toolbarRole, id + ".toolbarRole")
+    }
+
+    serializeSearchable(node, props.searchable, id + ".searchable")
+    serializeSearchSuggestions(node, props.searchSuggestions, id + ".searchSuggestions")
+    serializeSearchScopes(node, props.searchScopes, id + ".searchScopes")
+
+    if (typeof props.searchCompletion === "string") {
+      node.searchCompletion = props.searchCompletion
+    }
+
+    serializeTabRole(node, props.tabRole, id + ".tabRole")
+
+    if (props.searchPresentationToolbarBehavior !== undefined) {
+      node.searchPresentationToolbarBehavior = serializeSearchPresentationToolbarBehavior(
+        props.searchPresentationToolbarBehavior,
+        id + ".searchPresentationToolbarBehavior"
+      )
+    }
+
+    if (props.searchToolbarBehavior !== undefined) {
+      node.searchToolbarBehavior = serializeSearchToolbarBehavior(
+        props.searchToolbarBehavior,
+        id + ".searchToolbarBehavior"
+      )
+    }
+
     node.toolbarItems = serializeToolbarItems(props.toolbar, id + ".toolbar")
 
     if (typeof props.toolbarBackgroundVisibility === "string") {
@@ -631,6 +821,33 @@
 
     if (typeof props.listStyle === "string") {
       node.listStyle = props.listStyle
+    }
+
+    if (typeof props.pickerStyle === "string") {
+      node.pickerStyle = props.pickerStyle
+    }
+
+    if (typeof props.keyboardType === "string") {
+      node.keyboardType = serializeKeyboardType(props.keyboardType, id + ".keyboardType")
+    }
+
+    if (typeof props.textInputAutocapitalization === "string") {
+      node.textInputAutocapitalization = serializeTextInputAutocapitalization(
+        props.textInputAutocapitalization,
+        id + ".textInputAutocapitalization"
+      )
+    }
+
+    if (typeof props.autocorrectionDisabled === "boolean") {
+      node.autocorrectionDisabled = props.autocorrectionDisabled
+    }
+
+    if (typeof props.submitLabel === "string") {
+      node.submitLabel = serializeSubmitLabel(props.submitLabel, id + ".submitLabel")
+    }
+
+    if (typeof props.onSubmit === "function") {
+      node.submitEvent = registerHandler(props.onSubmit, id + ".onSubmit")
     }
 
     if (typeof props.scrollContentBackground === "string") {
@@ -646,6 +863,8 @@
     }
 
     serializeEdgeInsets(node, props.listRowInsets)
+    node.draggable = serializeTransferItem(props.draggable, id + ".draggable")
+    serializeDropDestination(node, props.dropDestination, id + ".dropDestination")
     node.contentMargins = serializeContentMargins(props.contentMargins)
 
     if (typeof props.imageContentMode === "string") {
@@ -723,6 +942,10 @@
       node.isDisabled = true
     }
 
+    if (props.moveDisabled === true) {
+      node.moveDisabled = true
+    }
+
     if (props.glassEffect === true) {
       node.glassEffect = true
       node.glassVariant = "regular"
@@ -736,6 +959,14 @@
       if (typeof props.glassEffect.tint === "string") {
         node.glassTint = props.glassEffect.tint
       }
+    }
+
+    if (props.editMode !== undefined) {
+      node.editMode = serializeEditMode(props.editMode)
+    }
+
+    if (typeof props.onEditModeChange === "function") {
+      node.editModeEvent = registerHandler(props.onEditModeChange, id + ":editMode")
     }
 
     if (typeof props.lineLimit === "number") {
@@ -756,6 +987,8 @@
 
     serializeAlert(node, props.alert, id + ".alert")
     serializeConfirmationDialog(node, props.confirmationDialog, id + ".confirmationDialog")
+    serializeContextMenu(node, props.contextMenu, id + ".contextMenu")
+    serializeSwipeActions(node, props.swipeActions, id + ".swipeActions")
 
     return node
   }
@@ -902,6 +1135,63 @@
     throw new Error("Picker selection must be a string or number")
   }
 
+  function serializePickerValues(value) {
+    const values = value instanceof Set ? Array.from(value) : value
+
+    if (!Array.isArray(values)) {
+      throw new Error("List selection must be a Set or array of strings or numbers")
+    }
+
+    return values.map(function (entry) {
+      return serializePickerValue(entry)
+    })
+  }
+
+  function serializeEditMode(value) {
+    if (value === "inactive" || value === "transient" || value === "active") {
+      return value
+    }
+
+    throw new Error("editMode must be 'inactive', 'transient', or 'active'")
+  }
+
+  function serializeShareItem(value, path) {
+    if (typeof value === "string") {
+      return {
+        kind: "text",
+        value: value
+      }
+    }
+
+    if (
+      value &&
+      typeof value === "object" &&
+      (value.kind === "text" || value.kind === "url") &&
+      typeof value.value === "string"
+    ) {
+      return {
+        kind: value.kind,
+        value: value.value
+      }
+    }
+
+    throw new Error(path + " must be a string or { kind, value }")
+  }
+
+  function serializeShareItems(value, path) {
+    if (!Array.isArray(value)) {
+      throw new Error(path + " must be an array")
+    }
+
+    if (value.length === 0) {
+      throw new Error(path + " must not be empty")
+    }
+
+    return value.map(function (item, index) {
+      return serializeShareItem(item, path + "." + index)
+    })
+  }
+
   function serializePickerOptions(options) {
     if (!Array.isArray(options)) {
       throw new Error("Picker requires an options array")
@@ -931,6 +1221,26 @@
     })
   }
 
+  function serializeDateValue(value, label) {
+    if (typeof value === "string" && value.length > 0) {
+      return value
+    }
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toISOString()
+    }
+
+    throw new Error(label + " must be a Date or non-empty ISO 8601 string")
+  }
+
+  function serializeDatePickerDisplayedComponents(value) {
+    if (value === "date" || value === "hourAndMinute" || value === "dateAndTime") {
+      return value
+    }
+
+    throw new Error("DatePicker displayedComponents must be date, hourAndMinute, or dateAndTime")
+  }
+
   function serializeBadgeValue(value) {
     if (typeof value === "string" || typeof value === "number") {
       return value
@@ -958,6 +1268,168 @@
         content: serializeSlot(item.content, path + "." + index + ".content", "toolbar item content")
       }
     })
+  }
+
+  function serializeSearchable(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (!value || typeof value !== "object" || typeof value.text !== "string") {
+      throw new Error("searchable must be { text, onChange, prompt?, placement? }")
+    }
+
+    if (typeof value.onChange !== "function") {
+      throw new Error("searchable requires an onChange function")
+    }
+
+    node.searchableText = value.text
+    node.searchableEvent = registerHandler(value.onChange, path + ".onChange")
+    serializeSearchFieldPlacement(node, value.placement, path + ".placement")
+
+    if (typeof value.prompt === "string") {
+      node.searchablePrompt = value.prompt
+    }
+  }
+
+  function serializeSearchSuggestions(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    node.searchSuggestionsContent = serializeViewContent(value, path, "search suggestions")
+  }
+
+  function serializeSearchScopes(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (!value || typeof value !== "object") {
+      throw new Error("searchScopes must be { selection, onChange, content }")
+    }
+
+    if (typeof value.onChange !== "function") {
+      throw new Error("searchScopes requires an onChange function")
+    }
+
+    node.searchScopesSelection = serializePickerValue(value.selection)
+    node.searchScopesEvent = registerHandler(value.onChange, path + ".onChange")
+    node.searchScopesContent = serializeViewContent(value.content, path + ".content", "search scopes content")
+  }
+
+  function serializeTabRole(node, value, path) {
+    if (value == null) {
+      return
+    }
+
+    if (value !== "search") {
+      throw new Error(path + " must be \"search\"")
+    }
+
+    node.tabRole = value
+  }
+
+  function serializeSearchFieldPlacement(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (
+      value === "automatic" ||
+      value === "toolbar" ||
+      value === "toolbarPrincipal" ||
+      value === "sidebar" ||
+      value === "navigationBarDrawer"
+    ) {
+      node.searchablePlacement = value
+      return
+    }
+
+    if (
+      value &&
+      typeof value === "object" &&
+      (value.navigationBarDrawer === "automatic" || value.navigationBarDrawer === "always")
+    ) {
+      node.searchablePlacement = "navigationBarDrawer"
+      node.searchablePlacementNavigationBarDrawerDisplayMode = value.navigationBarDrawer
+      return
+    }
+
+    throw new Error(
+      path +
+        " must be 'automatic', 'toolbar', 'toolbarPrincipal', 'sidebar', 'navigationBarDrawer', or { navigationBarDrawer: 'automatic' | 'always' }"
+    )
+  }
+
+  function serializeToolbarRole(value, path) {
+    if (value === "automatic" || value === "browser" || value === "editor") {
+      return value
+    }
+
+    throw new Error(path + " must be 'automatic', 'browser', or 'editor'")
+  }
+
+  function serializeSearchPresentationToolbarBehavior(value, path) {
+    if (value === "automatic" || value === "avoidHidingContent") {
+      return value
+    }
+
+    throw new Error(path + " must be 'automatic' or 'avoidHidingContent'")
+  }
+
+  function serializeSearchToolbarBehavior(value, path) {
+    if (value === "automatic" || value === "minimized") {
+      return value
+    }
+
+    throw new Error(path + " must be 'automatic' or 'minimized'")
+  }
+
+  function serializeKeyboardType(value, path) {
+    if (
+      value === "default" ||
+      value === "asciiCapable" ||
+      value === "numberPad" ||
+      value === "decimalPad" ||
+      value === "phonePad" ||
+      value === "emailAddress" ||
+      value === "URL"
+    ) {
+      return value
+    }
+
+    throw new Error(
+      path + " must be 'default', 'asciiCapable', 'numberPad', 'decimalPad', 'phonePad', 'emailAddress', or 'URL'"
+    )
+  }
+
+  function serializeTextInputAutocapitalization(value, path) {
+    if (value === "never" || value === "words" || value === "sentences" || value === "characters") {
+      return value
+    }
+
+    throw new Error(path + " must be 'never', 'words', 'sentences', or 'characters'")
+  }
+
+  function serializeSubmitLabel(value, path) {
+    if (
+      value === "done" ||
+      value === "go" ||
+      value === "send" ||
+      value === "join" ||
+      value === "route" ||
+      value === "search" ||
+      value === "return" ||
+      value === "next" ||
+      value === "continue"
+    ) {
+      return value
+    }
+
+    throw new Error(
+      path + " must be 'done', 'go', 'send', 'join', 'route', 'search', 'return', 'next', or 'continue'"
+    )
   }
 
   function serializeEdgeInsets(node, value) {
@@ -1083,6 +1555,173 @@
     node.confirmationDialogActions = serializeDialogActions(value.actions, path + ".actions")
   }
 
+  function serializeContextMenu(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (Array.isArray(value)) {
+      node.contextMenuActions = serializeDialogActions(value, path + ".items")
+      return
+    }
+
+    if (!value || typeof value !== "object" || !Array.isArray(value.items)) {
+      throw new Error("contextMenu must be an array of actions or { items, preview? }")
+    }
+
+    node.contextMenuActions = serializeDialogActions(value.items, path + ".items")
+    node.contextMenuPreview = serializeOptionalSlot(value.preview, path + ".preview")
+  }
+
+  function serializeSwipeActions(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    const entries = Array.isArray(value) ? value : [value]
+    node.swipeActions = entries.map(function (entry, index) {
+      if (!entry || typeof entry !== "object" || entry.items === undefined || entry.items === null) {
+        throw new Error("swipeActions must be { items, edge?, allowsFullSwipe? } or an array of those objects")
+      }
+
+      const resolved = resolveElement(entry.items, path + "." + index + ".items")
+      const items = normalizeResolvedNodes(resolved, path + "." + index + ".items")
+
+      if (items.length === 0) {
+        throw new Error("swipeActions items must produce at least one view")
+      }
+
+      if (entry.allowsFullSwipe !== undefined && typeof entry.allowsFullSwipe !== "boolean") {
+        throw new Error(path + "." + index + ".allowsFullSwipe must be a boolean")
+      }
+
+      return {
+        edge: serializeHorizontalEdge(entry.edge, path + "." + index + ".edge") || "trailing",
+        allowsFullSwipe: entry.allowsFullSwipe === undefined ? true : entry.allowsFullSwipe,
+        items: items
+      }
+    })
+  }
+
+  function serializeTransferItem(value, path) {
+    if (value === undefined || value === null) {
+      return undefined
+    }
+
+    if (typeof value === "string") {
+      return {
+        kind: "text",
+        value: value
+      }
+    }
+
+    if (!value || typeof value !== "object" || typeof value.kind !== "string") {
+      throw new Error(path + ' must be a string or { kind: "text" | "url" | "file" | "data", value, ... }')
+    }
+
+    if (value.kind === "text" || value.kind === "url" || value.kind === "file") {
+      if (typeof value.value !== "string") {
+        throw new Error(path + ".value must be a string")
+      }
+
+      return {
+        kind: value.kind,
+        value: value.value,
+        contentType: typeof value.contentType === "string" ? value.contentType : undefined,
+        suggestedName: typeof value.suggestedName === "string" ? value.suggestedName : undefined
+      }
+    }
+
+    if (value.kind === "data") {
+      if (typeof value.value !== "string" || typeof value.contentType !== "string") {
+        throw new Error(path + '.data items must provide string "value" and "contentType" fields')
+      }
+
+      return {
+        kind: "data",
+        value: value.value,
+        contentType: value.contentType,
+        suggestedName: typeof value.suggestedName === "string" ? value.suggestedName : undefined
+      }
+    }
+
+    throw new Error(path + '.kind must be "text", "url", "file", or "data"')
+  }
+
+  function serializeDropDestination(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (!value || typeof value !== "object") {
+      throw new Error(path + " must be { contentTypes?, action, isTargeted? }")
+    }
+
+    if (typeof value.action !== "function") {
+      throw new Error(path + ".action must be a function")
+    }
+
+    if (value.contentTypes !== undefined) {
+      if (
+        !Array.isArray(value.contentTypes) ||
+        value.contentTypes.length === 0 ||
+        value.contentTypes.some(function (entry) {
+          return typeof entry !== "string" || entry.length === 0
+        })
+      ) {
+        throw new Error(path + ".contentTypes must be a non-empty string array")
+      }
+
+      node.dropDestinationContentTypes = value.contentTypes.slice()
+    }
+
+    node.dropDestinationEvent = registerHandler(function (payload) {
+      const items =
+        payload && typeof payload === "object" && Array.isArray(payload.items) ? payload.items : []
+      const locationValue =
+        payload && typeof payload === "object" && payload.location && typeof payload.location === "object"
+          ? payload.location
+          : {}
+
+      value.action(items, {
+        x: typeof locationValue.x === "number" ? locationValue.x : 0,
+        y: typeof locationValue.y === "number" ? locationValue.y : 0
+      })
+    }, path + ".action")
+
+    if (value.isTargeted !== undefined) {
+      if (typeof value.isTargeted !== "function") {
+        throw new Error(path + ".isTargeted must be a function")
+      }
+
+      node.dropDestinationTargetedEvent = registerHandler(value.isTargeted, path + ".isTargeted")
+    }
+  }
+
+  function serializeHorizontalEdge(value, path) {
+    if (value === undefined || value === null) {
+      return undefined
+    }
+
+    if (value === "leading" || value === "trailing") {
+      return value
+    }
+
+    throw new Error(path + " must be 'leading' or 'trailing'")
+  }
+
+  function serializeButtonRole(role, path) {
+    if (role === undefined || role === null) {
+      return undefined
+    }
+
+    if (role === "cancel" || role === "destructive") {
+      return role
+    }
+
+    throw new Error(path + " must be 'cancel' or 'destructive'")
+  }
+
   function serializeDialogActions(actions, path) {
     if (actions === undefined || actions === null) {
       return undefined
@@ -1099,7 +1738,7 @@
 
       return {
         title: action.title,
-        role: typeof action.role === "string" ? action.role : undefined,
+        role: serializeButtonRole(action.role, path + "." + index + ".role"),
         event:
           typeof action.action === "function"
             ? registerHandler(action.action, path + "." + index + ".action")
@@ -1194,6 +1833,21 @@
     }
 
     throw new Error("Missing " + name)
+  }
+
+  function serializeViewContent(value, path, name) {
+    if (value === undefined || value === null) {
+      throw new Error("Missing " + name)
+    }
+
+    const resolved = resolveElement(value, path)
+    const nodes = normalizeResolvedNodes(resolved, path)
+
+    if (nodes.length === 0) {
+      throw new Error("Missing " + name)
+    }
+
+    return nodes
   }
 
   function serializeOptionalSlot(value, path) {
@@ -1332,6 +1986,10 @@
     return !!geometryReaderHandlers[id]
   }
 
+  function hasNavigationDestinationHandler(id) {
+    return !!navigationDestinationHandlers[id]
+  }
+
   function measureLayout(id, proposalJSON, subviewCount) {
     const handler = layoutHandlers[id]
     if (!handler) {
@@ -1370,6 +2028,17 @@
     })
     const resolved = resolveElement(content, "geometry." + id)
     return JSON.stringify(serializeGeometryReaderContent(resolved, "geometry." + id))
+  }
+
+  function renderNavigationDestination(id, valueJSON) {
+    const handler = navigationDestinationHandlers[id]
+    if (!handler) {
+      throw new Error("Missing navigation destination handler: " + id)
+    }
+
+    return JSON.stringify(
+      serializeSlot(handler(parseJSON(valueJSON)), "navigationDestination." + id, "navigationDestination")
+    )
   }
 
   function createLayoutSubviews(subviewCount) {
@@ -1469,10 +2138,12 @@
     dispatchEvent: dispatchEvent,
     hasGeometryReaderHandler: hasGeometryReaderHandler,
     hasLayoutHandler: hasLayoutHandler,
+    hasNavigationDestinationHandler: hasNavigationDestinationHandler,
     measureLayout: measureLayout,
     mount: mount,
     placeLayoutSubviews: placeLayoutSubviews,
     renderGeometryReader: renderGeometryReader,
+    renderNavigationDestination: renderNavigationDestination,
     invokeModule: invokeModule,
     rejectModuleCall: rejectModuleCall,
     resolveModuleCall: resolveModuleCall,
