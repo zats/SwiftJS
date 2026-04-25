@@ -4,7 +4,7 @@ options:
   minimumXcodeGenVersion: 2.38.0
   projectFormat: xcode16_0
   deploymentTarget:
-    iOS: "26.0"
+    iOS: "26.1"
   defaultSourceDirectoryType: syncedFolder
 
 packages:

@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "SwiftJS",
     platforms: [
-        .iOS(.v26)
+        .iOS("26.1")
     ],
     products: [
         .library(
@@ -32,17 +32,20 @@ let package = Package(
         .target(
             name: "SwiftJS",
             dependencies: ["SwiftJSCore"],
+            exclude: ["Package"],
             resources: [
                 .process("Resources")
             ]
         ),
         .target(
             name: "SwiftJSLocation",
-            dependencies: ["SwiftJSCore"]
+            dependencies: ["SwiftJSCore"],
+            exclude: ["Package"]
         ),
         .target(
             name: "SwiftJSCalendar",
-            dependencies: ["SwiftJSCore"]
+            dependencies: ["SwiftJSCore"],
+            exclude: ["Package"]
         )
     ],
     swiftLanguageModes: [.v6]

@@ -60,7 +60,6 @@ struct TabTagModifier: ViewModifier {
 }
 
 extension TabRoleKind {
-    @available(iOS 26.0, *)
     var swiftUIRole: TabRole {
         switch self {
         case .search:
@@ -69,7 +68,6 @@ extension TabRoleKind {
     }
 }
 
-@available(iOS 26.0, *)
 @MainActor
 @ViewBuilder
 func roleTabView<TabItem: TabContent>(_ tabItem: TabItem, badge: BadgeValue?) -> some View {
@@ -127,8 +125,11 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(OptionalClipModifier(cornerRadius: modifiers.cornerRadius, imageContentMode: modifiers.imageContentMode))
             .modifier(OptionalGlassEffectModifier(modifiers: modifiers))
             .modifier(OptionalTintModifier(tint: modifiers.tint.flatMap(Color.named(_:))))
+            .modifier(OptionalBadgeModifier(badge: modifiers.badge))
             .modifier(OptionalNavigationTitleModifier(title: modifiers.navigationTitle))
             .modifier(OptionalNavigationBarTitleDisplayModeModifier(mode: modifiers.swiftUINavigationBarTitleDisplayMode))
+            .modifier(OptionalTabBarMinimizeBehaviorModifier(modifiers: modifiers))
+            .modifier(OptionalTabViewBottomAccessoryModifier(accessory: modifiers.tabViewBottomAccessory, onEvent: onEvent, customHostRegistry: customHostRegistry))
             .modifier(OptionalToolbarRoleModifier(role: modifiers.swiftUIToolbarRole))
             .modifier(OptionalSearchPresentationToolbarBehaviorModifier(behavior: modifiers.swiftUISearchPresentationToolbarBehavior))
             .modifier(OptionalSearchToolbarBehaviorModifier(behavior: modifiers.searchToolbarBehavior))
@@ -139,6 +140,7 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(OptionalAutocorrectionDisabledModifier(isDisabled: modifiers.autocorrectionDisabled))
             .modifier(OptionalSubmitLabelModifier(submitLabel: modifiers.submitLabel))
             .modifier(OptionalOnSubmitModifier(event: modifiers.submitEvent, onEvent: onEvent))
+            .modifier(OptionalSensoryFeedbackModifier(value: modifiers.sensoryFeedback))
             .modifier(OptionalScrollContentBackgroundModifier(visibility: modifiers.swiftUIScrollContentBackgroundVisibility))
             .modifier(OptionalListRowSeparatorModifier(visibility: modifiers.swiftUIListRowSeparatorVisibility))
             .modifier(OptionalListSectionSeparatorModifier(visibility: modifiers.swiftUIListSectionSeparatorVisibility))
@@ -161,6 +163,52 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(OptionalIdentityModifier(viewIdentity: modifiers.viewIdentity))
             .modifier(OptionalOnAppearModifier(event: modifiers.onAppearEvent, onEvent: onEvent))
             .moveDisabled(modifiers.moveDisabled)
+    }
+}
+
+struct OptionalBadgeModifier: ViewModifier {
+    let badge: BadgeValue?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        switch badge {
+        case let .string(value):
+            content.badge(value)
+        case let .number(value):
+            content.badge(Int(value))
+        case nil:
+            content
+        }
+    }
+}
+
+struct OptionalTabBarMinimizeBehaviorModifier: ViewModifier {
+    let modifiers: ViewModifiers
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let behavior = modifiers.swiftUITabBarMinimizeBehavior {
+            content.tabBarMinimizeBehavior(behavior)
+        } else {
+            content
+        }
+    }
+}
+
+struct OptionalTabViewBottomAccessoryModifier: ViewModifier {
+    let accessory: TabViewBottomAccessoryValue?
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let accessory {
+            content.tabViewBottomAccessory(isEnabled: accessory.isEnabled) {
+                RenderNodeView(node: accessory.content, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        } else {
+            content
+        }
     }
 }
 
@@ -325,11 +373,7 @@ struct OptionalGlassEffectModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if modifiers.glassEffect && !modifiers.usesGlassButtonStyle {
-            if #available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *) {
-                content.glassEffect(glassValue(for: modifiers))
-            } else {
-                content
-            }
+            content.glassEffect(glassValue(for: modifiers))
         } else {
             content
         }
@@ -425,11 +469,7 @@ struct OptionalTextInputAutocapitalizationModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let autocapitalization {
-            if #available(iOS 15.0, tvOS 15.0, watchOS 8.0, *) {
-                content.textInputAutocapitalization(autocapitalization.swiftUITextInputAutocapitalization)
-            } else {
-                content
-            }
+            content.textInputAutocapitalization(autocapitalization.swiftUITextInputAutocapitalization)
         } else {
             content
         }
@@ -472,6 +512,19 @@ struct OptionalOnSubmitModifier: ViewModifier {
             content.onSubmit {
                 onEvent(event)
             }
+        } else {
+            content
+        }
+    }
+}
+
+struct OptionalSensoryFeedbackModifier: ViewModifier {
+    let value: SensoryFeedbackValue?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let value {
+            content.sensoryFeedback(value.feedback.swiftUISensoryFeedback, trigger: value.trigger)
         } else {
             content
         }
@@ -565,11 +618,7 @@ struct OptionalToolbarRoleModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let role {
-            if #available(iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
-                content.toolbarRole(role)
-            } else {
-                content
-            }
+            content.toolbarRole(role)
         } else {
             content
         }
@@ -582,11 +631,7 @@ struct OptionalSearchPresentationToolbarBehaviorModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let behavior {
-            if #available(iOS 17.1, tvOS 17.1, watchOS 10.1, *) {
-                content.searchPresentationToolbarBehavior(behavior.swiftUISearchPresentationToolbarBehavior)
-            } else {
-                content
-            }
+            content.searchPresentationToolbarBehavior(behavior.swiftUISearchPresentationToolbarBehavior)
         } else {
             content
         }
@@ -599,11 +644,7 @@ struct OptionalSearchToolbarBehaviorModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let behavior {
-            if #available(iOS 26.0, tvOS 26.0, watchOS 26.0, *) {
-                content.searchToolbarBehavior(behavior.swiftUISearchToolbarBehavior)
-            } else {
-                content
-            }
+            content.searchToolbarBehavior(behavior.swiftUISearchToolbarBehavior)
         } else {
             content
         }
@@ -875,13 +916,25 @@ struct ToolbarItemsModifier: ViewModifier {
 
     @ToolbarContentBuilder
     private func toolbarGroup(for placement: ToolbarItemPlacementKind) -> some ToolbarContent {
-        let matching = Array(items.enumerated().filter { $0.element.placement == placement })
+        let matching = Array(items.enumerated().filter { $0.element.placement == placement && $0.element.kind == .item })
         if !matching.isEmpty {
             ToolbarItemGroup(placement: placement.swiftUIToolbarItemPlacement) {
                 ForEach(matching, id: \.offset) { entry in
-                    RenderNodeView(node: entry.element.content, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                    if let content = entry.element.content {
+                        RenderNodeView(node: content, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                    }
                 }
             }
+        }
+
+        toolbarSpacers(for: placement)
+    }
+
+    @ToolbarContentBuilder
+    private func toolbarSpacers(for placement: ToolbarItemPlacementKind) -> some ToolbarContent {
+        let matching = items.filter { $0.placement == placement && $0.kind == .spacer }
+        if let spacer = matching.first {
+            ToolbarSpacer(spacer.sizing?.swiftUISpacerSizing ?? .flexible, placement: placement.swiftUIToolbarItemPlacement)
         }
     }
 }

@@ -107,6 +107,37 @@ public enum TabRoleKind: String, Codable, Equatable, Sendable {
     case search
 }
 
+public enum TabBarMinimizeBehaviorKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case onScrollDown
+    case onScrollUp
+    case never
+}
+
+public enum ToolbarContentKind: String, Codable, Equatable, Sendable {
+    case item
+    case spacer
+}
+
+public enum ToolbarSpacerSizingKind: String, Codable, Equatable, Sendable {
+    case fixed
+    case flexible
+}
+
+public enum SensoryFeedbackKind: String, Codable, Equatable, Sendable {
+    case selection
+    case success
+    case warning
+    case error
+    case increase
+    case decrease
+    case start
+    case stop
+    case alignment
+    case levelChange
+    case impact
+}
+
 public enum AxisKind: String, Codable, Equatable, Sendable {
     case vertical
     case horizontal
@@ -645,9 +676,21 @@ public struct SafeAreaInsetValue: Equatable, Sendable {
     public let content: ViewNode
 }
 
-public struct ToolbarItemValue: Equatable, Sendable {
-    public let placement: ToolbarItemPlacementKind
+public struct TabViewBottomAccessoryValue: Equatable, Sendable {
+    public let isEnabled: Bool
     public let content: ViewNode
+}
+
+public struct SensoryFeedbackValue: Equatable, Sendable {
+    public let feedback: SensoryFeedbackKind
+    public let trigger: CustomHostValue
+}
+
+public struct ToolbarItemValue: Equatable, Sendable {
+    public let kind: ToolbarContentKind
+    public let placement: ToolbarItemPlacementKind
+    public let content: ViewNode?
+    public let sizing: ToolbarSpacerSizingKind?
 }
 
 public typealias DialogActionRoleKind = ButtonRoleKind
@@ -1060,6 +1103,7 @@ public struct ViewModifiers: Equatable, Sendable {
     public var foregroundColor: String?
     public var foregroundStyle: ShapeStyleValue?
     public var tint: String?
+    public var badge: BadgeValue?
     public var cornerRadius: Double?
     public var fontStyle: TextStyle?
     public var fontSize: Double?
@@ -1077,6 +1121,8 @@ public struct ViewModifiers: Equatable, Sendable {
     public var navigationTitle: String?
     public var navigationBarTitleDisplayMode: NavigationBarTitleDisplayModeKind?
     public var navigationLinkIndicatorVisibility: VisibilityKind?
+    public var tabBarMinimizeBehavior: TabBarMinimizeBehaviorKind?
+    public var tabViewBottomAccessory: TabViewBottomAccessoryValue?
     public var toolbarRole: ToolbarRoleKind?
     public var searchable: SearchableValue?
     public var searchSuggestions: SearchSuggestionsValue?
@@ -1095,6 +1141,7 @@ public struct ViewModifiers: Equatable, Sendable {
     public var autocorrectionDisabled: Bool?
     public var submitLabel: SubmitLabelKind?
     public var submitEvent: SurfaceEvent?
+    public var sensoryFeedback: SensoryFeedbackValue?
     public var scrollContentBackground: VisibilityKind?
     public var listRowSeparator: VisibilityKind?
     public var listSectionSeparator: VisibilityKind?
@@ -1147,6 +1194,7 @@ public struct ViewModifiers: Equatable, Sendable {
         foregroundColor: String? = nil,
         foregroundStyle: ShapeStyleValue? = nil,
         tint: String? = nil,
+        badge: BadgeValue? = nil,
         cornerRadius: Double? = nil,
         fontStyle: TextStyle? = nil,
         fontSize: Double? = nil,
@@ -1164,6 +1212,8 @@ public struct ViewModifiers: Equatable, Sendable {
         navigationTitle: String? = nil,
         navigationBarTitleDisplayMode: NavigationBarTitleDisplayModeKind? = nil,
         navigationLinkIndicatorVisibility: VisibilityKind? = nil,
+        tabBarMinimizeBehavior: TabBarMinimizeBehaviorKind? = nil,
+        tabViewBottomAccessory: TabViewBottomAccessoryValue? = nil,
         toolbarRole: ToolbarRoleKind? = nil,
         searchable: SearchableValue? = nil,
         searchSuggestions: SearchSuggestionsValue? = nil,
@@ -1182,6 +1232,7 @@ public struct ViewModifiers: Equatable, Sendable {
         autocorrectionDisabled: Bool? = nil,
         submitLabel: SubmitLabelKind? = nil,
         submitEvent: SurfaceEvent? = nil,
+        sensoryFeedback: SensoryFeedbackValue? = nil,
         scrollContentBackground: VisibilityKind? = nil,
         listRowSeparator: VisibilityKind? = nil,
         listSectionSeparator: VisibilityKind? = nil,
@@ -1233,6 +1284,7 @@ public struct ViewModifiers: Equatable, Sendable {
         self.foregroundColor = foregroundColor
         self.foregroundStyle = foregroundStyle
         self.tint = tint
+        self.badge = badge
         self.cornerRadius = cornerRadius
         self.fontStyle = fontStyle
         self.fontSize = fontSize
@@ -1250,6 +1302,8 @@ public struct ViewModifiers: Equatable, Sendable {
         self.navigationTitle = navigationTitle
         self.navigationBarTitleDisplayMode = navigationBarTitleDisplayMode
         self.navigationLinkIndicatorVisibility = navigationLinkIndicatorVisibility
+        self.tabBarMinimizeBehavior = tabBarMinimizeBehavior
+        self.tabViewBottomAccessory = tabViewBottomAccessory
         self.toolbarRole = toolbarRole
         self.searchable = searchable
         self.searchSuggestions = searchSuggestions
@@ -1268,6 +1322,7 @@ public struct ViewModifiers: Equatable, Sendable {
         self.autocorrectionDisabled = autocorrectionDisabled
         self.submitLabel = submitLabel
         self.submitEvent = submitEvent
+        self.sensoryFeedback = sensoryFeedback
         self.scrollContentBackground = scrollContentBackground
         self.listRowSeparator = listRowSeparator
         self.listSectionSeparator = listSectionSeparator
@@ -1557,6 +1612,12 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         source: ImageSource,
         modifiers: ViewModifiers
     )
+    case asyncImage(
+        id: NodeID,
+        url: URL,
+        placeholder: ViewNode?,
+        modifiers: ViewModifiers
+    )
     case rectangle(
         id: NodeID,
         fill: ShapeStyleValue?,
@@ -1676,11 +1737,40 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
+    case groupBox(
+        id: NodeID,
+        title: String?,
+        label: ViewNode?,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
     case picker(
         id: NodeID,
         title: String,
         selection: PickerSelectionValue,
         options: [PickerOption],
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
+    case slider(
+        id: NodeID,
+        title: String,
+        value: Double,
+        minimumValue: Double,
+        maximumValue: Double,
+        step: Double?,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
+    case stepper(
+        id: NodeID,
+        title: String,
+        value: Double,
+        minimumValue: Double,
+        maximumValue: Double,
+        step: Double?,
         event: SurfaceEvent,
         modifiers: ViewModifiers,
         children: [ViewNode]
@@ -1737,6 +1827,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .contentUnavailable(id, _, _, _, _, _),
              let .progressView(id, _, _, _, _, _),
              let .image(id, _, _),
+             let .asyncImage(id, _, _, _),
              let .rectangle(id, _, _, _, _),
              let .roundedRectangle(id, _, _, _, _, _),
              let .circle(id, _, _, _, _),
@@ -1755,7 +1846,10 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .menu(id, _, _, _, _),
              let .disclosureGroup(id, _, _, _, _, _, _),
              let .controlGroup(id, _, _),
+             let .groupBox(id, _, _, _, _),
              let .picker(id, _, _, _, _, _, _),
+             let .slider(id, _, _, _, _, _, _, _, _),
+             let .stepper(id, _, _, _, _, _, _, _, _),
              let .datePicker(id, _, _, _, _, _, _, _, _),
              let .toggle(id, _, _, _, _, _):
             id
@@ -1794,6 +1888,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .contentUnavailable(_, _, _, _, modifiers, _),
              let .progressView(_, _, _, _, _, modifiers),
              let .image(_, _, modifiers),
+             let .asyncImage(_, _, _, modifiers),
              let .rectangle(_, _, _, _, modifiers),
              let .roundedRectangle(_, _, _, _, _, modifiers),
              let .circle(_, _, _, _, modifiers),
@@ -1812,7 +1907,10 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .menu(_, _, modifiers, _, _),
              let .disclosureGroup(_, _, _, _, modifiers, _, _),
              let .controlGroup(_, modifiers, _),
+             let .groupBox(_, _, _, modifiers, _),
              let .picker(_, _, _, _, _, modifiers, _),
+             let .slider(_, _, _, _, _, _, _, modifiers, _),
+             let .stepper(_, _, _, _, _, _, _, modifiers, _),
              let .datePicker(_, _, _, _, _, _, _, modifiers, _),
              let .toggle(_, _, _, _, modifiers, _):
             modifiers
@@ -2090,6 +2188,13 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
         case let (.image(lID, lSource, lModifiers),
                   .image(rID, rSource, rModifiers)):
             guard lID == rID, lSource == rSource, lModifiers == rModifiers else { return false }
+        case let (.asyncImage(lID, lURL, lPlaceholder, lModifiers),
+                  .asyncImage(rID, rURL, rPlaceholder, rModifiers)):
+            guard lID == rID,
+                  lURL == rURL,
+                  lModifiers == rModifiers,
+                  enqueueOptionalNode(lhs: lPlaceholder, rhs: rPlaceholder, into: &stack)
+            else { return false }
         case let (.rectangle(lID, lFill, lStroke, lLineWidth, lModifiers),
                   .rectangle(rID, rFill, rStroke, rLineWidth, rModifiers)):
             guard lID == rID, lFill == rFill, lStroke == rStroke, lLineWidth == rLineWidth, lModifiers == rModifiers else { return false }
@@ -2163,12 +2268,44 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
+        case let (.groupBox(lID, lTitle, lLabel, lModifiers, lChildren),
+                  .groupBox(rID, rTitle, rLabel, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lModifiers == rModifiers,
+                  enqueueOptionalNode(lhs: lLabel, rhs: rLabel, into: &stack),
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
         case let (.picker(lID, lTitle, lSelection, lOptions, lEvent, lModifiers, lChildren),
                   .picker(rID, rTitle, rSelection, rOptions, rEvent, rModifiers, rChildren)):
             guard lID == rID,
                   lTitle == rTitle,
                   lSelection == rSelection,
                   lOptions == rOptions,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.slider(lID, lTitle, lValue, lMinimumValue, lMaximumValue, lStep, lEvent, lModifiers, lChildren),
+                  .slider(rID, rTitle, rValue, rMinimumValue, rMaximumValue, rStep, rEvent, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lValue == rValue,
+                  lMinimumValue == rMinimumValue,
+                  lMaximumValue == rMaximumValue,
+                  lStep == rStep,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.stepper(lID, lTitle, lValue, lMinimumValue, lMaximumValue, lStep, lEvent, lModifiers, lChildren),
+                  .stepper(rID, rTitle, rValue, rMinimumValue, rMaximumValue, rStep, rEvent, rModifiers, rChildren)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lValue == rValue,
+                  lMinimumValue == rMinimumValue,
+                  lMaximumValue == rMaximumValue,
+                  lStep == rStep,
                   lEvent == rEvent,
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
@@ -2394,6 +2531,10 @@ struct RenderNodeView: View {
             applyCommonModifiers(
                 imageView(source, modifiers: modifiers)
             )
+        case let .asyncImage(_, url, placeholder, modifiers):
+            applyCommonModifiers(
+                asyncImageView(url: url, placeholder: placeholder, modifiers: modifiers)
+            )
         case let .rectangle(_, fill, stroke, lineWidth, modifiers):
             applyCommonModifiers(
                 shapeView(Rectangle(), fill: fill, stroke: stroke, lineWidth: lineWidth, modifiers: modifiers)
@@ -2471,9 +2612,39 @@ struct RenderNodeView: View {
             applyCommonModifiers(
                 controlGroupView(children: children)
             )
+        case let .groupBox(_, title, label, modifiers, children):
+            applyCommonModifiers(
+                groupBoxView(title: title, label: label, modifiers: modifiers, children: children)
+            )
         case let .picker(_, title, selection, options, event, modifiers, children):
             applyCommonModifiers(
                 pickerView(title, selection: selection, options: options, event: event, modifiers: modifiers, children: children)
+            )
+        case let .slider(_, title, value, minimumValue, maximumValue, step, event, modifiers, children):
+            applyCommonModifiers(
+                sliderView(
+                    title,
+                    value: value,
+                    minimumValue: minimumValue,
+                    maximumValue: maximumValue,
+                    step: step,
+                    event: event,
+                    modifiers: modifiers,
+                    children: children
+                )
+            )
+        case let .stepper(_, title, value, minimumValue, maximumValue, step, event, modifiers, children):
+            applyCommonModifiers(
+                stepperView(
+                    title,
+                    value: value,
+                    minimumValue: minimumValue,
+                    maximumValue: maximumValue,
+                    step: step,
+                    event: event,
+                    modifiers: modifiers,
+                    children: children
+                )
             )
         case let .datePicker(_, title, selection, minimumDate, maximumDate, displayedComponents, event, modifiers, children):
             applyCommonModifiers(
@@ -3029,6 +3200,39 @@ struct RenderNodeView: View {
     }
 
     @ViewBuilder
+    private func asyncImageView(url: URL, placeholder: ViewNode?, modifiers: ViewModifiers) -> some View {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case let .success(image):
+                let image = interpolationStyled(image.resizable(), interpolation: modifiers.imageInterpolation?.swiftUIImageInterpolation)
+
+                switch modifiers.imageContentMode ?? .fit {
+                case .fit:
+                    image.scaledToFit()
+                case .fill:
+                    image.scaledToFill()
+                }
+            case .failure:
+                if let placeholder {
+                    RenderNodeView(node: placeholder, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                } else {
+                    Image(systemName: "photo")
+                        .foregroundStyle(.secondary)
+                }
+            case .empty:
+                if let placeholder {
+                    RenderNodeView(node: placeholder, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                } else {
+                    ProgressView()
+                }
+            @unknown default:
+                EmptyView()
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+    }
+
+    @ViewBuilder
     private func interpolationStyled(_ image: Image, interpolation: SwiftUI.Image.Interpolation?) -> some View {
         if let interpolation {
             image.interpolation(interpolation)
@@ -3256,17 +3460,9 @@ struct RenderNodeView: View {
         selection: PickerSelectionValue?,
         role: TabRoleKind
     ) -> some View {
-        if #available(iOS 26.0, *) {
-            roleTabItem(content: content, title: title, source: source, badge: badge, selection: selection, role: role)
-        } else {
-            content
-                .modifier(TabItemLabelModifier(title: title, source: source))
-                .modifier(TabBadgeModifier(badge: badge))
-                .modifier(TabTagModifier(selection: selection))
-        }
+        roleTabItem(content: content, title: title, source: source, badge: badge, selection: selection, role: role)
     }
 
-    @available(iOS 26.0, *)
     @ViewBuilder
     private func roleTabItem<Content: View>(
         content: Content,
@@ -3511,6 +3707,23 @@ struct RenderNodeView: View {
     }
 
     @ViewBuilder
+    private func groupBoxView(title: String?, label: ViewNode?, modifiers: ViewModifiers, children: [ViewNode]) -> some View {
+        GroupBox {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        } label: {
+            if let label {
+                RenderNodeView(node: label, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            } else if let title, !title.isEmpty {
+                Text(title)
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
+    }
+
+    @ViewBuilder
     private func pickerView(
         _ title: String,
         selection: PickerSelectionValue,
@@ -3538,6 +3751,66 @@ struct RenderNodeView: View {
                     RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 }
             }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
+    }
+
+    @ViewBuilder
+    private func sliderView(
+        _ title: String,
+        value: Double,
+        minimumValue: Double,
+        maximumValue: Double,
+        step: Double?,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    ) -> some View {
+        let binding = Binding(
+            get: { value },
+            set: { nextValue in
+                onEvent(SurfaceEvent(event.name, payloadJSON: String(nextValue)))
+            }
+        )
+
+        Group {
+            if let step {
+                Slider(value: binding, in: minimumValue ... maximumValue, step: step) {
+                    controlLabel(title, fallback: "", children: children)
+                }
+            } else {
+                Slider(value: binding, in: minimumValue ... maximumValue) {
+                    controlLabel(title, fallback: "", children: children)
+                }
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+        .disabled(modifiers.isDisabled)
+    }
+
+    @ViewBuilder
+    private func stepperView(
+        _ title: String,
+        value: Double,
+        minimumValue: Double,
+        maximumValue: Double,
+        step: Double?,
+        event: SurfaceEvent,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    ) -> some View {
+        Stepper(
+            value: Binding(
+                get: { value },
+                set: { nextValue in
+                    onEvent(SurfaceEvent(event.name, payloadJSON: String(nextValue)))
+                }
+            ),
+            in: minimumValue ... maximumValue,
+            step: step ?? 1
+        ) {
+            controlLabel(title, fallback: String(value), children: children)
         }
         .modifier(NodeAppearanceModifier(modifiers: modifiers))
         .disabled(modifiers.isDisabled)
@@ -4087,17 +4360,9 @@ private extension RenderNodeView {
         case .borderedProminent:
             shapedButton(content.buttonStyle(.borderedProminent), modifiers: modifiers)
         case .glass:
-            if #available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *) {
-                shapedButton(content.buttonStyle(.glass(glassValue(for: modifiers))), modifiers: modifiers)
-            } else {
-                shapedButton(content.buttonStyle(.bordered), modifiers: modifiers)
-            }
+            shapedButton(content.buttonStyle(.glass(glassValue(for: modifiers))), modifiers: modifiers)
         case .glassProminent:
-            if #available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *) {
-                shapedButton(content.buttonStyle(.glassProminent), modifiers: modifiers)
-            } else {
-                shapedButton(content.buttonStyle(.borderedProminent), modifiers: modifiers)
-            }
+            shapedButton(content.buttonStyle(.glassProminent), modifiers: modifiers)
         }
     }
 
@@ -4117,8 +4382,10 @@ private extension RenderNodeView {
 }
 
 struct HostToolbarItem: Decodable {
+    let kind: ToolbarContentKind?
     let placement: ToolbarItemPlacementKind
-    let content: HostNode
+    let content: HostNode?
+    let sizing: ToolbarSpacerSizingKind?
 }
 
 struct HostSafeAreaInset: Decodable {
@@ -4178,6 +4445,7 @@ final class HostNode: Decodable {
     let foregroundColor: String?
     let foregroundStyle: ShapeStyleValue?
     let tint: String?
+    let viewBadge: BadgeValue?
     let fill: ShapeStyleValue?
     let stroke: ShapeStyleValue?
     let lineWidth: Double?
@@ -4198,6 +4466,9 @@ final class HostNode: Decodable {
     let navigationTitle: String?
     let navigationBarTitleDisplayMode: NavigationBarTitleDisplayModeKind?
     let navigationLinkIndicatorVisibility: VisibilityKind?
+    let tabBarMinimizeBehavior: TabBarMinimizeBehaviorKind?
+    let tabViewBottomAccessoryEnabled: Bool?
+    let tabViewBottomAccessory: HostNode?
     let toolbarRole: ToolbarRoleKind?
     let searchableText: String?
     let searchablePrompt: String?
@@ -4222,6 +4493,8 @@ final class HostNode: Decodable {
     let autocorrectionDisabled: Bool?
     let submitLabel: SubmitLabelKind?
     let submitEvent: String?
+    let sensoryFeedback: SensoryFeedbackKind?
+    let sensoryFeedbackTrigger: CustomHostValue?
     let scrollContentBackground: VisibilityKind?
     let listRowSeparator: VisibilityKind?
     let listSectionSeparator: VisibilityKind?
@@ -4273,6 +4546,7 @@ final class HostNode: Decodable {
     let footer: HostNode?
     let description: HostNode?
     let label: HostNode?
+    let placeholder: HostNode?
     let currentValueLabel: HostNode?
     let event: String?
     let onDismiss: String?
@@ -4282,6 +4556,10 @@ final class HostNode: Decodable {
     let pathEvent: String?
     let progressValue: Double?
     let progressTotal: Double?
+    let numericValue: Double?
+    let minimumValue: Double?
+    let maximumValue: Double?
+    let step: Double?
     let selectionValues: [PickerSelectionValue]?
     let selectionEvent: String?
     let moveEvent: String?
@@ -4633,6 +4911,13 @@ final class HostNode: Decodable {
                 source: source,
                 modifiers: modifiers
             )
+        case .asyncImage:
+            return .asyncImage(
+                id: NodeID(id),
+                url: try makeURL(url, name: "url"),
+                placeholder: try placeholder?.makeViewNode(),
+                modifiers: modifiers
+            )
         case .rectangle:
             return .rectangle(
                 id: NodeID(id),
@@ -4816,6 +5101,14 @@ final class HostNode: Decodable {
                 modifiers: modifiers,
                 children: try mapChildren()
             )
+        case .groupBox:
+            return .groupBox(
+                id: NodeID(id),
+                title: title,
+                label: try label?.makeViewNode(),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
         case .picker:
             guard let event else {
                 throw JSSurfaceError.invalidTree("Picker node '\(id)' is missing an onChange event")
@@ -4834,6 +5127,54 @@ final class HostNode: Decodable {
                 title: title ?? "",
                 selection: selection,
                 options: options,
+                event: SurfaceEvent(event),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
+        case .slider:
+            guard let event else {
+                throw JSSurfaceError.invalidTree("Slider node '\(id)' is missing an onChange event")
+            }
+
+            guard let numericValue else {
+                throw JSSurfaceError.invalidTree("Slider node '\(id)' is missing a value")
+            }
+
+            guard let minimumValue, let maximumValue else {
+                throw JSSurfaceError.invalidTree("Slider node '\(id)' is missing range bounds")
+            }
+
+            return .slider(
+                id: NodeID(id),
+                title: title ?? "",
+                value: numericValue,
+                minimumValue: minimumValue,
+                maximumValue: maximumValue,
+                step: step,
+                event: SurfaceEvent(event),
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
+        case .stepper:
+            guard let event else {
+                throw JSSurfaceError.invalidTree("Stepper node '\(id)' is missing an onChange event")
+            }
+
+            guard let numericValue else {
+                throw JSSurfaceError.invalidTree("Stepper node '\(id)' is missing a value")
+            }
+
+            guard let minimumValue, let maximumValue else {
+                throw JSSurfaceError.invalidTree("Stepper node '\(id)' is missing range bounds")
+            }
+
+            return .stepper(
+                id: NodeID(id),
+                title: title ?? "",
+                value: numericValue,
+                minimumValue: minimumValue,
+                maximumValue: maximumValue,
+                step: step,
                 event: SurfaceEvent(event),
                 modifiers: modifiers,
                 children: try mapChildren()
@@ -4938,6 +5279,7 @@ final class HostNode: Decodable {
             foregroundColor: foregroundColor,
             foregroundStyle: foregroundStyle,
             tint: tint,
+            badge: viewBadge,
             cornerRadius: cornerRadius,
             fontStyle: fontName,
             fontSize: fontSize,
@@ -4955,6 +5297,8 @@ final class HostNode: Decodable {
             navigationTitle: navigationTitle,
             navigationBarTitleDisplayMode: navigationBarTitleDisplayMode,
             navigationLinkIndicatorVisibility: navigationLinkIndicatorVisibility,
+            tabBarMinimizeBehavior: tabBarMinimizeBehavior,
+            tabViewBottomAccessory: try makeTabViewBottomAccessory(),
             toolbarRole: toolbarRole,
             searchable: makeSearchable(),
             searchSuggestions: try makeSearchSuggestions(),
@@ -4973,6 +5317,7 @@ final class HostNode: Decodable {
             autocorrectionDisabled: autocorrectionDisabled,
             submitLabel: submitLabel,
             submitEvent: submitEvent.map { SurfaceEvent($0) },
+            sensoryFeedback: try makeSensoryFeedback(),
             scrollContentBackground: scrollContentBackground,
             listRowSeparator: listRowSeparator,
             listSectionSeparator: listSectionSeparator,
@@ -5010,10 +5355,27 @@ final class HostNode: Decodable {
 
     private func mapToolbarItems() throws -> [ToolbarItemValue] {
         try (toolbarItems ?? []).map { item in
-            ToolbarItemValue(
-                placement: item.placement,
-                content: try item.content.makeViewNode()
-            )
+            let kind = item.kind ?? .item
+            switch kind {
+            case .item:
+                guard let content = item.content else {
+                    throw JSSurfaceError.invalidTree("Toolbar item on node '\(id)' is missing content")
+                }
+
+                return ToolbarItemValue(
+                    kind: .item,
+                    placement: item.placement,
+                    content: try content.makeViewNode(),
+                    sizing: nil
+                )
+            case .spacer:
+                return ToolbarItemValue(
+                    kind: .spacer,
+                    placement: item.placement,
+                    content: nil,
+                    sizing: item.sizing ?? .flexible
+                )
+            }
         }
     }
 
@@ -5083,6 +5445,29 @@ final class HostNode: Decodable {
             event: SurfaceEvent(searchScopesEvent),
             content: try searchScopesContent.map { try $0.makeViewNode() }
         )
+    }
+
+    private func makeTabViewBottomAccessory() throws -> TabViewBottomAccessoryValue? {
+        guard let tabViewBottomAccessory else {
+            return nil
+        }
+
+        return TabViewBottomAccessoryValue(
+            isEnabled: tabViewBottomAccessoryEnabled ?? true,
+            content: try tabViewBottomAccessory.makeViewNode()
+        )
+    }
+
+    private func makeSensoryFeedback() throws -> SensoryFeedbackValue? {
+        guard let sensoryFeedback else {
+            return nil
+        }
+
+        guard let sensoryFeedbackTrigger else {
+            throw JSSurfaceError.invalidTree("Node '\(id)' has sensoryFeedback without a trigger")
+        }
+
+        return SensoryFeedbackValue(feedback: sensoryFeedback, trigger: sensoryFeedbackTrigger)
     }
 
     private func makeTabRole() throws -> TabRoleKind? {
@@ -5301,6 +5686,7 @@ enum HostComponentType: String, Decodable {
     case contentUnavailable = "ContentUnavailableView"
     case progressView = "ProgressView"
     case image = "Image"
+    case asyncImage = "AsyncImage"
     case rectangle = "Rectangle"
     case roundedRectangle = "RoundedRectangle"
     case circle = "Circle"
@@ -5319,7 +5705,10 @@ enum HostComponentType: String, Decodable {
     case menu = "Menu"
     case disclosureGroup = "DisclosureGroup"
     case controlGroup = "ControlGroup"
+    case groupBox = "GroupBox"
     case picker = "Picker"
+    case slider = "Slider"
+    case stepper = "Stepper"
     case datePicker = "DatePicker"
     case toggle = "Toggle"
 }

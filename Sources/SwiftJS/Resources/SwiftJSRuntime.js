@@ -527,6 +527,14 @@
         }
 
         throw new Error("Image requires a systemName or name prop")
+      case "AsyncImage":
+        if (typeof props.url !== "string" || props.url.length === 0) {
+          throw new Error("AsyncImage requires a url string prop")
+        }
+
+        node.url = props.url
+        node.placeholder = serializeOptionalSlot(props.placeholder, path + ".placeholder")
+        return node
       case "Rectangle":
       case "Circle":
       case "Capsule":
@@ -654,11 +662,44 @@
       case "ControlGroup":
         node.children = hostChildren(children)
         return node
+      case "GroupBox":
+        node.title = typeof props.title === "string" ? props.title : undefined
+        node.label = serializeOptionalSlot(props.label, path + ".label")
+        node.children = hostChildren(children)
+        return node
       case "Picker":
         node.title = textValue(props.children)
         node.children = hostChildren(children)
         node.selection = serializePickerValue(props.selection)
         node.options = serializePickerOptions(props.options)
+        node.event = registerHandler(props.onChange, id + ":change")
+        return node
+      case "Slider":
+        if (typeof props.value !== "number") {
+          throw new Error("Slider requires a numeric value prop")
+        }
+
+        serializeNumericRange(node, props.range, path + ".range", "Slider")
+        node.numericValue = props.value
+        if (typeof props.step === "number") {
+          node.step = props.step
+        }
+        node.title = textValue(props.children)
+        node.children = hostChildren(children)
+        node.event = registerHandler(props.onChange, id + ":change")
+        return node
+      case "Stepper":
+        if (typeof props.value !== "number") {
+          throw new Error("Stepper requires a numeric value prop")
+        }
+
+        serializeNumericRange(node, props.range, path + ".range", "Stepper")
+        node.numericValue = props.value
+        if (typeof props.step === "number") {
+          node.step = props.step
+        }
+        node.title = textValue(props.children)
+        node.children = hostChildren(children)
         node.event = registerHandler(props.onChange, id + ":change")
         return node
       case "DatePicker":
@@ -765,6 +806,10 @@
       node.tint = props.tint
     }
 
+    if (props.badge !== undefined) {
+      node.viewBadge = serializeBadgeValue(props.badge)
+    }
+
     if (typeof props.cornerRadius === "number") {
       node.cornerRadius = props.cornerRadius
     }
@@ -781,6 +826,12 @@
       node.navigationLinkIndicatorVisibility = props.navigationLinkIndicatorVisibility
     }
 
+    if (typeof props.tabBarMinimizeBehavior === "string") {
+      node.tabBarMinimizeBehavior = props.tabBarMinimizeBehavior
+    }
+
+    serializeTabViewBottomAccessory(node, props.tabViewBottomAccessory, id + ".tabViewBottomAccessory")
+
     if (props.toolbarRole !== undefined) {
       node.toolbarRole = serializeToolbarRole(props.toolbarRole, id + ".toolbarRole")
     }
@@ -793,7 +844,7 @@
       node.searchCompletion = props.searchCompletion
     }
 
-    serializeTabRole(node, props.tabRole, id + ".tabRole")
+    serializeTabRole(node, props.role ?? props.tabRole, id + ".role")
 
     if (props.searchPresentationToolbarBehavior !== undefined) {
       node.searchPresentationToolbarBehavior = serializeSearchPresentationToolbarBehavior(
@@ -849,6 +900,8 @@
     if (typeof props.onSubmit === "function") {
       node.submitEvent = registerHandler(props.onSubmit, id + ".onSubmit")
     }
+
+    serializeSensoryFeedback(node, props.sensoryFeedback, id + ".sensoryFeedback")
 
     if (typeof props.scrollContentBackground === "string") {
       node.scrollContentBackground = props.scrollContentBackground
@@ -1249,6 +1302,23 @@
     throw new Error("Tab badge must be a string or number")
   }
 
+  function serializeNumericRange(node, value, path, component) {
+    if (!value || typeof value !== "object") {
+      throw new Error(component + " range must be { start, end }")
+    }
+
+    if (typeof value.start !== "number" || typeof value.end !== "number") {
+      throw new Error(path + " must contain numeric start and end values")
+    }
+
+    if (value.start > value.end) {
+      throw new Error(path + " start must be less than or equal to end")
+    }
+
+    node.minimumValue = value.start
+    node.maximumValue = value.end
+  }
+
   function serializeToolbarItems(items, path) {
     if (items === undefined || items === null) {
       return undefined
@@ -1263,7 +1333,16 @@
         throw new Error("toolbar items must be objects")
       }
 
+      if (item.kind === "spacer") {
+        return {
+          kind: "spacer",
+          placement: typeof item.placement === "string" ? item.placement : "automatic",
+          sizing: typeof item.sizing === "string" ? item.sizing : "flexible"
+        }
+      }
+
       return {
+        kind: "item",
         placement: typeof item.placement === "string" ? item.placement : "automatic",
         content: serializeSlot(item.content, path + "." + index + ".content", "toolbar item content")
       }
@@ -1328,6 +1407,50 @@
     }
 
     node.tabRole = value
+  }
+
+  function serializeTabViewBottomAccessory(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (!value || typeof value !== "object") {
+      throw new Error("tabViewBottomAccessory must be { isEnabled?, content }")
+    }
+
+    node.tabViewBottomAccessoryEnabled = value.isEnabled !== false
+    node.tabViewBottomAccessory = serializeSlot(value.content, path + ".content", "tab view bottom accessory content")
+  }
+
+  function serializeSensoryFeedback(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (!value || typeof value !== "object" || typeof value.feedback !== "string") {
+      throw new Error("sensoryFeedback must be { feedback, trigger }")
+    }
+
+    const supported = [
+      "selection",
+      "success",
+      "warning",
+      "error",
+      "increase",
+      "decrease",
+      "start",
+      "stop",
+      "alignment",
+      "levelChange",
+      "impact"
+    ]
+
+    if (!supported.includes(value.feedback)) {
+      throw new Error(path + ".feedback is unsupported")
+    }
+
+    node.sensoryFeedback = value.feedback
+    node.sensoryFeedbackTrigger = serializeCustomValue(value.trigger)
   }
 
   function serializeSearchFieldPlacement(node, value, path) {

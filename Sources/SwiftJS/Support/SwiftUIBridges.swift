@@ -146,6 +146,23 @@ extension ViewModifiers {
         }
     }
 
+    var swiftUITabBarMinimizeBehavior: SwiftUI.TabBarMinimizeBehavior? {
+        guard let tabBarMinimizeBehavior else {
+            return nil
+        }
+
+        switch tabBarMinimizeBehavior {
+        case .automatic:
+            return .automatic
+        case .onScrollDown:
+            return .onScrollDown
+        case .onScrollUp:
+            return .onScrollUp
+        case .never:
+            return .never
+        }
+    }
+
     var swiftUITextAlignment: TextAlignment? {
         guard let multilineTextAlignment else {
             return nil
@@ -234,6 +251,46 @@ extension ViewModifiers {
 
     var swiftUIPresentationDragIndicator: Visibility? {
         presentationDragIndicator?.swiftUIVisibility
+    }
+}
+
+extension ToolbarSpacerSizingKind {
+    var swiftUISpacerSizing: SpacerSizing {
+        switch self {
+        case .fixed:
+            return .fixed
+        case .flexible:
+            return .flexible
+        }
+    }
+}
+
+extension SensoryFeedbackKind {
+    var swiftUISensoryFeedback: SensoryFeedback {
+        switch self {
+        case .selection:
+            return .selection
+        case .success:
+            return .success
+        case .warning:
+            return .warning
+        case .error:
+            return .error
+        case .increase:
+            return .increase
+        case .decrease:
+            return .decrease
+        case .start:
+            return .start
+        case .stop:
+            return .stop
+        case .alignment:
+            return .alignment
+        case .levelChange:
+            return .levelChange
+        case .impact:
+            return .impact
+        }
     }
 }
 
@@ -354,7 +411,6 @@ private func makeGradient(colors: [String]?, stops: [GradientStopValue]?) -> Gra
     return Gradient(colors: (colors ?? ["clear", "clear"]).map { Color.named($0) ?? Color($0) })
 }
 
-@available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *)
 func glassValue(for modifiers: ViewModifiers) -> SwiftUI.Glass {
     if let tint = modifiers.glassTint.flatMap(Color.named(_:)) {
         switch modifiers.glassVariant {
@@ -573,7 +629,6 @@ extension SearchFieldNavigationBarDrawerDisplayModeKind {
 }
 #endif
 
-@available(iOS 17.1, tvOS 17.1, watchOS 10.1, *)
 extension SearchPresentationToolbarBehaviorKind {
     var swiftUISearchPresentationToolbarBehavior: SearchPresentationToolbarBehavior {
         switch self {
@@ -585,7 +640,6 @@ extension SearchPresentationToolbarBehaviorKind {
     }
 }
 
-@available(iOS 26.0, tvOS 26.0, watchOS 26.0, *)
 extension SearchToolbarBehaviorKind {
     var swiftUISearchToolbarBehavior: SearchToolbarBehavior {
         switch self {
@@ -619,7 +673,6 @@ extension KeyboardTypeKind {
 }
 
 extension TextInputAutocapitalizationKind {
-    @available(iOS 15.0, tvOS 15.0, watchOS 8.0, *)
     var swiftUITextInputAutocapitalization: TextInputAutocapitalization {
         switch self {
         case .never:
