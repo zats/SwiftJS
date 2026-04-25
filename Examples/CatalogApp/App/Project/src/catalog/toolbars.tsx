@@ -1,4 +1,4 @@
-import { Button, Image, Menu, Text, type ToolbarValue } from "../swiftjs"
+import { Button, Image, Menu, Text, type ToolbarValue } from "swiftjs"
 
 export const layoutToolbar: ToolbarValue = [
   { placement: "topBarLeading", content: <Image systemName="square.grid.2x2" /> },

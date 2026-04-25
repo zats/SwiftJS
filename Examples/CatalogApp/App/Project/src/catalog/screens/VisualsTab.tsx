@@ -14,7 +14,7 @@ import {
   RoundedRectangle,
   Text,
   VStack,
-} from "../../swiftjs"
+} from "swiftjs"
 import { Card, DemoSection, FixedText, ScreenShell } from "../components/common"
 import { space, truncationModes } from "../shared"
 import { visualsToolbar } from "../toolbars"

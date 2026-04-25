@@ -1,4 +1,4 @@
-import { Button, ContentUnavailableView, Form, HStack, Label, List, Picker, ScrollView, Section, Text, Toggle, VStack } from "../../swiftjs"
+import { Button, ContentUnavailableView, Form, HStack, Label, List, Picker, ScrollView, Section, Text, Toggle, VStack } from "swiftjs"
 import { Card, DemoSection, ListPreview, ScreenShell } from "../components/common"
 import { space } from "../shared"
 import { listsToolbar } from "../toolbars"

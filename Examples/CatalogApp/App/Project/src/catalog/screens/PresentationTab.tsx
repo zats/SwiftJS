@@ -11,7 +11,7 @@ import {
   VStack,
   useState,
   type AlertValue,
-} from "../../swiftjs"
+} from "swiftjs"
 import {
   Card,
   ChromePreviewScreen,

@@ -11,7 +11,7 @@ import type {
   ToolbarValue,
   TruncationMode,
   VisibilityKind,
-} from "../swiftjs"
+} from "swiftjs"
 
 export const space = {
   xxs: 4,

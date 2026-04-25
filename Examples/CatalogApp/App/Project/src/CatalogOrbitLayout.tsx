@@ -4,7 +4,7 @@ import {
   type LayoutSubview,
   type ProposedViewSize,
   type ViewProps,
-} from "./swiftjs"
+} from "swiftjs"
 
 const fallbackSize = { width: 72, height: 72 } as const
 

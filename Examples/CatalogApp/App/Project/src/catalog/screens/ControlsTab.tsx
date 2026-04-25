@@ -14,7 +14,7 @@ import {
   useAppStorage,
   useState,
   type PickerValue,
-} from "../../swiftjs"
+} from "swiftjs"
 import { Card, DemoSection, ScreenShell } from "../components/common"
 import { buttonShapes, buttonStyles, space } from "../shared"
 import { controlsToolbar } from "../toolbars"

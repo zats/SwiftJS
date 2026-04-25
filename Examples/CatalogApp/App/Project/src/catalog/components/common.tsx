@@ -16,7 +16,7 @@ import {
   ZStack,
   useState,
   type ToolbarValue,
-} from "../../swiftjs"
+} from "swiftjs"
 import type {
   CardProps,
   ChromePreviewProps,

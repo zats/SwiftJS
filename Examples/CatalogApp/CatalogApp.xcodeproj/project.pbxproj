@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		8D8C19E85ED8DE4D039D1EFA /* SwiftJS in Frameworks */ = {isa = PBXBuildFile; productRef = 48CF8794BAAC1C6047C15C74 /* SwiftJS */; };
+		A1274C2F9B5645C68AE47401 /* SwiftJSCalendar in Frameworks */ = {isa = PBXBuildFile; productRef = A1274C2F9B5645C68AE47411 /* SwiftJSCalendar */; };
+		A1274C2F9B5645C68AE47402 /* SwiftJSLocation in Frameworks */ = {isa = PBXBuildFile; productRef = A1274C2F9B5645C68AE47412 /* SwiftJSLocation */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +27,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				8D8C19E85ED8DE4D039D1EFA /* SwiftJS in Frameworks */,
+				A1274C2F9B5645C68AE47401 /* SwiftJSCalendar in Frameworks */,
+				A1274C2F9B5645C68AE47402 /* SwiftJSLocation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,6 +81,8 @@
 			name = CatalogApp;
 			packageProductDependencies = (
 				48CF8794BAAC1C6047C15C74 /* SwiftJS */,
+				A1274C2F9B5645C68AE47411 /* SwiftJSCalendar */,
+				A1274C2F9B5645C68AE47412 /* SwiftJSLocation */,
 			);
 			productName = CatalogApp;
 			productReference = CF1A3521EDCBD76282A5E2C9 /* CatalogApp.app */;
@@ -348,6 +354,14 @@
 		48CF8794BAAC1C6047C15C74 /* SwiftJS */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftJS;
+		};
+		A1274C2F9B5645C68AE47411 /* SwiftJSCalendar */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftJSCalendar;
+		};
+		A1274C2F9B5645C68AE47412 /* SwiftJSLocation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftJSLocation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

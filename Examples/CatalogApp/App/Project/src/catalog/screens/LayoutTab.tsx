@@ -16,7 +16,7 @@ import {
   ViewThatFits,
   ZStack,
   useState,
-} from "../../swiftjs"
+} from "swiftjs"
 import { CatalogOrbitLayout } from "../../CatalogOrbitLayout"
 import { Card, DemoSection, InsetBar, Pill, ScreenShell, ValuePlate } from "../components/common"
 import { space } from "../shared"

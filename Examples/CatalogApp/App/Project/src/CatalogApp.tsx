@@ -1,7 +1,8 @@
-import { Tab, TabView, useAppStorage } from "./swiftjs"
+import { Tab, TabView, useAppStorage } from "swiftjs"
 import { ControlsTab } from "./catalog/screens/ControlsTab"
 import { LayoutTab } from "./catalog/screens/LayoutTab"
 import { ListsTab } from "./catalog/screens/ListsTab"
+import { ModulesTab } from "./catalog/screens/ModulesTab"
 import { PresentationTab } from "./catalog/screens/PresentationTab"
 import { VisualsTab } from "./catalog/screens/VisualsTab"
 
@@ -21,6 +22,9 @@ export function CatalogApp() {
       </Tab>
       <Tab title="Present" value="present" systemName="square.on.square">
         <PresentationTab />
+      </Tab>
+      <Tab title="Modules" value="modules" systemName="puzzlepiece.extension">
+        <ModulesTab />
       </Tab>
       <Tab title="Visuals" value="visuals" name="CatalogMark">
         <VisualsTab />
