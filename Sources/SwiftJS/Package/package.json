@@ -1,0 +1,40 @@
+{
+  "name": "swiftjs",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "bin": {
+    "swiftjs-build-app": "./build-swiftjs-app.mjs"
+  },
+  "files": [
+    "build-swiftjs-app.mjs",
+    "index.ts",
+    "jsx-runtime.ts",
+    "types.ts",
+    "location.ts",
+    "calendar.ts"
+  ],
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./jsx-runtime": {
+      "types": "./jsx-runtime.ts",
+      "default": "./jsx-runtime.ts"
+    },
+    "./types": {
+      "types": "./types.ts",
+      "default": "./types.ts"
+    },
+    "./location": {
+      "types": "./location.ts",
+      "default": "./location.ts"
+    },
+    "./calendar": {
+      "types": "./calendar.ts",
+      "default": "./calendar.ts"
+    }
+  }
+}

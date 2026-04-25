@@ -32,20 +32,18 @@ let package = Package(
         .target(
             name: "SwiftJS",
             dependencies: ["SwiftJSCore"],
-            exclude: ["Package"],
             resources: [
+                .copy("Package"),
                 .process("Resources")
             ]
         ),
         .target(
             name: "SwiftJSLocation",
-            dependencies: ["SwiftJSCore"],
-            exclude: ["Package"]
+            dependencies: ["SwiftJSCore"]
         ),
         .target(
             name: "SwiftJSCalendar",
-            dependencies: ["SwiftJSCore"],
-            exclude: ["Package"]
+            dependencies: ["SwiftJSCore"]
         )
     ],
     swiftLanguageModes: [.v6]
