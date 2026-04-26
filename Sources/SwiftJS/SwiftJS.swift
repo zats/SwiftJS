@@ -98,6 +98,17 @@ public enum ButtonBorderShape: String, Codable, Equatable, Sendable {
     case circle
 }
 
+public enum ButtonSizingKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case flexible
+}
+
+public enum ContentShapeKind: String, Codable, Equatable, Sendable {
+    case rectangle
+    case circle
+    case capsule
+}
+
 public enum ButtonRoleKind: String, Codable, Equatable, Sendable {
     case cancel
     case destructive
@@ -202,6 +213,19 @@ public enum TextInputAutocapitalizationKind: String, Codable, Equatable, Sendabl
     case words
     case sentences
     case characters
+}
+
+public enum TextContentTypeKind: String, Codable, Equatable, Sendable {
+    case name
+    case givenName
+    case familyName
+    case username
+    case emailAddress
+    case password
+    case newPassword
+    case oneTimeCode
+    case URL
+    case telephoneNumber
 }
 
 public enum SubmitLabelKind: String, Codable, Equatable, Sendable {
@@ -310,6 +334,7 @@ public enum ToolbarItemPlacementKind: String, Codable, Equatable, Sendable {
     case status
     case cancellationAction
     case confirmationAction
+    case destructiveAction
     case primaryAction
 }
 
@@ -489,6 +514,7 @@ public struct AngularGradientValue: Codable, Equatable, Sendable {
 
 public enum ShapeStyleValue: Equatable, Sendable {
     case color(String)
+    case material(String)
     case linearGradient(LinearGradientValue)
     case radialGradient(RadialGradientValue)
     case angularGradient(AngularGradientValue)
@@ -880,7 +906,11 @@ extension ShapeStyleValue: Codable {
     public init(from decoder: Decoder) throws {
         if let container = try? decoder.singleValueContainer(),
            let value = try? container.decode(String.self) {
-            self = .color(value)
+            if Material.named(value) != nil {
+                self = .material(value)
+            } else {
+                self = .color(value)
+            }
             return
         }
 
@@ -926,6 +956,9 @@ extension ShapeStyleValue: Codable {
     public func encode(to encoder: Encoder) throws {
         switch self {
         case let .color(value):
+            var container = encoder.singleValueContainer()
+            try container.encode(value)
+        case let .material(value):
             var container = encoder.singleValueContainer()
             try container.encode(value)
         case let .linearGradient(value):
@@ -1089,6 +1122,8 @@ public struct ViewModifiers: Equatable, Sendable {
     public var viewIdentity: CustomHostValue?
     public var tag: PickerSelectionValue?
     public var accessibilityLabel: String?
+    public var accessibilityHint: String?
+    public var accessibilityValue: String?
     public var padding: Double?
     public var paddingTop: Double?
     public var frameMinWidth: Double?
@@ -1111,6 +1146,8 @@ public struct ViewModifiers: Equatable, Sendable {
     public var symbolRenderingMode: SymbolRenderingMode?
     public var buttonStyle: ButtonStyle?
     public var buttonBorderShape: ButtonBorderShape?
+    public var buttonSizing: ButtonSizingKind?
+    public var contentShape: ContentShapeKind?
     public var isDisabled: Bool
     public var moveDisabled: Bool
     public var glassEffect: Bool
@@ -1163,6 +1200,7 @@ public struct ViewModifiers: Equatable, Sendable {
     public var ignoresSafeAreaEdges: EdgeSetKind
     public var safeAreaInsets: [SafeAreaInsetValue]
     public var lineLimit: Int?
+    public var lineSpacing: Double?
     public var multilineTextAlignment: TextAlignmentKind?
     public var truncationMode: TruncationModeKind?
     public var minimumScaleFactor: Double?
@@ -1180,6 +1218,8 @@ public struct ViewModifiers: Equatable, Sendable {
         viewIdentity: CustomHostValue? = nil,
         tag: PickerSelectionValue? = nil,
         accessibilityLabel: String? = nil,
+        accessibilityHint: String? = nil,
+        accessibilityValue: String? = nil,
         padding: Double? = nil,
         paddingTop: Double? = nil,
         frameMinWidth: Double? = nil,
@@ -1202,6 +1242,8 @@ public struct ViewModifiers: Equatable, Sendable {
         symbolRenderingMode: SymbolRenderingMode? = nil,
         buttonStyle: ButtonStyle? = nil,
         buttonBorderShape: ButtonBorderShape? = nil,
+        buttonSizing: ButtonSizingKind? = nil,
+        contentShape: ContentShapeKind? = nil,
         isDisabled: Bool = false,
         moveDisabled: Bool = false,
         glassEffect: Bool = false,
@@ -1254,6 +1296,7 @@ public struct ViewModifiers: Equatable, Sendable {
         ignoresSafeAreaEdges: EdgeSetKind = .all,
         safeAreaInsets: [SafeAreaInsetValue] = [],
         lineLimit: Int? = nil,
+        lineSpacing: Double? = nil,
         multilineTextAlignment: TextAlignmentKind? = nil,
         truncationMode: TruncationModeKind? = nil,
         minimumScaleFactor: Double? = nil,
@@ -1270,6 +1313,8 @@ public struct ViewModifiers: Equatable, Sendable {
         self.viewIdentity = viewIdentity
         self.tag = tag
         self.accessibilityLabel = accessibilityLabel
+        self.accessibilityHint = accessibilityHint
+        self.accessibilityValue = accessibilityValue
         self.padding = padding
         self.paddingTop = paddingTop
         self.frameMinWidth = frameMinWidth
@@ -1292,6 +1337,8 @@ public struct ViewModifiers: Equatable, Sendable {
         self.symbolRenderingMode = symbolRenderingMode
         self.buttonStyle = buttonStyle
         self.buttonBorderShape = buttonBorderShape
+        self.buttonSizing = buttonSizing
+        self.contentShape = contentShape
         self.isDisabled = isDisabled
         self.moveDisabled = moveDisabled
         self.glassEffect = glassEffect
@@ -1344,6 +1391,7 @@ public struct ViewModifiers: Equatable, Sendable {
         self.ignoresSafeAreaEdges = ignoresSafeAreaEdges
         self.safeAreaInsets = safeAreaInsets
         self.lineLimit = lineLimit
+        self.lineSpacing = lineSpacing
         self.multilineTextAlignment = multilineTextAlignment
         self.truncationMode = truncationMode
         self.minimumScaleFactor = minimumScaleFactor
@@ -1375,18 +1423,24 @@ public struct SearchableValue: Equatable, Sendable {
     public let text: String
     public let prompt: String?
     public let placement: SearchFieldPlacementValue
+    public let isPresented: Bool?
     public let event: SurfaceEvent
+    public let presentationEvent: SurfaceEvent?
 
     public init(
         text: String,
         prompt: String? = nil,
         placement: SearchFieldPlacementValue = .init(),
-        event: SurfaceEvent
+        isPresented: Bool? = nil,
+        event: SurfaceEvent,
+        presentationEvent: SurfaceEvent? = nil
     ) {
         self.text = text
         self.prompt = prompt
         self.placement = placement
+        self.isPresented = isPresented
         self.event = event
+        self.presentationEvent = presentationEvent
     }
 }
 
@@ -1699,6 +1753,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         title: String,
         text: String,
         prompt: String?,
+        textContentType: TextContentTypeKind?,
         event: SurfaceEvent,
         modifiers: ViewModifiers
     )
@@ -1707,6 +1762,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         title: String,
         text: String,
         prompt: String?,
+        textContentType: TextContentTypeKind?,
         event: SurfaceEvent,
         modifiers: ViewModifiers
     )
@@ -1840,8 +1896,8 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .button(id, _, _, _, _, _),
              let .editButton(id, _),
              let .shareLink(id, _, _, _, _, _, _),
-             let .textField(id, _, _, _, _, _),
-             let .secureField(id, _, _, _, _, _),
+             let .textField(id, _, _, _, _, _, _),
+             let .secureField(id, _, _, _, _, _, _),
              let .textEditor(id, _, _, _),
              let .menu(id, _, _, _, _),
              let .disclosureGroup(id, _, _, _, _, _, _),
@@ -1901,8 +1957,8 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .button(_, _, _, _, modifiers, _),
              let .editButton(_, modifiers),
              let .shareLink(_, _, _, _, _, modifiers, _),
-             let .textField(_, _, _, _, _, modifiers),
-             let .secureField(_, _, _, _, _, modifiers),
+             let .textField(_, _, _, _, _, _, modifiers),
+             let .secureField(_, _, _, _, _, _, modifiers),
              let .textEditor(_, _, _, modifiers),
              let .menu(_, _, modifiers, _, _),
              let .disclosureGroup(_, _, _, _, modifiers, _, _),
@@ -2244,6 +2300,26 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
+        case let (.textField(lID, lTitle, lText, lPrompt, lTextContentType, lEvent, lModifiers),
+                  .textField(rID, rTitle, rText, rPrompt, rTextContentType, rEvent, rModifiers)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lText == rText,
+                  lPrompt == rPrompt,
+                  lTextContentType == rTextContentType,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers
+            else { return false }
+        case let (.secureField(lID, lTitle, lText, lPrompt, lTextContentType, lEvent, lModifiers),
+                  .secureField(rID, rTitle, rText, rPrompt, rTextContentType, rEvent, rModifiers)):
+            guard lID == rID,
+                  lTitle == rTitle,
+                  lText == rText,
+                  lPrompt == rPrompt,
+                  lTextContentType == rTextContentType,
+                  lEvent == rEvent,
+                  lModifiers == rModifiers
+            else { return false }
         case let (.menu(lID, lTitle, lModifiers, lContent, lChildren),
                   .menu(rID, rTitle, rModifiers, rContent, rChildren)):
             guard lID == rID,
@@ -2581,13 +2657,13 @@ struct RenderNodeView: View {
             applyCommonModifiers(
                 shareLinkView(title, items: items, subject: subject, message: message, modifiers: modifiers, children: children)
             )
-        case let .textField(_, title, text, prompt, event, modifiers):
+        case let .textField(_, title, text, prompt, textContentType, event, modifiers):
             applyCommonModifiers(
-                textFieldView(title: title, text: text, prompt: prompt, event: event, modifiers: modifiers)
+                textFieldView(title: title, text: text, prompt: prompt, textContentType: textContentType, event: event, modifiers: modifiers)
             )
-        case let .secureField(_, title, text, prompt, event, modifiers):
+        case let .secureField(_, title, text, prompt, textContentType, event, modifiers):
             applyCommonModifiers(
-                secureFieldView(title: title, text: text, prompt: prompt, event: event, modifiers: modifiers)
+                secureFieldView(title: title, text: text, prompt: prompt, textContentType: textContentType, event: event, modifiers: modifiers)
             )
         case let .textEditor(_, text, event, modifiers):
             applyCommonModifiers(
@@ -3074,7 +3150,7 @@ struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func textFieldView(title: String, text: String, prompt: String?, event: SurfaceEvent, modifiers: ViewModifiers) -> some View {
+    private func textFieldView(title: String, text: String, prompt: String?, textContentType: TextContentTypeKind?, event: SurfaceEvent, modifiers: ViewModifiers) -> some View {
         TextField(
             title,
             text: Binding(
@@ -3085,12 +3161,13 @@ struct RenderNodeView: View {
             ),
             prompt: prompt.map(Text.init)
         )
+        .modifier(OptionalTextContentTypeModifier(textContentType: textContentType))
         .modifier(NodeAppearanceModifier(modifiers: modifiers))
         .disabled(modifiers.isDisabled)
     }
 
     @ViewBuilder
-    private func secureFieldView(title: String, text: String, prompt: String?, event: SurfaceEvent, modifiers: ViewModifiers) -> some View {
+    private func secureFieldView(title: String, text: String, prompt: String?, textContentType: TextContentTypeKind?, event: SurfaceEvent, modifiers: ViewModifiers) -> some View {
         SecureField(
             title,
             text: Binding(
@@ -3101,6 +3178,7 @@ struct RenderNodeView: View {
             ),
             prompt: prompt.map(Text.init)
         )
+        .modifier(OptionalTextContentTypeModifier(textContentType: textContentType))
         .modifier(NodeAppearanceModifier(modifiers: modifiers))
         .disabled(modifiers.isDisabled)
     }
@@ -4425,6 +4503,8 @@ final class HostNode: Decodable {
     let viewIdentity: CustomHostValue?
     let tag: PickerSelectionValue?
     let accessibilityLabel: String?
+    let accessibilityHint: String?
+    let accessibilityValue: String?
     let distribution: StackDistribution?
     let axis: AxisKind?
     let spacing: Double?
@@ -4456,6 +4536,8 @@ final class HostNode: Decodable {
     let symbolRenderingMode: SymbolRenderingMode?
     let buttonStyle: ButtonStyle?
     let buttonBorderShape: ButtonBorderShape?
+    let buttonSizing: ButtonSizingKind?
+    let contentShape: ContentShapeKind?
     let isDisabled: Bool?
     let moveDisabled: Bool?
     let glassEffect: Bool?
@@ -4473,6 +4555,8 @@ final class HostNode: Decodable {
     let searchableText: String?
     let searchablePrompt: String?
     let searchableEvent: String?
+    let searchableIsPresented: Bool?
+    let searchablePresentationEvent: String?
     let searchSuggestionsContent: [HostNode]?
     let searchScopesSelection: PickerSelectionValue?
     let searchScopesEvent: String?
@@ -4521,6 +4605,7 @@ final class HostNode: Decodable {
     let ignoresSafeAreaEdges: EdgeSetKind?
     let safeAreaInsets: [HostSafeAreaInset]?
     let lineLimit: Int?
+    let textLineSpacing: Double?
     let multilineTextAlignment: TextAlignmentKind?
     let truncationMode: TruncationModeKind?
     let minimumScaleFactor: Double?
@@ -4539,6 +4624,7 @@ final class HostNode: Decodable {
     let onAppearEvent: String?
     let value: String?
     let prompt: String?
+    let textContentType: TextContentTypeKind?
     let systemName: String?
     let name: String?
     let title: String?
@@ -5034,6 +5120,7 @@ final class HostNode: Decodable {
                 title: title ?? "",
                 text: value,
                 prompt: prompt,
+                textContentType: textContentType,
                 event: SurfaceEvent(event),
                 modifiers: modifiers
             )
@@ -5051,6 +5138,7 @@ final class HostNode: Decodable {
                 title: title ?? "",
                 text: value,
                 prompt: prompt,
+                textContentType: textContentType,
                 event: SurfaceEvent(event),
                 modifiers: modifiers
             )
@@ -5129,7 +5217,7 @@ final class HostNode: Decodable {
                 options: options,
                 event: SurfaceEvent(event),
                 modifiers: modifiers,
-                children: try mapChildren()
+                children: try label.map { [try $0.makeViewNode()] } ?? mapChildren()
             )
         case .slider:
             guard let event else {
@@ -5265,6 +5353,8 @@ final class HostNode: Decodable {
             viewIdentity: viewIdentity,
             tag: tag,
             accessibilityLabel: accessibilityLabel,
+            accessibilityHint: accessibilityHint,
+            accessibilityValue: accessibilityValue,
             padding: padding,
             paddingTop: paddingTop,
             frameMinWidth: frameMinWidth,
@@ -5287,6 +5377,8 @@ final class HostNode: Decodable {
             symbolRenderingMode: symbolRenderingMode,
             buttonStyle: buttonStyle,
             buttonBorderShape: buttonBorderShape,
+            buttonSizing: buttonSizing,
+            contentShape: contentShape,
             isDisabled: isDisabled ?? false,
             moveDisabled: moveDisabled ?? false,
             glassEffect: glassEffect ?? false,
@@ -5339,6 +5431,7 @@ final class HostNode: Decodable {
             ignoresSafeAreaEdges: ignoresSafeAreaEdges ?? .all,
             safeAreaInsets: try mapSafeAreaInsets(),
             lineLimit: lineLimit,
+            lineSpacing: textLineSpacing,
             multilineTextAlignment: multilineTextAlignment,
             truncationMode: truncationMode,
             minimumScaleFactor: minimumScaleFactor,
@@ -5411,7 +5504,9 @@ final class HostNode: Decodable {
                 kind: searchablePlacement ?? .automatic,
                 navigationBarDrawerDisplayMode: searchablePlacementNavigationBarDrawerDisplayMode
             ),
-            event: SurfaceEvent(searchableEvent)
+            isPresented: searchableIsPresented,
+            event: SurfaceEvent(searchableEvent),
+            presentationEvent: searchablePresentationEvent.map { SurfaceEvent($0) }
         )
     }
 

@@ -90,6 +90,7 @@ struct NodeAppearanceModifier: ViewModifier {
             .fontWeight(modifiers.swiftUIFontWeight)
             .symbolRenderingMode(modifiers.swiftUISymbolRenderingMode)
             .lineLimit(modifiers.lineLimit)
+            .lineSpacing(CGFloat(modifiers.lineSpacing ?? 0))
             .minimumScaleFactor(CGFloat(modifiers.minimumScaleFactor ?? 1))
             .modifier(NodeForegroundModifier(shapeStyle: modifiers.foregroundShapeStyle, color: modifiers.swiftUIColor))
             .modifier(NodeMultilineTextAlignmentModifier(alignment: modifiers.swiftUITextAlignment))
@@ -157,7 +158,11 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(OptionalConfirmationDialogModifier(dialog: modifiers.confirmationDialog, onEvent: onEvent, customHostRegistry: customHostRegistry))
             .modifier(OptionalContextMenuModifier(contextMenu: modifiers.contextMenu, onEvent: onEvent, customHostRegistry: customHostRegistry))
             .modifier(OptionalAccessibilityLabelModifier(label: modifiers.accessibilityLabel))
+            .modifier(OptionalAccessibilityHintModifier(hint: modifiers.accessibilityHint))
+            .modifier(OptionalAccessibilityValueModifier(value: modifiers.accessibilityValue))
             .modifier(OptionalTagModifier(tag: modifiers.tag))
+            .modifier(OptionalButtonSizingModifier(sizing: modifiers.buttonSizing))
+            .modifier(OptionalContentShapeModifier(shape: modifiers.contentShape))
             .modifier(OptionalSearchCompletionModifier(completion: modifiers.searchCompletion))
             .modifier(OptionalEditModeModifier(editMode: modifiers.editMode, event: modifiers.editModeEvent, onEvent: onEvent))
             .modifier(OptionalIdentityModifier(viewIdentity: modifiers.viewIdentity))
@@ -225,6 +230,32 @@ struct OptionalAccessibilityLabelModifier: ViewModifier {
     }
 }
 
+struct OptionalAccessibilityHintModifier: ViewModifier {
+    let hint: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let hint, !hint.isEmpty {
+            content.accessibilityHint(Text(hint))
+        } else {
+            content
+        }
+    }
+}
+
+struct OptionalAccessibilityValueModifier: ViewModifier {
+    let value: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let value, !value.isEmpty {
+            content.accessibilityValue(Text(value))
+        } else {
+            content
+        }
+    }
+}
+
 struct OptionalTagModifier: ViewModifier {
     let tag: PickerSelectionValue?
 
@@ -233,6 +264,40 @@ struct OptionalTagModifier: ViewModifier {
         if let tag {
             content.tag(tag)
         } else {
+            content
+        }
+    }
+}
+
+struct OptionalButtonSizingModifier: ViewModifier {
+    let sizing: ButtonSizingKind?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        switch sizing {
+        case .automatic:
+            content.buttonSizing(.automatic)
+        case .flexible:
+            content.buttonSizing(.flexible)
+        case nil:
+            content
+        }
+    }
+}
+
+struct OptionalContentShapeModifier: ViewModifier {
+    let shape: ContentShapeKind?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        switch shape {
+        case .rectangle:
+            content.contentShape(Rectangle())
+        case .circle:
+            content.contentShape(Circle())
+        case .capsule:
+            content.contentShape(Capsule())
+        case nil:
             content
         }
     }
@@ -489,6 +554,19 @@ struct OptionalAutocorrectionDisabledModifier: ViewModifier {
     }
 }
 
+struct OptionalTextContentTypeModifier: ViewModifier {
+    let textContentType: TextContentTypeKind?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let textContentType {
+            content.textContentType(textContentType.swiftUITextContentType)
+        } else {
+            content
+        }
+    }
+}
+
 struct OptionalSubmitLabelModifier: ViewModifier {
     let submitLabel: SubmitLabelKind?
 
@@ -538,16 +616,31 @@ struct OptionalSearchableModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let searchable {
-            content.searchable(
-                text: Binding(
-                    get: { searchable.text },
-                    set: { nextValue in
-                        onEvent(SurfaceEvent(searchable.event.name, payloadJSON: nextValue.payloadJSON))
-                    }
-                ),
-                placement: searchable.placement.swiftUISearchFieldPlacement,
-                prompt: searchable.prompt.map(Text.init)
+            let text = Binding(
+                get: { searchable.text },
+                set: { nextValue in
+                    onEvent(SurfaceEvent(searchable.event.name, payloadJSON: nextValue.payloadJSON))
+                }
             )
+            if let isPresented = searchable.isPresented, let presentationEvent = searchable.presentationEvent {
+                content.searchable(
+                    text: text,
+                    isPresented: Binding(
+                        get: { isPresented },
+                        set: { nextValue in
+                            onEvent(SurfaceEvent(presentationEvent.name, payloadJSON: nextValue ? "true" : "false"))
+                        }
+                    ),
+                    placement: searchable.placement.swiftUISearchFieldPlacement,
+                    prompt: searchable.prompt.map(Text.init)
+                )
+            } else {
+                content.searchable(
+                    text: text,
+                    placement: searchable.placement.swiftUISearchFieldPlacement,
+                    prompt: searchable.prompt.map(Text.init)
+                )
+            }
         } else {
             content
         }
@@ -909,6 +1002,7 @@ struct ToolbarItemsModifier: ViewModifier {
                 toolbarGroup(for: .status)
                 toolbarGroup(for: .cancellationAction)
                 toolbarGroup(for: .confirmationAction)
+                toolbarGroup(for: .destructiveAction)
                 toolbarGroup(for: .primaryAction)
             }
         }

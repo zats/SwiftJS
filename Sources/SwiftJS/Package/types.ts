@@ -23,7 +23,9 @@ export type NamedColorValue =
   | "white"
   | "primary"
   | "secondary"
+  | "tint"
   | "clear"
+  | "systemBackground"
   | "systemGroupedBackground"
   | "secondarySystemBackground"
   | "tertiarySystemBackground"
@@ -64,8 +66,43 @@ export type ButtonStyle =
 /** Mirrors `SwiftUI.ButtonBorderShape`. */
 export type ButtonBorderShape = "automatic" | "capsule" | "roundedRectangle" | "circle"
 
+/** Mirrors `SwiftUI.ButtonSizing`. */
+export type ButtonSizing = "automatic" | "flexible"
+
+/** Mirrors the common hit-test and glass shapes used by SwiftUI. */
+export type ShapeValue =
+  | "rectangle"
+  | "circle"
+  | "capsule"
+  | { rect: { cornerRadius?: number } }
+  | { roundedRectangle: { cornerRadius: number } }
+
+/** Mirrors the common hit-test shapes used with `.contentShape(...)`. */
+export type ContentShapeValue = ShapeValue
+
+/** Mirrors `SwiftUI.ScrollEdgeEffectStyle`. */
+export type ScrollEdgeEffectStyleValue = "automatic" | "hard" | "soft"
+
+/** Mirrors `.scrollEdgeEffectStyle(_:for:)`. */
+export type ScrollEdgeEffectValue =
+  | ScrollEdgeEffectStyleValue
+  | {
+      style: ScrollEdgeEffectStyleValue
+      edge?: EdgeValue
+    }
+
 /** Mirrors the liquid glass variants SwiftJS supports. */
-export type GlassEffectValue = boolean | "clear" | { variant?: "regular" | "clear"; tint?: ColorValue }
+export type GlassEffectValue =
+  | boolean
+  | "clear"
+  | {
+      variant?: "regular" | "clear"
+      tint?: ColorValue
+      shape?: ShapeValue
+      interactive?: boolean
+      id?: string
+      unionID?: string
+    }
 
 /** Shared alignment values used by stacks, frames, and shape anchors. */
 export type ContentAlignment =
@@ -159,10 +196,19 @@ export type SensoryFeedbackKind =
   | "levelChange"
   | "impact"
 
+/** Mirrors common `SensoryFeedback.Weight` values for impact feedback. */
+export type SensoryFeedbackWeight = "light" | "medium" | "heavy"
+
+/** Mirrors common `SensoryFeedback.Flexibility` values for impact feedback. */
+export type SensoryFeedbackFlexibility = "soft" | "solid" | "rigid"
+
 /** Mirrors `.sensoryFeedback(_:trigger:)`. */
 export type SensoryFeedbackValue = {
-  feedback: SensoryFeedbackKind
+  feedback:
+    | SensoryFeedbackKind
+    | { impact: { weight?: SensoryFeedbackWeight; flexibility?: SensoryFeedbackFlexibility; intensity?: number } }
   trigger: CustomValue
+  isEnabled?: boolean
 }
 
 /** Mirrors `fixedSize()` and `fixedSize(horizontal:vertical:)`. */
@@ -184,6 +230,11 @@ export type ListSelectionValue = PickerValue
 export type MoveAction = {
   fromOffsets: number[]
   toOffset: number
+}
+
+/** Mirrors the payload emitted by SwiftUI list deletion. */
+export type DeleteAction = {
+  offsets: number[]
 }
 
 /** Picker option values supported by SwiftJS. */
@@ -288,6 +339,7 @@ export type ToolbarItemPlacement =
   | "status"
   | "cancellationAction"
   | "confirmationAction"
+  | "destructiveAction"
   | "primaryAction"
 
 /** Serializable toolbar item description. */
@@ -327,6 +379,9 @@ export type SearchFieldPlacement =
 export type SearchableValue = {
   text: string
   onChange: (nextValue: string) => void
+  onSubmit?: () => void
+  isPresented?: boolean
+  onPresentationChange?: (nextValue: boolean) => void
   prompt?: string
   placement?: SearchFieldPlacement
 }
@@ -448,7 +503,65 @@ export type RadialGradientValue = { type: "RadialGradient" } & RadialGradientBas
 export type AngularGradientValue = { type: "AngularGradient" } & AngularGradientBase
 
 /** Shared paint value accepted by view backgrounds and shape styling props. */
-export type ShapeStyleValue = ColorValue | LinearGradientValue | RadialGradientValue | AngularGradientValue
+export type MaterialValue = "ultraThinMaterial" | "thinMaterial" | "regularMaterial" | "thickMaterial" | "ultraThickMaterial"
+
+/** Shared paint value accepted by view backgrounds and shape styling props. */
+export type ShapeStyleValue = ColorValue | MaterialValue | LinearGradientValue | RadialGradientValue | AngularGradientValue
+
+/** Mirrors common SwiftUI accessibility traits. */
+export type AccessibilityTraitValue =
+  | "button"
+  | "link"
+  | "header"
+  | "selected"
+  | "image"
+  | "staticText"
+  | "summaryElement"
+  | "updatesFrequently"
+  | "searchField"
+  | "isModal"
+
+export type AccessibilityTraitsValue = AccessibilityTraitValue | AccessibilityTraitValue[]
+
+/** One segment of a formatted SwiftUI `Text` value. */
+export type TextSegmentValue = {
+  text: string
+  font?: FontValue
+  fontWeight?: FontWeight
+  foregroundColor?: ColorValue
+  foregroundStyle?: ShapeStyleValue
+}
+
+/** Lightweight map marker used by `Map`. */
+export type MapMarkerValue = {
+  title: string
+  latitude: number
+  longitude: number
+  systemName?: string
+}
+
+/** Serializable chart point used by `Chart`. */
+export type ChartPointValue = {
+  label: string
+  value: number
+  series?: string
+}
+
+/** Chart mark kinds supported by SwiftJS. */
+export type ChartMarkKind = "bar" | "line" | "point" | "area"
+
+/** Mirrors high-value `UITextContentType` cases for text inputs. */
+export type TextContentType =
+  | "name"
+  | "givenName"
+  | "familyName"
+  | "username"
+  | "emailAddress"
+  | "password"
+  | "newPassword"
+  | "oneTimeCode"
+  | "URL"
+  | "telephoneNumber"
 
 /** Serializable transfer payload used by `draggable` and `dropDestination`. */
 export type TransferItemValue =
@@ -514,6 +627,10 @@ export type ViewProps = {
   children?: unknown
   /** Overrides the spoken label for assistive technologies. */
   accessibilityLabel?: string
+  accessibilityHint?: string
+  accessibilityValue?: string
+  accessibilityAddTraits?: AccessibilityTraitsValue
+  accessibilityRemoveTraits?: AccessibilityTraitsValue
   padding?: number
   paddingTop?: number
   frame?: FrameValue
@@ -564,12 +681,16 @@ export type ViewProps = {
   symbolRenderingMode?: SymbolRenderingMode
   buttonStyle?: ButtonStyle
   buttonBorderShape?: ButtonBorderShape
+  buttonSizing?: ButtonSizing
+  contentShape?: ContentShapeValue
   disabled?: boolean
   moveDisabled?: boolean
   glassEffect?: GlassEffectValue
+  scrollEdgeEffectStyle?: ScrollEdgeEffectValue
   editMode?: EditMode
   onEditModeChange?: (nextValue: EditMode) => void
   lineLimit?: number
+  lineSpacing?: number
   multilineTextAlignment?: TextAlignmentValue
   truncationMode?: TruncationMode
   minimumScaleFactor?: number
@@ -648,8 +769,12 @@ export type NavigationStackProps = ViewProps & {
 }
 
 /** Props for `ForEach`, used to carry row-level move handling. */
-export type ForEachProps = ViewProps & {
+export type ForEachProps<Item = unknown> = ViewProps & {
+  data?: readonly Item[]
+  id?: keyof Item | ((item: Item, index: number) => string | number)
+  children?: unknown | ((item: Item, index: number) => unknown)
   onMove?: (action: MoveAction) => void
+  onDelete?: (action: DeleteAction) => void
 }
 
 /** Props for `NavigationLink`. */
@@ -669,7 +794,11 @@ export type LinkProps = ViewProps & {
 
 /** Props for `WebView`. */
 export type WebViewProps = ViewProps & {
-  url: string
+  url?: string
+  html?: string
+  baseURL?: string
+  javaScriptEnabled?: boolean
+  allowsBackForwardNavigationGestures?: boolean
 }
 
 /** Props for `ShareLink`. */
@@ -682,11 +811,8 @@ export type ShareLinkProps = ViewProps &
   message?: string
 }
 
-/** Props for `Sheet`. */
-export type SheetProps = ViewProps & {
-  isPresented: boolean
+type PresentationProps = ViewProps & {
   onDismiss?: () => void
-  content: unknown
   presentationDetents?: PresentationDetentValue[]
   presentationDragIndicator?: PresentationDragIndicator
   presentationCornerRadius?: number
@@ -694,13 +820,15 @@ export type SheetProps = ViewProps & {
   interactiveDismissDisabled?: boolean
 }
 
+/** Props for `Sheet`. */
+export type SheetProps<Item = unknown> =
+  | (PresentationProps & { isPresented: boolean; item?: never; content: unknown | (() => unknown) })
+  | (PresentationProps & { isPresented?: never; item: Item | null | undefined; content: (item: Item) => unknown })
+
 /** Props for `FullScreenCover`. */
-export type FullScreenCoverProps = ViewProps & {
-  isPresented: boolean
-  onDismiss?: () => void
-  content: unknown
-  interactiveDismissDisabled?: boolean
-}
+export type FullScreenCoverProps<Item = unknown> =
+  | (PresentationProps & { isPresented: boolean; item?: never; content: unknown | (() => unknown) })
+  | (PresentationProps & { isPresented?: never; item: Item | null | undefined; content: (item: Item) => unknown })
 
 /** Props for `TabView`. */
 export type TabViewProps = ViewProps & {
@@ -797,6 +925,7 @@ export type NavigationSplitViewProps = ViewProps & {
 export type TextProps = ViewProps & {
   font?: FontValue
   fontWeight?: FontWeight
+  segments?: TextSegmentValue[]
 }
 
 /** Shared props for shape hosts. */
@@ -845,6 +974,7 @@ export type TextFieldProps = ViewProps & {
   onChange: (nextValue: string) => void
   title?: string
   prompt?: string
+  textContentType?: TextContentType
   font?: FontValue
   fontWeight?: FontWeight
 }
@@ -855,6 +985,7 @@ export type SecureFieldProps = ViewProps & {
   onChange: (nextValue: string) => void
   title?: string
   prompt?: string
+  textContentType?: TextContentType
   font?: FontValue
   fontWeight?: FontWeight
 }
@@ -870,7 +1001,9 @@ export type TextEditorProps = ViewProps & {
 /** Props for `Picker`. */
 export type PickerProps = ViewProps & {
   selection: PickerValue
-  options: PickerOption[]
+  title?: string
+  label?: unknown
+  options?: PickerOption[]
   onChange: (nextValue: PickerValue) => void
 }
 
@@ -917,6 +1050,28 @@ export type ImageProps = ViewProps & {
 export type AsyncImageProps = ViewProps & {
   url: string
   placeholder?: unknown
+  empty?: unknown
+  failure?: unknown
+}
+
+/** Props for `Map`. */
+export type MapProps = ViewProps & {
+  latitude: number
+  longitude: number
+  latitudeDelta?: number
+  longitudeDelta?: number
+  markers?: MapMarkerValue[]
+}
+
+/** Props for `Chart`. */
+export type ChartProps = ViewProps & {
+  data: ChartPointValue[]
+  mark?: ChartMarkKind
+}
+
+/** Props for `VideoPlayer`. */
+export type VideoPlayerProps = ViewProps & {
+  url: string
 }
 
 /** Props for `Label`. */
@@ -958,10 +1113,13 @@ export type DividerProps = ViewProps
 export type SpacerProps = ViewProps
 
 /** Props for `List`. */
-export type ListProps = ViewProps & {
+export type ListProps<Item = unknown> = ViewProps & {
   searchable?: SearchableValue
   selection?: ReadonlySet<ListSelectionValue>
   onSelectionChange?: (nextValue: Set<ListSelectionValue>) => void
+  data?: readonly Item[]
+  id?: keyof Item | ((item: Item, index: number) => string | number)
+  children?: unknown | ((item: Item, index: number) => unknown)
 }
 
 /** Props for `EditButton`. */

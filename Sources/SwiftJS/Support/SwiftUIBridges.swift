@@ -337,9 +337,14 @@ extension ShapeStyleValue {
     var swiftUIShapeStyle: AnyShapeStyle {
         switch self {
         case let .color(value):
-            AnyShapeStyle(Color.named(value) ?? Color(value))
+            if value == "tint" {
+                return AnyShapeStyle(.tint)
+            }
+            return AnyShapeStyle(Color.named(value) ?? Color(value))
+        case let .material(value):
+            return AnyShapeStyle(Material.named(value) ?? .regular)
         case let .linearGradient(value):
-            AnyShapeStyle(
+            return AnyShapeStyle(
                 LinearGradient(
                     gradient: value.swiftUIGradient,
                     startPoint: value.startPoint.swiftUIUnitPoint,
@@ -347,7 +352,7 @@ extension ShapeStyleValue {
                 )
             )
         case let .radialGradient(value):
-            AnyShapeStyle(
+            return AnyShapeStyle(
                 RadialGradient(
                     gradient: value.swiftUIGradient,
                     center: value.center.swiftUIUnitPoint,
@@ -357,7 +362,7 @@ extension ShapeStyleValue {
             )
         case let .angularGradient(value):
             if let angle = value.angle {
-                AnyShapeStyle(
+                return AnyShapeStyle(
                     AngularGradient(
                         gradient: value.swiftUIGradient,
                         center: value.center.swiftUIUnitPoint,
@@ -365,7 +370,7 @@ extension ShapeStyleValue {
                     )
                 )
             } else {
-                AnyShapeStyle(
+                return AnyShapeStyle(
                     AngularGradient(
                         gradient: value.swiftUIGradient,
                         center: value.center.swiftUIUnitPoint,
@@ -374,6 +379,25 @@ extension ShapeStyleValue {
                     )
                 )
             }
+        }
+    }
+}
+
+extension Material {
+    static func named(_ value: String) -> Material? {
+        switch value {
+        case "ultraThinMaterial":
+            return .ultraThin
+        case "thinMaterial":
+            return .thin
+        case "regularMaterial":
+            return .regular
+        case "thickMaterial":
+            return .thick
+        case "ultraThickMaterial":
+            return .ultraThick
+        default:
+            return nil
         }
     }
 }
@@ -560,6 +584,8 @@ extension ToolbarItemPlacementKind {
             return .cancellationAction
         case .confirmationAction:
             return .confirmationAction
+        case .destructiveAction:
+            return .destructiveAction
         case .primaryAction:
             return .primaryAction
         }
@@ -687,6 +713,33 @@ extension TextInputAutocapitalizationKind {
     }
 }
 
+extension TextContentTypeKind {
+    var swiftUITextContentType: UITextContentType {
+        switch self {
+        case .name:
+            .name
+        case .givenName:
+            .givenName
+        case .familyName:
+            .familyName
+        case .username:
+            .username
+        case .emailAddress:
+            .emailAddress
+        case .password:
+            .password
+        case .newPassword:
+            .newPassword
+        case .oneTimeCode:
+            .oneTimeCode
+        case .URL:
+            .URL
+        case .telephoneNumber:
+            .telephoneNumber
+        }
+    }
+}
+
 extension SubmitLabelKind {
     var swiftUISubmitLabel: SubmitLabel {
         switch self {
@@ -779,6 +832,8 @@ extension Color {
             return .secondary
         case "clear":
             return .clear
+        case "systemBackground":
+            return Color(uiColor: .systemBackground)
         case "systemGroupedBackground":
             return Color(uiColor: .systemGroupedBackground)
         case "secondarySystemBackground":

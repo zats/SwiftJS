@@ -7,6 +7,7 @@ import type {
   ButtonRole,
   ButtonProps,
   ConfirmationDialogValue,
+  ContentShapeValue,
   ContextMenuValue,
   ContentUnavailableProps,
   ContentMarginsValue,
@@ -93,12 +94,14 @@ import type {
   TabViewBottomAccessoryValue,
   TabViewProps,
   TextAlignmentValue,
+  TextContentType,
   TextInputAutocapitalization,
   TextEditorProps,
   TextFieldProps,
   TextProps,
   TransferItemValue,
   ToggleProps,
+  ToolbarItemContentValue,
   ToolbarItemPlacement,
   ToolbarItemValue,
   ToolbarSpacerSizing,
@@ -119,6 +122,7 @@ export type {
   BadgeValue,
   ButtonRole,
   ButtonBorderShape,
+  ButtonSizing,
   ButtonProps,
   ButtonStyle,
   CapsuleProps,
@@ -128,6 +132,7 @@ export type {
   NamedColorValue,
   ColorSchemeValue,
   ContentAlignment,
+  ContentShapeValue,
   ContentMarginsValue,
   ContentMarginPlacement,
   ContentUnavailableProps,
@@ -185,6 +190,7 @@ export type {
   ListStyle,
   ListSelectionValue,
   MenuProps,
+  MaterialValue,
   MoveAction,
   NavigationLinkProps,
   NavigationBarTitleDisplayMode,
@@ -233,12 +239,14 @@ export type {
   TabViewBottomAccessoryValue,
   TabViewProps,
   TextAlignmentValue,
+  TextContentType,
   TextInputAutocapitalization,
   TextEditorProps,
   TextFieldProps,
   TextProps,
   TransferItemValue,
   ToggleProps,
+  ToolbarItemContentValue,
   ToolbarItemPlacement,
   ToolbarItemValue,
   ToolbarSpacerSizing,
@@ -338,6 +346,75 @@ function restoreDateValue<Value extends DateValue>(value: string, template: Valu
   return value as Value
 }
 
+function dataChildren<Item>(
+  data: readonly Item[] | undefined,
+  id: keyof Item | ((item: Item, index: number) => string | number) | undefined,
+  children: unknown
+) {
+  if (data === undefined) {
+    return children
+  }
+
+  if (typeof children !== "function") {
+    throw new Error("data-driven List and ForEach require children to be a render function")
+  }
+
+  return data.map((item, index) => {
+    const rendered = (children as (item: Item, index: number) => unknown)(item, index)
+    const key = dataKey(item, index, id)
+    if (rendered && typeof rendered === "object" && "props" in rendered) {
+      const element = rendered as { props?: Record<string, unknown> }
+      return {
+        ...rendered,
+        props: {
+          ...(element.props ?? {}),
+          key: element.props?.key ?? key,
+          viewID: element.props?.viewID ?? key,
+        },
+      }
+    }
+
+    return rendered
+  })
+}
+
+function dataKey<Item>(
+  item: Item,
+  index: number,
+  id: keyof Item | ((item: Item, index: number) => string | number) | undefined
+) {
+  if (typeof id === "function") {
+    return id(item, index)
+  }
+
+  if (id !== undefined && item && typeof item === "object") {
+    const value = (item as Record<string, unknown>)[String(id)]
+    if (typeof value === "string" || typeof value === "number") {
+      return value
+    }
+  }
+
+  return index
+}
+
+function presentationContent<Item>(props: SheetProps<Item> | FullScreenCoverProps<Item>) {
+  if ("item" in props) {
+    const item = props.item
+    const renderContent = props.content as (item: Item) => unknown
+    return {
+      ...props,
+      item: undefined,
+      isPresented: item !== null && item !== undefined,
+      content: item === null || item === undefined ? createElement(Fragment, undefined) : renderContent(item),
+    }
+  }
+
+  return {
+    ...props,
+    content: typeof props.content === "function" ? props.content() : props.content,
+  }
+}
+
 export const Fragment = runtime().Fragment
 export const createElement = (type: unknown, props?: Record<string, unknown>, ...children: unknown[]) =>
   runtime().createElement(type, props, ...children)
@@ -363,6 +440,29 @@ export const useEffect = (effect: () => void | (() => void), deps?: unknown[]) =
 export const useRef = <Value,>(initialValue: Value) => runtime().useRef(initialValue)
 /** Mounts a root component into the current SwiftJS surface. */
 export const mount = (component: () => unknown) => runtime().mount(component)
+
+/** Mirrors `ToolbarItem(placement:content:)` for the serializable `toolbar` prop. */
+export function ToolbarItem(props: ToolbarItemContentValue): ToolbarItemValue {
+  return {
+    kind: "item",
+    placement: props.placement,
+    content: props.content,
+  }
+}
+
+/** Mirrors `ToolbarItemGroup(placement:content:)` for grouped toolbar content. */
+export function ToolbarItemGroup(props: ToolbarItemContentValue): ToolbarItemValue {
+  return ToolbarItem(props)
+}
+
+/** Mirrors `ToolbarSpacer(_:placement:)`. */
+export function ToolbarSpacer(props: { placement?: ToolbarItemPlacement; sizing?: ToolbarSpacerSizing } = {}): ToolbarItemValue {
+  return {
+    kind: "spacer",
+    placement: props.placement,
+    sizing: props.sizing,
+  }
+}
 
 /**
  * Arranges children vertically with optional spacing, alignment, and distribution.
@@ -524,7 +624,14 @@ export const GeometryReader = hostComponent<GeometryReaderProps>("GeometryReader
  *   </Section>
  * </List>
  */
-export const List = hostComponent<ListProps>("List")
+const ListBase = hostComponent<ListProps>("List")
+export function List<Item = unknown>(props: ListProps<Item>) {
+  const { data, id, children, ...rest } = props
+  return createElement(ListBase, {
+    ...rest,
+    children: dataChildren(data, id, children),
+  })
+}
 /**
  * Renders grouped rows using platform form chrome.
  *
@@ -547,7 +654,14 @@ export const Form = hostComponent<FormProps>("Form")
  *   </ForEach>
  * </List>
  */
-export const ForEach = hostComponent<ForEachProps>("ForEach")
+const ForEachBase = hostComponent<ForEachProps>("ForEach")
+export function ForEach<Item = unknown>(props: ForEachProps<Item>) {
+  const { data, id, children, ...rest } = props
+  return createElement(ForEachBase, {
+    ...rest,
+    children: dataChildren(data, id, children),
+  })
+}
 /**
  * Groups list or form content under an optional header and footer.
  * `title` remains shorthand for a text header when `header` is omitted.
@@ -613,7 +727,10 @@ export const WebView = hostComponent<WebViewProps>("WebView")
  *   content={<NavigationStack navigationTitle="Compose"><Text>Draft message</Text></NavigationStack>}
  * />
  */
-export const Sheet = hostComponent<SheetProps>("Sheet")
+const SheetBase = hostComponent<SheetProps>("Sheet")
+export function Sheet<Item = unknown>(props: SheetProps<Item>) {
+  return createElement(SheetBase, presentationContent(props))
+}
 /**
  * Presents content modally over the full screen.
  *
@@ -623,7 +740,10 @@ export const Sheet = hostComponent<SheetProps>("Sheet")
  *   content={<ZStack><LinearGradient colors={["indigo", "blue"]} startPoint="top" endPoint="bottom" /><Text foregroundColor="white">Welcome</Text></ZStack>}
  * />
  */
-export const FullScreenCover = hostComponent<FullScreenCoverProps>("FullScreenCover")
+const FullScreenCoverBase = hostComponent<FullScreenCoverProps>("FullScreenCover")
+export function FullScreenCover<Item = unknown>(props: FullScreenCoverProps<Item>) {
+  return createElement(FullScreenCoverBase, presentationContent(props))
+}
 /**
  * Switches between child tabs.
  *

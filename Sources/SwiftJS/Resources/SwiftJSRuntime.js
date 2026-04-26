@@ -624,6 +624,9 @@
         node.prompt = typeof props.prompt === "string" ? props.prompt : undefined
         node.value = props.text
         node.event = registerHandler(props.onChange, id + ":change")
+        if (typeof props.textContentType === "string") {
+          node.textContentType = serializeTextContentType(props.textContentType, id + ".textContentType")
+        }
         return node
       case "SecureField":
         if (typeof props.text !== "string") {
@@ -634,6 +637,9 @@
         node.prompt = typeof props.prompt === "string" ? props.prompt : undefined
         node.value = props.text
         node.event = registerHandler(props.onChange, id + ":change")
+        if (typeof props.textContentType === "string") {
+          node.textContentType = serializeTextContentType(props.textContentType, id + ".textContentType")
+        }
         return node
       case "TextEditor":
         if (typeof props.text !== "string") {
@@ -668,10 +674,15 @@
         node.children = hostChildren(children)
         return node
       case "Picker":
-        node.title = textValue(props.children)
-        node.children = hostChildren(children)
+        const hasPickerOptionChildren = props.options === undefined
+        node.title = typeof props.title === "string" ? props.title : textValue(props.children)
+        node.label = serializeOptionalSlot(props.label, path + ".label")
+        node.children = props.label === undefined && !hasPickerOptionChildren ? hostChildren(children) : []
         node.selection = serializePickerValue(props.selection)
-        node.options = serializePickerOptions(props.options)
+        node.options =
+          hasPickerOptionChildren
+            ? serializePickerOptionsFromChildren(children, path + ".children")
+            : serializePickerOptions(props.options)
         node.event = registerHandler(props.onChange, id + ":change")
         return node
       case "Slider":
@@ -740,6 +751,14 @@
 
     if (typeof props.accessibilityLabel === "string") {
       node.accessibilityLabel = props.accessibilityLabel
+    }
+
+    if (typeof props.accessibilityHint === "string") {
+      node.accessibilityHint = props.accessibilityHint
+    }
+
+    if (typeof props.accessibilityValue === "string") {
+      node.accessibilityValue = props.accessibilityValue
     }
 
     if (typeof props.alignment === "string") {
@@ -991,6 +1010,14 @@
       node.buttonBorderShape = props.buttonBorderShape
     }
 
+    if (typeof props.buttonSizing === "string") {
+      node.buttonSizing = serializeButtonSizing(props.buttonSizing, id + ".buttonSizing")
+    }
+
+    if (typeof props.contentShape === "string") {
+      node.contentShape = serializeContentShape(props.contentShape, id + ".contentShape")
+    }
+
     if (props.disabled === true) {
       node.isDisabled = true
     }
@@ -1024,6 +1051,10 @@
 
     if (typeof props.lineLimit === "number") {
       node.lineLimit = props.lineLimit
+    }
+
+    if (typeof props.lineSpacing === "number") {
+      node.textLineSpacing = props.lineSpacing
     }
 
     if (typeof props.multilineTextAlignment === "string") {
@@ -1274,6 +1305,76 @@
     })
   }
 
+  function serializePickerOptionsFromChildren(children, path) {
+    if (!Array.isArray(children) || children.length === 0) {
+      throw new Error("Picker requires options or tagged child option views")
+    }
+
+    return children.map(function (child, index) {
+      if (!child || typeof child !== "object") {
+        throw new Error(path + "." + index + " must be a tagged option view")
+      }
+
+      if (child.tag === undefined) {
+        throw new Error(path + "." + index + " is missing tag")
+      }
+
+      return {
+        title: pickerOptionTitle(child, path + "." + index),
+        value: serializePickerValue(child.tag)
+      }
+    })
+  }
+
+  function pickerOptionTitle(child, path) {
+    if (typeof child.value === "string") {
+      return child.value
+    }
+
+    if (typeof child.title === "string") {
+      return child.title
+    }
+
+    throw new Error(path + " must be Text or Label when used as a Picker option")
+  }
+
+  function serializeButtonSizing(value, path) {
+    if (value === "automatic" || value === "flexible") {
+      return value
+    }
+
+    throw new Error(path + " must be 'automatic' or 'flexible'")
+  }
+
+  function serializeContentShape(value, path) {
+    if (value === "rectangle" || value === "circle" || value === "capsule") {
+      return value
+    }
+
+    throw new Error(path + " must be 'rectangle', 'circle', or 'capsule'")
+  }
+
+  function serializeTextContentType(value, path) {
+    const supported = [
+      "name",
+      "givenName",
+      "familyName",
+      "username",
+      "emailAddress",
+      "password",
+      "newPassword",
+      "oneTimeCode",
+      "URL",
+      "telephoneNumber"
+    ]
+
+    if (supported.includes(value)) {
+      return value
+    }
+
+    throw new Error(path + " is unsupported")
+  }
+
   function serializeDateValue(value, label) {
     if (typeof value === "string" && value.length > 0) {
       return value
@@ -1365,6 +1466,14 @@
     node.searchableText = value.text
     node.searchableEvent = registerHandler(value.onChange, path + ".onChange")
     serializeSearchFieldPlacement(node, value.placement, path + ".placement")
+
+    if (typeof value.isPresented === "boolean") {
+      node.searchableIsPresented = value.isPresented
+      if (typeof value.onPresentationChange !== "function") {
+        throw new Error("searchable with isPresented requires onPresentationChange")
+      }
+      node.searchablePresentationEvent = registerHandler(value.onPresentationChange, path + ".onPresentationChange")
+    }
 
     if (typeof value.prompt === "string") {
       node.searchablePrompt = value.prompt
@@ -1458,9 +1567,9 @@
       return
     }
 
-    if (
-      value === "automatic" ||
-      value === "toolbar" ||
+      if (
+        value === "automatic" ||
+        value === "toolbar" ||
       value === "toolbarPrincipal" ||
       value === "sidebar" ||
       value === "navigationBarDrawer"
