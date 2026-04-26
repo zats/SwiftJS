@@ -47,8 +47,8 @@ public struct SurfaceView: View {
 public enum SwiftJSTypeScriptPackage {
     public static var packageRootURL: URL? {
         Bundle.module
-            .url(forResource: "package", withExtension: "json")?
-            .deletingLastPathComponent()
+            .url(forResource: "Package", withExtension: nil)
+//            .deletingLastPathComponent()
     }
 
     public static func apiReferenceSkillBody() -> String? {
