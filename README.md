@@ -56,9 +56,9 @@ WebApp/
 }
 ```
 
-3. Add an Xcode Run Script phase before resources are copied:
+3. Add an Xcode Run Script phase before resources are copied. Set the phase shell to `/bin/bash`:
 
-```sh
+```bash
 set -euo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 node "$BUILT_PRODUCTS_DIR/SwiftJS_SwiftJS.bundle/Package/build-swiftjs-app.mjs" "$SRCROOT/WebApp/JS" ../Project ../Bundle
@@ -133,7 +133,7 @@ mount(App)
 
 ## Building The Catalog Example
 
-```sh
+```bash
 cd Examples/CatalogApp/JS
 pnpm install
 pnpm build
