@@ -1,5 +1,8 @@
+import AVKit
+import Charts
 import Foundation
 import JavaScriptCore
+import MapKit
 import Observation
 import SwiftUI
 import UniformTypeIdentifiers
@@ -103,10 +106,25 @@ public enum ButtonSizingKind: String, Codable, Equatable, Sendable {
     case flexible
 }
 
-public enum ContentShapeKind: String, Codable, Equatable, Sendable {
+public enum ShapeKind: String, Codable, Equatable, Sendable {
     case rectangle
+    case rect
     case circle
     case capsule
+    case roundedRectangle
+}
+
+public struct ShapeValue: Codable, Equatable, Sendable {
+    public let kind: ShapeKind
+    public let cornerRadius: Double?
+}
+
+public typealias ContentShapeKind = ShapeValue
+
+public enum ScrollEdgeEffectStyleKind: String, Codable, Equatable, Sendable {
+    case automatic
+    case hard
+    case soft
 }
 
 public enum ButtonRoleKind: String, Codable, Equatable, Sendable {
@@ -147,6 +165,18 @@ public enum SensoryFeedbackKind: String, Codable, Equatable, Sendable {
     case alignment
     case levelChange
     case impact
+}
+
+public enum SensoryFeedbackWeightKind: String, Codable, Equatable, Sendable {
+    case light
+    case medium
+    case heavy
+}
+
+public enum SensoryFeedbackFlexibilityKind: String, Codable, Equatable, Sendable {
+    case soft
+    case solid
+    case rigid
 }
 
 public enum AxisKind: String, Codable, Equatable, Sendable {
@@ -710,6 +740,78 @@ public struct TabViewBottomAccessoryValue: Equatable, Sendable {
 public struct SensoryFeedbackValue: Equatable, Sendable {
     public let feedback: SensoryFeedbackKind
     public let trigger: CustomHostValue
+    public let weight: SensoryFeedbackWeightKind?
+    public let flexibility: SensoryFeedbackFlexibilityKind?
+    public let intensity: Double?
+    public let isEnabled: Bool
+
+    public init(
+        feedback: SensoryFeedbackKind,
+        trigger: CustomHostValue,
+        weight: SensoryFeedbackWeightKind? = nil,
+        flexibility: SensoryFeedbackFlexibilityKind? = nil,
+        intensity: Double? = nil,
+        isEnabled: Bool = true
+    ) {
+        self.feedback = feedback
+        self.trigger = trigger
+        self.weight = weight
+        self.flexibility = flexibility
+        self.intensity = intensity
+        self.isEnabled = isEnabled
+    }
+}
+
+public enum AccessibilityTraitKind: String, Codable, Equatable, Sendable {
+    case button
+    case link
+    case header
+    case selected
+    case image
+    case staticText
+    case summaryElement
+    case updatesFrequently
+    case searchField
+    case isModal
+}
+
+public struct TextSegmentValue: Codable, Equatable, Sendable {
+    public let text: String
+    public let fontName: TextStyle?
+    public let fontSize: Double?
+    public let fontWeight: FontWeight?
+    public let foregroundColor: String?
+    public let foregroundStyle: ShapeStyleValue?
+}
+
+public struct MapMarkerValue: Codable, Equatable, Sendable {
+    public let title: String
+    public let latitude: Double
+    public let longitude: Double
+    public let systemName: String?
+}
+
+public enum ChartMarkKind: String, Codable, Equatable, Sendable {
+    case bar
+    case line
+    case point
+    case area
+}
+
+public struct ChartPointValue: Codable, Equatable, Sendable, Identifiable {
+    public var id: String { "\(series ?? "")|\(label)|\(value)" }
+    public let label: String
+    public let value: Double
+    public let series: String?
+}
+
+public struct DeleteActionValue: Codable, Equatable, Sendable {
+    public let offsets: [Int]
+
+    var payloadJSON: String {
+        let data = try? JSONEncoder().encode(self)
+        return String(decoding: data ?? Data("null".utf8), as: UTF8.self)
+    }
 }
 
 public struct ToolbarItemValue: Equatable, Sendable {
@@ -1124,6 +1226,8 @@ public struct ViewModifiers: Equatable, Sendable {
     public var accessibilityLabel: String?
     public var accessibilityHint: String?
     public var accessibilityValue: String?
+    public var accessibilityAddTraits: [AccessibilityTraitKind]
+    public var accessibilityRemoveTraits: [AccessibilityTraitKind]
     public var padding: Double?
     public var paddingTop: Double?
     public var frameMinWidth: Double?
@@ -1148,11 +1252,18 @@ public struct ViewModifiers: Equatable, Sendable {
     public var buttonBorderShape: ButtonBorderShape?
     public var buttonSizing: ButtonSizingKind?
     public var contentShape: ContentShapeKind?
+    public var clipShape: ShapeValue?
     public var isDisabled: Bool
     public var moveDisabled: Bool
     public var glassEffect: Bool
     public var glassVariant: GlassVariantKind
     public var glassTint: String?
+    public var glassShape: ShapeValue?
+    public var glassInteractive: Bool
+    public var glassID: String?
+    public var glassUnionID: String?
+    public var scrollEdgeEffectStyle: ScrollEdgeEffectStyleKind?
+    public var scrollEdgeEffectEdge: EdgeKind
     public var editMode: EditModeKind?
     public var editModeEvent: SurfaceEvent?
     public var navigationTitle: String?
@@ -1220,6 +1331,8 @@ public struct ViewModifiers: Equatable, Sendable {
         accessibilityLabel: String? = nil,
         accessibilityHint: String? = nil,
         accessibilityValue: String? = nil,
+        accessibilityAddTraits: [AccessibilityTraitKind] = [],
+        accessibilityRemoveTraits: [AccessibilityTraitKind] = [],
         padding: Double? = nil,
         paddingTop: Double? = nil,
         frameMinWidth: Double? = nil,
@@ -1244,11 +1357,18 @@ public struct ViewModifiers: Equatable, Sendable {
         buttonBorderShape: ButtonBorderShape? = nil,
         buttonSizing: ButtonSizingKind? = nil,
         contentShape: ContentShapeKind? = nil,
+        clipShape: ShapeValue? = nil,
         isDisabled: Bool = false,
         moveDisabled: Bool = false,
         glassEffect: Bool = false,
         glassVariant: GlassVariantKind = .regular,
         glassTint: String? = nil,
+        glassShape: ShapeValue? = nil,
+        glassInteractive: Bool = false,
+        glassID: String? = nil,
+        glassUnionID: String? = nil,
+        scrollEdgeEffectStyle: ScrollEdgeEffectStyleKind? = nil,
+        scrollEdgeEffectEdge: EdgeKind = .top,
         editMode: EditModeKind? = nil,
         editModeEvent: SurfaceEvent? = nil,
         navigationTitle: String? = nil,
@@ -1315,6 +1435,8 @@ public struct ViewModifiers: Equatable, Sendable {
         self.accessibilityLabel = accessibilityLabel
         self.accessibilityHint = accessibilityHint
         self.accessibilityValue = accessibilityValue
+        self.accessibilityAddTraits = accessibilityAddTraits
+        self.accessibilityRemoveTraits = accessibilityRemoveTraits
         self.padding = padding
         self.paddingTop = paddingTop
         self.frameMinWidth = frameMinWidth
@@ -1339,11 +1461,18 @@ public struct ViewModifiers: Equatable, Sendable {
         self.buttonBorderShape = buttonBorderShape
         self.buttonSizing = buttonSizing
         self.contentShape = contentShape
+        self.clipShape = clipShape
         self.isDisabled = isDisabled
         self.moveDisabled = moveDisabled
         self.glassEffect = glassEffect
         self.glassVariant = glassVariant
         self.glassTint = glassTint
+        self.glassShape = glassShape
+        self.glassInteractive = glassInteractive
+        self.glassID = glassID
+        self.glassUnionID = glassUnionID
+        self.scrollEdgeEffectStyle = scrollEdgeEffectStyle
+        self.scrollEdgeEffectEdge = scrollEdgeEffectEdge
         self.editMode = editMode
         self.editModeEvent = editModeEvent
         self.navigationTitle = navigationTitle
@@ -1426,6 +1555,7 @@ public struct SearchableValue: Equatable, Sendable {
     public let isPresented: Bool?
     public let event: SurfaceEvent
     public let presentationEvent: SurfaceEvent?
+    public let submitEvent: SurfaceEvent?
 
     public init(
         text: String,
@@ -1433,7 +1563,8 @@ public struct SearchableValue: Equatable, Sendable {
         placement: SearchFieldPlacementValue = .init(),
         isPresented: Bool? = nil,
         event: SurfaceEvent,
-        presentationEvent: SurfaceEvent? = nil
+        presentationEvent: SurfaceEvent? = nil,
+        submitEvent: SurfaceEvent? = nil
     ) {
         self.text = text
         self.prompt = prompt
@@ -1441,6 +1572,7 @@ public struct SearchableValue: Equatable, Sendable {
         self.isPresented = isPresented
         self.event = event
         self.presentationEvent = presentationEvent
+        self.submitEvent = submitEvent
     }
 }
 
@@ -1542,6 +1674,13 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
     case forEach(
         id: NodeID,
         moveEvent: SurfaceEvent?,
+        deleteEvent: SurfaceEvent?,
+        modifiers: ViewModifiers,
+        children: [ViewNode]
+    )
+    case glassEffectContainer(
+        id: NodeID,
+        spacing: Double,
         modifiers: ViewModifiers,
         children: [ViewNode]
     )
@@ -1588,7 +1727,11 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
     )
     case webView(
         id: NodeID,
-        url: URL,
+        url: URL?,
+        html: String?,
+        baseURL: URL?,
+        javaScriptEnabled: Bool,
+        allowsBackForwardNavigationGestures: Bool,
         modifiers: ViewModifiers
     )
     case sheet(
@@ -1637,6 +1780,7 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
     case text(
         id: NodeID,
         value: String,
+        segments: [TextSegmentValue],
         modifiers: ViewModifiers
     )
     case label(
@@ -1670,6 +1814,28 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
         id: NodeID,
         url: URL,
         placeholder: ViewNode?,
+        empty: ViewNode?,
+        failure: ViewNode?,
+        modifiers: ViewModifiers
+    )
+    case map(
+        id: NodeID,
+        latitude: Double,
+        longitude: Double,
+        latitudeDelta: Double,
+        longitudeDelta: Double,
+        markers: [MapMarkerValue],
+        modifiers: ViewModifiers
+    )
+    case chart(
+        id: NodeID,
+        data: [ChartPointValue],
+        mark: ChartMarkKind,
+        modifiers: ViewModifiers
+    )
+    case videoPlayer(
+        id: NodeID,
+        url: URL,
         modifiers: ViewModifiers
     )
     case rectangle(
@@ -1864,26 +2030,30 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .geometryReader(id, _),
              let .custom(id, _, _, _, _, _),
              let .customLayout(id, _, _, _, _),
-             let .forEach(id, _, _, _),
+             let .forEach(id, _, _, _, _),
+             let .glassEffectContainer(id, _, _, _),
              let .list(id, _, _, _, _),
              let .form(id, _, _),
              let .section(id, _, _, _, _, _),
              let .navigationStack(id, _, _, _, _),
              let .navigationLink(id, _, _, _, _),
              let .link(id, _, _, _, _),
-             let .webView(id, _, _),
+             let .webView(id, _, _, _, _, _, _),
              let .sheet(id, _, _, _, _, _),
              let .fullScreenCover(id, _, _, _, _, _, _),
              let .tabView(id, _, _, _, _),
              let .tab(id, _, _, _, _, _, _),
              let .navigationSplitView(id, _, _, _),
              let .spacer(id, _),
-             let .text(id, _, _),
+             let .text(id, _, _, _),
              let .label(id, _, _, _),
              let .contentUnavailable(id, _, _, _, _, _),
              let .progressView(id, _, _, _, _, _),
              let .image(id, _, _),
-             let .asyncImage(id, _, _, _),
+             let .asyncImage(id, _, _, _, _, _),
+             let .map(id, _, _, _, _, _, _),
+             let .chart(id, _, _, _),
+             let .videoPlayer(id, _, _),
              let .rectangle(id, _, _, _, _),
              let .roundedRectangle(id, _, _, _, _, _),
              let .circle(id, _, _, _, _),
@@ -1925,26 +2095,30 @@ public indirect enum ViewNode: Equatable, Sendable, Identifiable {
              let .geometryReader(_, modifiers),
              let .custom(_, _, modifiers, _, _, _),
              let .customLayout(_, _, modifiers, _, _),
-             let .forEach(_, _, modifiers, _),
+             let .forEach(_, _, _, modifiers, _),
+             let .glassEffectContainer(_, _, modifiers, _),
              let .list(_, _, _, modifiers, _),
              let .form(_, modifiers, _),
              let .section(_, _, _, _, modifiers, _),
              let .navigationStack(_, _, _, modifiers, _),
              let .navigationLink(_, modifiers, _, _, _),
              let .link(_, _, _, modifiers, _),
-             let .webView(_, _, modifiers),
+             let .webView(_, _, _, _, _, _, modifiers),
              let .sheet(_, _, _, modifiers, _, _),
              let .fullScreenCover(_, _, _, _, modifiers, _, _),
              let .tabView(_, _, _, modifiers, _),
              let .tab(_, _, _, _, _, modifiers, _),
              let .navigationSplitView(_, modifiers, _, _),
              let .spacer(_, modifiers),
-             let .text(_, _, modifiers),
+             let .text(_, _, _, modifiers),
              let .label(_, _, _, modifiers),
              let .contentUnavailable(_, _, _, _, modifiers, _),
              let .progressView(_, _, _, _, _, modifiers),
              let .image(_, _, modifiers),
-             let .asyncImage(_, _, _, modifiers),
+             let .asyncImage(_, _, _, _, _, modifiers),
+             let .map(_, _, _, _, _, _, modifiers),
+             let .chart(_, _, _, modifiers),
+             let .videoPlayer(_, _, modifiers),
              let .rectangle(_, _, _, _, modifiers),
              let .roundedRectangle(_, _, _, _, _, modifiers),
              let .circle(_, _, _, _, modifiers),
@@ -2091,10 +2265,18 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
                   lValues == rValues,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
-        case let (.forEach(lID, lMoveEvent, lModifiers, lChildren),
-                  .forEach(rID, rMoveEvent, rModifiers, rChildren)):
+        case let (.forEach(lID, lMoveEvent, lDeleteEvent, lModifiers, lChildren),
+                  .forEach(rID, rMoveEvent, rDeleteEvent, rModifiers, rChildren)):
             guard lID == rID,
                   lMoveEvent == rMoveEvent,
+                  lDeleteEvent == rDeleteEvent,
+                  lModifiers == rModifiers,
+                  enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
+            else { return false }
+        case let (.glassEffectContainer(lID, lSpacing, lModifiers, lChildren),
+                  .glassEffectContainer(rID, rSpacing, rModifiers, rChildren)):
+            guard lID == rID,
+                  lSpacing == rSpacing,
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
@@ -2145,9 +2327,16 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
                   lModifiers == rModifiers,
                   enqueueChildren(lhs: lChildren, rhs: rChildren, into: &stack)
             else { return false }
-        case let (.webView(lID, lURL, lModifiers),
-                  .webView(rID, rURL, rModifiers)):
-            guard lID == rID, lURL == rURL, lModifiers == rModifiers else { return false }
+        case let (.webView(lID, lURL, lHTML, lBaseURL, lJavaScriptEnabled, lGestures, lModifiers),
+                  .webView(rID, rURL, rHTML, rBaseURL, rJavaScriptEnabled, rGestures, rModifiers)):
+            guard lID == rID,
+                  lURL == rURL,
+                  lHTML == rHTML,
+                  lBaseURL == rBaseURL,
+                  lJavaScriptEnabled == rJavaScriptEnabled,
+                  lGestures == rGestures,
+                  lModifiers == rModifiers
+            else { return false }
         case let (.sheet(lID, lIsPresented, lOnDismiss, lModifiers, lContent, lChildren),
                   .sheet(rID, rIsPresented, rOnDismiss, rModifiers, rContent, rChildren)):
             guard lID == rID,
@@ -2193,9 +2382,9 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
         case let (.spacer(lID, lModifiers),
                   .spacer(rID, rModifiers)):
             guard lID == rID, lModifiers == rModifiers else { return false }
-        case let (.text(lID, lValue, lModifiers),
-                  .text(rID, rValue, rModifiers)):
-            guard lID == rID, lValue == rValue, lModifiers == rModifiers else { return false }
+        case let (.text(lID, lValue, lSegments, lModifiers),
+                  .text(rID, rValue, rSegments, rModifiers)):
+            guard lID == rID, lValue == rValue, lSegments == rSegments, lModifiers == rModifiers else { return false }
         case let (.label(lID, lTitle, lSource, lModifiers),
                   .label(rID, rTitle, rSource, rModifiers)):
             guard lID == rID, lTitle == rTitle, lSource == rSource, lModifiers == rModifiers else { return false }
@@ -2244,13 +2433,31 @@ public func ==(lhs: ViewNode, rhs: ViewNode) -> Bool {
         case let (.image(lID, lSource, lModifiers),
                   .image(rID, rSource, rModifiers)):
             guard lID == rID, lSource == rSource, lModifiers == rModifiers else { return false }
-        case let (.asyncImage(lID, lURL, lPlaceholder, lModifiers),
-                  .asyncImage(rID, rURL, rPlaceholder, rModifiers)):
+        case let (.asyncImage(lID, lURL, lPlaceholder, lEmpty, lFailure, lModifiers),
+                  .asyncImage(rID, rURL, rPlaceholder, rEmpty, rFailure, rModifiers)):
             guard lID == rID,
                   lURL == rURL,
                   lModifiers == rModifiers,
-                  enqueueOptionalNode(lhs: lPlaceholder, rhs: rPlaceholder, into: &stack)
+                  enqueueOptionalNode(lhs: lPlaceholder, rhs: rPlaceholder, into: &stack),
+                  enqueueOptionalNode(lhs: lEmpty, rhs: rEmpty, into: &stack),
+                  enqueueOptionalNode(lhs: lFailure, rhs: rFailure, into: &stack)
             else { return false }
+        case let (.map(lID, lLatitude, lLongitude, lLatitudeDelta, lLongitudeDelta, lMarkers, lModifiers),
+                  .map(rID, rLatitude, rLongitude, rLatitudeDelta, rLongitudeDelta, rMarkers, rModifiers)):
+            guard lID == rID,
+                  lLatitude == rLatitude,
+                  lLongitude == rLongitude,
+                  lLatitudeDelta == rLatitudeDelta,
+                  lLongitudeDelta == rLongitudeDelta,
+                  lMarkers == rMarkers,
+                  lModifiers == rModifiers
+            else { return false }
+        case let (.chart(lID, lData, lMark, lModifiers),
+                  .chart(rID, rData, rMark, rModifiers)):
+            guard lID == rID, lData == rData, lMark == rMark, lModifiers == rModifiers else { return false }
+        case let (.videoPlayer(lID, lURL, lModifiers),
+                  .videoPlayer(rID, rURL, rModifiers)):
+            guard lID == rID, lURL == rURL, lModifiers == rModifiers else { return false }
         case let (.rectangle(lID, lFill, lStroke, lLineWidth, lModifiers),
                   .rectangle(rID, rFill, rStroke, rLineWidth, rModifiers)):
             guard lID == rID, lFill == rFill, lStroke == rStroke, lLineWidth == rLineWidth, lModifiers == rModifiers else { return false }
@@ -2511,9 +2718,13 @@ struct RenderNodeView: View {
             applyCommonModifiers(
                 customLayoutView(id: id, name: name, values: values, children: children)
             )
-        case let .forEach(_, moveEvent, _, children):
+        case let .forEach(_, moveEvent, deleteEvent, _, children):
             applyCommonModifiers(
-                forEachView(children: children, moveEvent: moveEvent)
+                forEachView(children: children, moveEvent: moveEvent, deleteEvent: deleteEvent)
+            )
+        case let .glassEffectContainer(_, spacing, _, children):
+            applyCommonModifiers(
+                glassEffectContainerView(spacing: spacing, children: children)
             )
         case let .list(_, selection, selectionEvent, modifiers, children):
             listView(
@@ -2542,9 +2753,16 @@ struct RenderNodeView: View {
             applyCommonModifiers(
                 linkView(title, destination: destination, modifiers: modifiers, children: children)
             )
-        case let .webView(_, url, modifiers):
+        case let .webView(_, url, html, baseURL, javaScriptEnabled, allowsBackForwardNavigationGestures, modifiers):
             applyCommonModifiers(
-                webView(url: url, modifiers: modifiers)
+                webView(
+                    url: url,
+                    html: html,
+                    baseURL: baseURL,
+                    javaScriptEnabled: javaScriptEnabled,
+                    allowsBackForwardNavigationGestures: allowsBackForwardNavigationGestures,
+                    modifiers: modifiers
+                )
             )
         case let .sheet(_, isPresented, onDismiss, modifiers, content, children):
             applyCommonModifiers(
@@ -2575,9 +2793,9 @@ struct RenderNodeView: View {
             )
         case .spacer:
             applyCommonModifiers(Spacer())
-        case let .text(_, value, modifiers):
+        case let .text(_, value, segments, modifiers):
             applyCommonModifiers(
-                textView(value, modifiers: modifiers)
+                textView(value, segments: segments, modifiers: modifiers)
             )
         case let .label(_, title, source, modifiers):
             applyCommonModifiers(
@@ -2607,9 +2825,28 @@ struct RenderNodeView: View {
             applyCommonModifiers(
                 imageView(source, modifiers: modifiers)
             )
-        case let .asyncImage(_, url, placeholder, modifiers):
+        case let .asyncImage(_, url, placeholder, empty, failure, modifiers):
             applyCommonModifiers(
-                asyncImageView(url: url, placeholder: placeholder, modifiers: modifiers)
+                asyncImageView(url: url, placeholder: placeholder, empty: empty, failure: failure, modifiers: modifiers)
+            )
+        case let .map(_, latitude, longitude, latitudeDelta, longitudeDelta, markers, modifiers):
+            applyCommonModifiers(
+                mapView(
+                    latitude: latitude,
+                    longitude: longitude,
+                    latitudeDelta: latitudeDelta,
+                    longitudeDelta: longitudeDelta,
+                    markers: markers,
+                    modifiers: modifiers
+                )
+            )
+        case let .chart(_, data, mark, modifiers):
+            applyCommonModifiers(
+                chartView(data: data, mark: mark, modifiers: modifiers)
+            )
+        case let .videoPlayer(_, url, modifiers):
+            applyCommonModifiers(
+                videoPlayerView(url: url, modifiers: modifiers)
             )
         case let .rectangle(_, fill, stroke, lineWidth, modifiers):
             applyCommonModifiers(
@@ -2974,9 +3211,39 @@ struct RenderNodeView: View {
             )
     }
 
-    private func textView(_ value: String, modifiers: ViewModifiers) -> some View {
-        Text(value)
+    private func textView(_ value: String, segments: [TextSegmentValue], modifiers: ViewModifiers) -> some View {
+        formattedText(value, segments: segments)
             .modifier(NodeAppearanceModifier(modifiers: modifiers))
+    }
+
+    private func formattedText(_ value: String, segments: [TextSegmentValue]) -> Text {
+        guard let first = segments.first else {
+            return Text(value)
+        }
+
+        return segments.dropFirst().reduce(textSegment(first)) { partialResult, segment in
+            partialResult + textSegment(segment)
+        }
+    }
+
+    private func textSegment(_ segment: TextSegmentValue) -> Text {
+        var text = Text(segment.text)
+
+        if let font = swiftUIFont(style: segment.fontName, size: segment.fontSize) {
+            text = text.font(font)
+        }
+
+        if let fontWeight = segment.fontWeight?.swiftUIFontWeight {
+            text = text.fontWeight(fontWeight)
+        }
+
+        if let foregroundStyle = segment.foregroundStyle?.swiftUIShapeStyle {
+            text = text.foregroundStyle(foregroundStyle)
+        } else if let color = segment.foregroundColor.flatMap(Color.named(_:)) {
+            text = text.foregroundStyle(color)
+        }
+
+        return text
     }
 
     @ViewBuilder
@@ -3098,8 +3365,21 @@ struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func webView(url: URL, modifiers: ViewModifiers) -> some View {
-        SwiftJSWebView(url: url)
+    private func webView(
+        url: URL?,
+        html: String?,
+        baseURL: URL?,
+        javaScriptEnabled: Bool,
+        allowsBackForwardNavigationGestures: Bool,
+        modifiers: ViewModifiers
+    ) -> some View {
+        SwiftJSWebView(
+            url: url,
+            html: html,
+            baseURL: baseURL,
+            javaScriptEnabled: javaScriptEnabled,
+            allowsBackForwardNavigationGestures: allowsBackForwardNavigationGestures
+        )
             .modifier(NodeAppearanceModifier(modifiers: modifiers))
             .disabled(modifiers.isDisabled)
     }
@@ -3278,7 +3558,7 @@ struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func asyncImageView(url: URL, placeholder: ViewNode?, modifiers: ViewModifiers) -> some View {
+    private func asyncImageView(url: URL, placeholder: ViewNode?, empty: ViewNode?, failure: ViewNode?, modifiers: ViewModifiers) -> some View {
         AsyncImage(url: url) { phase in
             switch phase {
             case let .success(image):
@@ -3291,14 +3571,18 @@ struct RenderNodeView: View {
                     image.scaledToFill()
                 }
             case .failure:
-                if let placeholder {
+                if let failure {
+                    RenderNodeView(node: failure, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                } else if let placeholder {
                     RenderNodeView(node: placeholder, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 } else {
                     Image(systemName: "photo")
                         .foregroundStyle(.secondary)
                 }
             case .empty:
-                if let placeholder {
+                if let empty {
+                    RenderNodeView(node: empty, onEvent: onEvent, customHostRegistry: customHostRegistry)
+                } else if let placeholder {
                     RenderNodeView(node: placeholder, onEvent: onEvent, customHostRegistry: customHostRegistry)
                 } else {
                     ProgressView()
@@ -3308,6 +3592,76 @@ struct RenderNodeView: View {
             }
         }
         .modifier(NodeAppearanceModifier(modifiers: modifiers))
+    }
+
+    private func mapView(
+        latitude: Double,
+        longitude: Double,
+        latitudeDelta: Double,
+        longitudeDelta: Double,
+        markers: [MapMarkerValue],
+        modifiers: ViewModifiers
+    ) -> some View {
+        let center = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        let region = MKCoordinateRegion(
+            center: center,
+            span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
+        )
+
+        return Map(initialPosition: .region(region)) {
+            ForEach(Array(markers.enumerated()), id: \.offset) { entry in
+                let marker = entry.element
+                let coordinate = CLLocationCoordinate2D(latitude: marker.latitude, longitude: marker.longitude)
+                if let systemName = marker.systemName {
+                    Marker(marker.title, systemImage: systemName, coordinate: coordinate)
+                } else {
+                    Marker(marker.title, coordinate: coordinate)
+                }
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+    }
+
+    @ViewBuilder
+    private func chartView(data: [ChartPointValue], mark: ChartMarkKind, modifiers: ViewModifiers) -> some View {
+        Chart(data) { point in
+            switch mark {
+            case .bar:
+                if let series = point.series {
+                    BarMark(x: .value("Label", point.label), y: .value("Value", point.value))
+                        .foregroundStyle(by: .value("Series", series))
+                } else {
+                    BarMark(x: .value("Label", point.label), y: .value("Value", point.value))
+                }
+            case .line:
+                if let series = point.series {
+                    LineMark(x: .value("Label", point.label), y: .value("Value", point.value))
+                        .foregroundStyle(by: .value("Series", series))
+                } else {
+                    LineMark(x: .value("Label", point.label), y: .value("Value", point.value))
+                }
+            case .point:
+                if let series = point.series {
+                    PointMark(x: .value("Label", point.label), y: .value("Value", point.value))
+                        .foregroundStyle(by: .value("Series", series))
+                } else {
+                    PointMark(x: .value("Label", point.label), y: .value("Value", point.value))
+                }
+            case .area:
+                if let series = point.series {
+                    AreaMark(x: .value("Label", point.label), y: .value("Value", point.value))
+                        .foregroundStyle(by: .value("Series", series))
+                } else {
+                    AreaMark(x: .value("Label", point.label), y: .value("Value", point.value))
+                }
+            }
+        }
+        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+    }
+
+    private func videoPlayerView(url: URL, modifiers: ViewModifiers) -> some View {
+        VideoPlayer(player: AVPlayer(url: url))
+            .modifier(NodeAppearanceModifier(modifiers: modifiers))
     }
 
     @ViewBuilder
@@ -3320,8 +3674,16 @@ struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func forEachView(children: [ViewNode], moveEvent: SurfaceEvent?) -> some View {
-        movableContent(children: children, moveEvent: moveEvent)
+    private func forEachView(children: [ViewNode], moveEvent: SurfaceEvent?, deleteEvent: SurfaceEvent?) -> some View {
+        editableContent(children: children, moveEvent: moveEvent, deleteEvent: deleteEvent)
+    }
+
+    private func glassEffectContainerView(spacing: Double, children: [ViewNode]) -> some View {
+        GlassEffectContainer(spacing: spacing) {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+        }
     }
 
     @ViewBuilder
@@ -3353,8 +3715,28 @@ struct RenderNodeView: View {
     }
 
     @ViewBuilder
-    private func movableContent(children: [ViewNode], moveEvent: SurfaceEvent?) -> some View {
-        if let moveEvent {
+    private func editableContent(children: [ViewNode], moveEvent: SurfaceEvent?, deleteEvent: SurfaceEvent?) -> some View {
+        if let moveEvent, let deleteEvent {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+            .onDelete { offsets in
+                let payload = DeleteActionValue(offsets: Array(offsets))
+                onEvent(SurfaceEvent(deleteEvent.name, payloadJSON: payload.payloadJSON))
+            }
+            .onMove { fromOffsets, toOffset in
+                let payload = MoveActionValue(fromOffsets: Array(fromOffsets), toOffset: toOffset)
+                onEvent(SurfaceEvent(moveEvent.name, payloadJSON: payload.payloadJSON))
+            }
+        } else if let deleteEvent {
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+            .onDelete { offsets in
+                let payload = DeleteActionValue(offsets: Array(offsets))
+                onEvent(SurfaceEvent(deleteEvent.name, payloadJSON: payload.payloadJSON))
+            }
+        } else if let moveEvent {
             ForEach(children) { child in
                 RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
             }
@@ -4505,6 +4887,8 @@ final class HostNode: Decodable {
     let accessibilityLabel: String?
     let accessibilityHint: String?
     let accessibilityValue: String?
+    let accessibilityAddTraits: [AccessibilityTraitKind]?
+    let accessibilityRemoveTraits: [AccessibilityTraitKind]?
     let distribution: StackDistribution?
     let axis: AxisKind?
     let spacing: Double?
@@ -4538,11 +4922,18 @@ final class HostNode: Decodable {
     let buttonBorderShape: ButtonBorderShape?
     let buttonSizing: ButtonSizingKind?
     let contentShape: ContentShapeKind?
+    let clipShape: ShapeValue?
     let isDisabled: Bool?
     let moveDisabled: Bool?
     let glassEffect: Bool?
     let glassVariant: GlassVariantKind?
     let glassTint: String?
+    let glassShape: ShapeValue?
+    let glassInteractive: Bool?
+    let glassID: String?
+    let glassUnionID: String?
+    let scrollEdgeEffectStyle: ScrollEdgeEffectStyleKind?
+    let scrollEdgeEffectEdge: EdgeKind?
     let editMode: EditModeKind?
     let editModeEvent: String?
     let navigationTitle: String?
@@ -4557,6 +4948,7 @@ final class HostNode: Decodable {
     let searchableEvent: String?
     let searchableIsPresented: Bool?
     let searchablePresentationEvent: String?
+    let searchableSubmitEvent: String?
     let searchSuggestionsContent: [HostNode]?
     let searchScopesSelection: PickerSelectionValue?
     let searchScopesEvent: String?
@@ -4579,6 +4971,10 @@ final class HostNode: Decodable {
     let submitEvent: String?
     let sensoryFeedback: SensoryFeedbackKind?
     let sensoryFeedbackTrigger: CustomHostValue?
+    let sensoryFeedbackWeight: SensoryFeedbackWeightKind?
+    let sensoryFeedbackFlexibility: SensoryFeedbackFlexibilityKind?
+    let sensoryFeedbackIntensity: Double?
+    let sensoryFeedbackIsEnabled: Bool?
     let scrollContentBackground: VisibilityKind?
     let listRowSeparator: VisibilityKind?
     let listSectionSeparator: VisibilityKind?
@@ -4623,6 +5019,7 @@ final class HostNode: Decodable {
     let role: ButtonRoleKind?
     let onAppearEvent: String?
     let value: String?
+    let textSegments: [TextSegmentValue]?
     let prompt: String?
     let textContentType: TextContentTypeKind?
     let systemName: String?
@@ -4633,6 +5030,8 @@ final class HostNode: Decodable {
     let description: HostNode?
     let label: HostNode?
     let placeholder: HostNode?
+    let empty: HostNode?
+    let failure: HostNode?
     let currentValueLabel: HostNode?
     let event: String?
     let onDismiss: String?
@@ -4674,6 +5073,18 @@ final class HostNode: Decodable {
     let endAngle: Double?
     let destinationURL: String?
     let url: String?
+    let html: String?
+    let baseURL: String?
+    let webJavaScriptEnabled: Bool?
+    let webAllowsBackForwardNavigationGestures: Bool?
+    let latitude: Double?
+    let longitude: Double?
+    let latitudeDelta: Double?
+    let longitudeDelta: Double?
+    let mapMarkers: [MapMarkerValue]?
+    let chartData: [ChartPointValue]?
+    let chartMark: ChartMarkKind?
+    let deleteEvent: String?
     let shareItem: HostShareItem?
     let shareItems: [HostShareItem]?
     let shareSubject: String?
@@ -4791,6 +5202,14 @@ final class HostNode: Decodable {
             return .forEach(
                 id: NodeID(id),
                 moveEvent: moveEvent.map { SurfaceEvent($0) },
+                deleteEvent: deleteEvent.map { SurfaceEvent($0) },
+                modifiers: modifiers,
+                children: try mapChildren()
+            )
+        case .glassEffectContainer:
+            return .glassEffectContainer(
+                id: NodeID(id),
+                spacing: spacing ?? 16,
                 modifiers: modifiers,
                 children: try mapChildren()
             )
@@ -4846,9 +5265,19 @@ final class HostNode: Decodable {
                 children: try mapChildren()
             )
         case .webView:
+            let parsedURL = try makeOptionalURL(url, name: "url")
+            let parsedBaseURL = try makeOptionalURL(baseURL, name: "baseURL")
+            if parsedURL == nil, html == nil {
+                throw JSSurfaceError.invalidTree("WebView node '\(id)' is missing url or html")
+            }
+
             return .webView(
                 id: NodeID(id),
-                url: try makeURL(url, name: "url"),
+                url: parsedURL,
+                html: html,
+                baseURL: parsedBaseURL,
+                javaScriptEnabled: webJavaScriptEnabled ?? true,
+                allowsBackForwardNavigationGestures: webAllowsBackForwardNavigationGestures ?? false,
                 modifiers: modifiers
             )
         case .sheet:
@@ -4929,6 +5358,7 @@ final class HostNode: Decodable {
             return .text(
                 id: NodeID(id),
                 value: value,
+                segments: textSegments ?? [],
                 modifiers: modifiers
             )
         case .label:
@@ -5002,6 +5432,39 @@ final class HostNode: Decodable {
                 id: NodeID(id),
                 url: try makeURL(url, name: "url"),
                 placeholder: try placeholder?.makeViewNode(),
+                empty: try empty?.makeViewNode(),
+                failure: try failure?.makeViewNode(),
+                modifiers: modifiers
+            )
+        case .map:
+            guard let latitude, let longitude else {
+                throw JSSurfaceError.invalidTree("Map node '\(id)' is missing latitude or longitude")
+            }
+
+            return .map(
+                id: NodeID(id),
+                latitude: latitude,
+                longitude: longitude,
+                latitudeDelta: latitudeDelta ?? 0.01,
+                longitudeDelta: longitudeDelta ?? 0.01,
+                markers: mapMarkers ?? [],
+                modifiers: modifiers
+            )
+        case .chart:
+            guard let chartData, !chartData.isEmpty else {
+                throw JSSurfaceError.invalidTree("Chart node '\(id)' is missing data")
+            }
+
+            return .chart(
+                id: NodeID(id),
+                data: chartData,
+                mark: chartMark ?? .bar,
+                modifiers: modifiers
+            )
+        case .videoPlayer:
+            return .videoPlayer(
+                id: NodeID(id),
+                url: try makeURL(url, name: "url"),
                 modifiers: modifiers
             )
         case .rectangle:
@@ -5355,6 +5818,8 @@ final class HostNode: Decodable {
             accessibilityLabel: accessibilityLabel,
             accessibilityHint: accessibilityHint,
             accessibilityValue: accessibilityValue,
+            accessibilityAddTraits: accessibilityAddTraits ?? [],
+            accessibilityRemoveTraits: accessibilityRemoveTraits ?? [],
             padding: padding,
             paddingTop: paddingTop,
             frameMinWidth: frameMinWidth,
@@ -5379,11 +5844,18 @@ final class HostNode: Decodable {
             buttonBorderShape: buttonBorderShape,
             buttonSizing: buttonSizing,
             contentShape: contentShape,
+            clipShape: clipShape,
             isDisabled: isDisabled ?? false,
             moveDisabled: moveDisabled ?? false,
             glassEffect: glassEffect ?? false,
             glassVariant: glassVariant ?? .regular,
             glassTint: glassTint,
+            glassShape: glassShape,
+            glassInteractive: glassInteractive ?? false,
+            glassID: glassID,
+            glassUnionID: glassUnionID,
+            scrollEdgeEffectStyle: scrollEdgeEffectStyle,
+            scrollEdgeEffectEdge: scrollEdgeEffectEdge ?? .top,
             editMode: editMode,
             editModeEvent: editModeEvent.map { SurfaceEvent($0) },
             navigationTitle: navigationTitle,
@@ -5506,7 +5978,8 @@ final class HostNode: Decodable {
             ),
             isPresented: searchableIsPresented,
             event: SurfaceEvent(searchableEvent),
-            presentationEvent: searchablePresentationEvent.map { SurfaceEvent($0) }
+            presentationEvent: searchablePresentationEvent.map { SurfaceEvent($0) },
+            submitEvent: searchableSubmitEvent.map { SurfaceEvent($0) }
         )
     }
 
@@ -5562,7 +6035,14 @@ final class HostNode: Decodable {
             throw JSSurfaceError.invalidTree("Node '\(id)' has sensoryFeedback without a trigger")
         }
 
-        return SensoryFeedbackValue(feedback: sensoryFeedback, trigger: sensoryFeedbackTrigger)
+        return SensoryFeedbackValue(
+            feedback: sensoryFeedback,
+            trigger: sensoryFeedbackTrigger,
+            weight: sensoryFeedbackWeight,
+            flexibility: sensoryFeedbackFlexibility,
+            intensity: sensoryFeedbackIntensity,
+            isEnabled: sensoryFeedbackIsEnabled ?? true
+        )
     }
 
     private func makeTabRole() throws -> TabRoleKind? {
@@ -5695,6 +6175,15 @@ final class HostNode: Decodable {
         return url
     }
 
+    private func makeOptionalURL(_ value: String?, name: String) throws -> URL? {
+        guard let value else { return nil }
+        guard let url = URL(string: value), url.scheme != nil else {
+            throw JSSurfaceError.invalidTree("\(type.rawValue) node '\(id)' has an invalid \(name) URL")
+        }
+
+        return url
+    }
+
     private func makeShareItems() throws -> [ShareItemValue] {
         if shareItem != nil, shareItems != nil {
             throw JSSurfaceError.invalidTree("ShareLink node '\(id)' cannot define both item and items")
@@ -5763,6 +6252,7 @@ enum HostComponentType: String, Decodable {
     case custom = "Custom"
     case customLayout = "CustomLayout"
     case forEach = "ForEach"
+    case glassEffectContainer = "GlassEffectContainer"
     case list = "List"
     case form = "Form"
     case section = "Section"
@@ -5782,6 +6272,9 @@ enum HostComponentType: String, Decodable {
     case progressView = "ProgressView"
     case image = "Image"
     case asyncImage = "AsyncImage"
+    case map = "Map"
+    case chart = "Chart"
+    case videoPlayer = "VideoPlayer"
     case rectangle = "Rectangle"
     case roundedRectangle = "RoundedRectangle"
     case circle = "Circle"
@@ -5809,27 +6302,48 @@ enum HostComponentType: String, Decodable {
 }
 
 private struct SwiftJSWebView: UIViewRepresentable {
-    let url: URL
+    let url: URL?
+    let html: String?
+    let baseURL: URL?
+    let javaScriptEnabled: Bool
+    let allowsBackForwardNavigationGestures: Bool
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView(frame: .zero)
-        context.coordinator.loadedURL = url
-        webView.load(URLRequest(url: url))
+        let configuration = WKWebViewConfiguration()
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = javaScriptEnabled
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.allowsBackForwardNavigationGestures = allowsBackForwardNavigationGestures
+        load(webView, coordinator: context.coordinator)
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        guard context.coordinator.loadedURL != url else { return }
-        context.coordinator.loadedURL = url
-        webView.load(URLRequest(url: url))
+        webView.allowsBackForwardNavigationGestures = allowsBackForwardNavigationGestures
+        guard context.coordinator.loadedURL != url ||
+            context.coordinator.loadedHTML != html ||
+            context.coordinator.loadedBaseURL != baseURL else { return }
+        load(webView, coordinator: context.coordinator)
+    }
+
+    private func load(_ webView: WKWebView, coordinator: Coordinator) {
+        coordinator.loadedURL = url
+        coordinator.loadedHTML = html
+        coordinator.loadedBaseURL = baseURL
+        if let url {
+            webView.load(URLRequest(url: url))
+        } else {
+            webView.loadHTMLString(html ?? "", baseURL: baseURL)
+        }
     }
 
     final class Coordinator {
         var loadedURL: URL?
+        var loadedHTML: String?
+        var loadedBaseURL: URL?
     }
 }
 

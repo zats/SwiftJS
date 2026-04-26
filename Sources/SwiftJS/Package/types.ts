@@ -683,6 +683,7 @@ export type ViewProps = {
   buttonBorderShape?: ButtonBorderShape
   buttonSizing?: ButtonSizing
   contentShape?: ContentShapeValue
+  clipShape?: ShapeValue
   disabled?: boolean
   moveDisabled?: boolean
   glassEffect?: GlassEffectValue
@@ -1072,6 +1073,11 @@ export type ChartProps = ViewProps & {
 /** Props for `VideoPlayer`. */
 export type VideoPlayerProps = ViewProps & {
   url: string
+}
+
+/** Props for `GlassEffectContainer`. */
+export type GlassEffectContainerProps = ViewProps & {
+  spacing?: number
 }
 
 /** Props for `Label`. */

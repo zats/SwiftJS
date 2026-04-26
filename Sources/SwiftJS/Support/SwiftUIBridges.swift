@@ -254,6 +254,66 @@ extension ViewModifiers {
     }
 }
 
+extension FontWeight {
+    var swiftUIFontWeight: SwiftUI.Font.Weight {
+        switch self {
+        case .ultraLight:
+            return .ultraLight
+        case .thin:
+            return .thin
+        case .light:
+            return .light
+        case .regular:
+            return .regular
+        case .medium:
+            return .medium
+        case .semibold:
+            return .semibold
+        case .bold:
+            return .bold
+        case .heavy:
+            return .heavy
+        case .black:
+            return .black
+        }
+    }
+}
+
+func swiftUIFont(style: TextStyle?, size: Double?) -> Font? {
+    if let size {
+        return .system(size: size)
+    }
+
+    guard let style else {
+        return nil
+    }
+
+    switch style {
+    case .largeTitle:
+        return .largeTitle
+    case .title:
+        return .title
+    case .title2:
+        return .title2
+    case .title3:
+        return .title3
+    case .headline:
+        return .headline
+    case .subheadline:
+        return .subheadline
+    case .body:
+        return .body
+    case .callout:
+        return .callout
+    case .caption:
+        return .caption
+    case .caption2:
+        return .caption2
+    case .footnote:
+        return .footnote
+    }
+}
+
 extension ToolbarSpacerSizingKind {
     var swiftUISpacerSizing: SpacerSizing {
         switch self {
@@ -266,7 +326,7 @@ extension ToolbarSpacerSizingKind {
 }
 
 extension SensoryFeedbackKind {
-    var swiftUISensoryFeedback: SensoryFeedback {
+    func swiftUISensoryFeedback(weight: SensoryFeedbackWeightKind?, flexibility: SensoryFeedbackFlexibilityKind?, intensity: Double?) -> SensoryFeedback {
         switch self {
         case .selection:
             return .selection
@@ -289,7 +349,45 @@ extension SensoryFeedbackKind {
         case .levelChange:
             return .levelChange
         case .impact:
+            if let weight {
+                if let intensity {
+                    return .impact(weight: weight.swiftUIWeight, intensity: intensity)
+                }
+                return .impact(weight: weight.swiftUIWeight)
+            }
+            if let flexibility {
+                if let intensity {
+                    return .impact(flexibility: flexibility.swiftUIFlexibility, intensity: intensity)
+                }
+                return .impact(flexibility: flexibility.swiftUIFlexibility)
+            }
             return .impact
+        }
+    }
+}
+
+extension SensoryFeedbackWeightKind {
+    var swiftUIWeight: SensoryFeedback.Weight {
+        switch self {
+        case .light:
+            return .light
+        case .medium:
+            return .medium
+        case .heavy:
+            return .heavy
+        }
+    }
+}
+
+extension SensoryFeedbackFlexibilityKind {
+    var swiftUIFlexibility: SensoryFeedback.Flexibility {
+        switch self {
+        case .soft:
+            return .soft
+        case .solid:
+            return .solid
+        case .rigid:
+            return .rigid
         }
     }
 }
@@ -436,20 +534,75 @@ private func makeGradient(colors: [String]?, stops: [GradientStopValue]?) -> Gra
 }
 
 func glassValue(for modifiers: ViewModifiers) -> SwiftUI.Glass {
+    let glass: SwiftUI.Glass
     if let tint = modifiers.glassTint.flatMap(Color.named(_:)) {
         switch modifiers.glassVariant {
         case .clear:
-            return .clear.tint(tint)
+            glass = .clear.tint(tint)
         case .regular:
-            return .regular.tint(tint)
+            glass = .regular.tint(tint)
+        }
+    } else {
+        switch modifiers.glassVariant {
+        case .clear:
+            glass = .clear
+        case .regular:
+            glass = .regular
         }
     }
 
-    switch modifiers.glassVariant {
-    case .clear:
-        return .clear
-    case .regular:
-        return .regular
+    return modifiers.glassInteractive ? glass.interactive() : glass
+}
+
+extension ScrollEdgeEffectStyleKind {
+    var swiftUIScrollEdgeEffectStyle: ScrollEdgeEffectStyle {
+        switch self {
+        case .automatic:
+            return .automatic
+        case .hard:
+            return .hard
+        case .soft:
+            return .soft
+        }
+    }
+}
+
+extension AccessibilityTraits {
+    init?(_ traits: [AccessibilityTraitKind]) {
+        guard !traits.isEmpty else {
+            return nil
+        }
+
+        self = traits.reduce(into: AccessibilityTraits()) { partialResult, trait in
+            _ = partialResult.insert(trait.swiftUIAccessibilityTraits)
+        }
+    }
+}
+
+extension AccessibilityTraitKind {
+    var swiftUIAccessibilityTraits: AccessibilityTraits {
+        switch self {
+        case .button:
+            return .isButton
+        case .link:
+            return .isLink
+        case .header:
+            return .isHeader
+        case .selected:
+            return .isSelected
+        case .image:
+            return .isImage
+        case .staticText:
+            return .isStaticText
+        case .summaryElement:
+            return .isSummaryElement
+        case .updatesFrequently:
+            return .updatesFrequently
+        case .searchField:
+            return .isSearchField
+        case .isModal:
+            return .isModal
+        }
     }
 }
 
@@ -507,6 +660,19 @@ extension EdgeInsetsValue {
 
 extension EdgeKind {
     var swiftUIEdge: Edge {
+        switch self {
+        case .top:
+            return .top
+        case .bottom:
+            return .bottom
+        case .leading:
+            return .leading
+        case .trailing:
+            return .trailing
+        }
+    }
+
+    var swiftUIEdgeSet: Edge.Set {
         switch self {
         case .top:
             return .top

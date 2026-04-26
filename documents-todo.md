@@ -34,21 +34,21 @@ API-faithfulness cleanup remains before this surface should be considered settle
 - [x] `List` and `ForEach`: support data-driven builders so docs can stay close to `List(items) { ... }` and `ForEach(items) { ... }`.
 - [x] `Toolbar`: expose `ToolbarItem`, `ToolbarItemGroup`, and `ToolbarSpacer` helpers instead of requiring raw object literals.
 - [x] Search: support `searchable(..., isPresented:)`.
-- [ ] Search: evaluate `isSearching`, `dismissSearch`, and search submit parity.
+- [x] Search: add search submit; use the existing `isPresented` binding for active/dismiss state.
 - [x] Presentations: support item-driven `Sheet` and `FullScreenCover` content builders.
 - [x] Liquid Glass: add `buttonSizing`.
-- [ ] Liquid Glass: expand `glassEffect` with shape/interactive/container/id/union APIs and `scrollEdgeEffectStyle`.
-- [ ] Web: expand or intentionally scope `WebView` beyond `url` before converting the WebView docs.
-- [ ] Media/maps/charts: add or intentionally scope `Map`, `Chart`, and `VideoPlayer`.
-- [ ] Image: evaluate SwiftUI-shaped `AsyncImage` content/phase builders and shape clipping names.
+- [x] Liquid Glass: expand `glassEffect` with shape/interactive/container/id/union APIs and `scrollEdgeEffectStyle`.
+- [x] Web: expand `WebView` beyond `url` before converting the WebView docs.
+- [x] Media/maps/charts: add `Map`, `Chart`, and `VideoPlayer`.
+- [x] Image: add `AsyncImage` empty/failure phase slots and SwiftUI-shaped clipping names.
 - [x] Accessibility: add hint, value, and content-shape coverage used by the docs.
-- [ ] Accessibility: add traits coverage used by the docs.
+- [x] Accessibility: add traits coverage used by the docs.
 - [x] Typography: add line spacing.
-- [ ] Typography: decide how to express formatted/concatenated text in TSX.
+- [x] Typography: express formatted/concatenated text as `Text` segments in TSX.
 - [x] Color/materials: add `systemBackground`, material shape styles, and `tint` foreground style support.
 - [x] Text input: add text content type coverage for email/password/code flows.
-- [ ] Edit/list actions: add delete actions and improve edit-mode ergonomics where docs need them.
-- [ ] Haptics: evaluate conditional and parameterized sensory feedback.
+- [x] Edit/list actions: add delete actions and improve edit-mode ergonomics where docs need them.
+- [x] Haptics: add conditional and parameterized sensory feedback.
 
 ## SwiftUI SDK Coverage
 

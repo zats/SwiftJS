@@ -6,6 +6,7 @@ import type {
   BadgeValue,
   ButtonRole,
   ButtonProps,
+  ChartProps,
   ConfirmationDialogValue,
   ContentShapeValue,
   ContextMenuValue,
@@ -24,6 +25,7 @@ import type {
   DateValue,
   DialogActionRole,
   DialogActionValue,
+  DeleteAction,
   DividerProps,
   DropDestinationValue,
   DropLocationValue,
@@ -39,6 +41,7 @@ import type {
   ForEachProps,
   FormProps,
   FullScreenCoverProps,
+  GlassEffectContainerProps,
   IgnoresSafeAreaValue,
   GeometryReaderProps,
   GridProps,
@@ -73,6 +76,7 @@ import type {
   RoundedRectangleProps,
   SafeAreaInsetValue,
   SafeAreaPaddingValue,
+  MapProps,
   ScrollViewProps,
   SecureFieldProps,
   SectionProps,
@@ -109,6 +113,7 @@ import type {
   TruncationMode,
   VisibilityKind,
   ViewThatFitsProps,
+  VideoPlayerProps,
   WebViewProps,
 } from "./types"
 
@@ -126,6 +131,9 @@ export type {
   ButtonProps,
   ButtonStyle,
   CapsuleProps,
+  ChartMarkKind,
+  ChartPointValue,
+  ChartProps,
   CircleProps,
   ColorValue,
   HexColorValue,
@@ -147,6 +155,7 @@ export type {
   DatePickerProps,
   DatePickerRange,
   DateValue,
+  DeleteAction,
   DividerProps,
   DropDestinationValue,
   DropLocationValue,
@@ -165,6 +174,7 @@ export type {
   FormProps,
   FrameValue,
   FullScreenCoverProps,
+  GlassEffectContainerProps,
   GeometryProxy,
   GeometryReaderProps,
   GlassEffectValue,
@@ -191,6 +201,8 @@ export type {
   ListSelectionValue,
   MenuProps,
   MaterialValue,
+  MapMarkerValue,
+  MapProps,
   MoveAction,
   NavigationLinkProps,
   NavigationBarTitleDisplayMode,
@@ -214,14 +226,19 @@ export type {
   SafeAreaPaddingValue,
   ScrollViewProps,
   SearchableValue,
+  ScrollEdgeEffectStyleValue,
+  ScrollEdgeEffectValue,
   SecureFieldProps,
   SectionProps,
   SensoryFeedbackKind,
+  SensoryFeedbackFlexibility,
+  SensoryFeedbackWeight,
   SensoryFeedbackValue,
   ShareLinkProps,
   ShareItemValue,
   ShapeProps,
   ShapeStyleValue,
+  ShapeValue,
   SheetProps,
   SpacerProps,
   StackDistribution,
@@ -244,6 +261,7 @@ export type {
   TextEditorProps,
   TextFieldProps,
   TextProps,
+  TextSegmentValue,
   TransferItemValue,
   ToggleProps,
   ToolbarItemContentValue,
@@ -257,6 +275,7 @@ export type {
   VisibilityKind,
   ViewProps,
   ViewThatFitsProps,
+  VideoPlayerProps,
   WebViewProps,
 } from "./types"
 
@@ -663,6 +682,14 @@ export function ForEach<Item = unknown>(props: ForEachProps<Item>) {
   })
 }
 /**
+ * Groups related custom Liquid Glass effects.
+ *
+ * <GlassEffectContainer spacing={24}>
+ *   <Image systemName="plus" glassEffect={{ shape: "circle" }} />
+ * </GlassEffectContainer>
+ */
+export const GlassEffectContainer = hostComponent<GlassEffectContainerProps>("GlassEffectContainer")
+/**
  * Groups list or form content under an optional header and footer.
  * `title` remains shorthand for a text header when `header` is omitted.
  *
@@ -714,6 +741,7 @@ export const Link = hostComponent<LinkProps>("Link")
  * This is not a SwiftUI-parity control.
  *
  * <WebView url="https://example.com" />
+ * <WebView html="<article>Local preview</article>" baseURL="https://example.com" />
  */
 export const WebView = hostComponent<WebViewProps>("WebView")
 /**
@@ -858,6 +886,24 @@ export const Image = hostComponent<ImageProps>("Image")
  * <AsyncImage url={profile.photoURL} imageContentMode="fill" />
  */
 export const AsyncImage = hostComponent<AsyncImageProps>("AsyncImage")
+/**
+ * Displays a native MapKit map centered on a coordinate.
+ *
+ * <Map latitude={37.3349} longitude={-122.009} markers={[{ title: "Apple Park", latitude: 37.3349, longitude: -122.009 }]} />
+ */
+export const Map = hostComponent<MapProps>("Map")
+/**
+ * Displays a native Swift Charts chart for simple labeled values.
+ *
+ * <Chart data={[{ label: "Mon", value: 12 }, { label: "Tue", value: 18 }]} mark="bar" />
+ */
+export const Chart = hostComponent<ChartProps>("Chart")
+/**
+ * Displays native AVKit video playback for a remote or local URL.
+ *
+ * <VideoPlayer url="https://example.com/clip.mp4" />
+ */
+export const VideoPlayer = hostComponent<VideoPlayerProps>("VideoPlayer")
 /**
  * Draws a rectangular fill or stroke.
  *

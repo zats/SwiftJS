@@ -123,7 +123,7 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(OptionalSafeAreaPaddingModifier(length: modifiers.safeAreaPaddingLength, edges: modifiers.safeAreaPaddingEdges.swiftUIEdgeSet))
             .modifier(OptionalIgnoresSafeAreaModifier(isEnabled: modifiers.ignoresSafeArea, edges: modifiers.ignoresSafeAreaEdges.swiftUIEdgeSet))
             .modifier(OptionalBackgroundModifier(style: modifiers.backgroundShapeStyle))
-            .modifier(OptionalClipModifier(cornerRadius: modifiers.cornerRadius, imageContentMode: modifiers.imageContentMode))
+            .modifier(OptionalClipModifier(shape: modifiers.clipShape, cornerRadius: modifiers.cornerRadius, imageContentMode: modifiers.imageContentMode))
             .modifier(OptionalGlassEffectModifier(modifiers: modifiers))
             .modifier(OptionalTintModifier(tint: modifiers.tint.flatMap(Color.named(_:))))
             .modifier(OptionalBadgeModifier(badge: modifiers.badge))
@@ -160,9 +160,11 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(OptionalAccessibilityLabelModifier(label: modifiers.accessibilityLabel))
             .modifier(OptionalAccessibilityHintModifier(hint: modifiers.accessibilityHint))
             .modifier(OptionalAccessibilityValueModifier(value: modifiers.accessibilityValue))
+            .modifier(OptionalAccessibilityTraitsModifier(addTraits: modifiers.accessibilityAddTraits, removeTraits: modifiers.accessibilityRemoveTraits))
             .modifier(OptionalTagModifier(tag: modifiers.tag))
             .modifier(OptionalButtonSizingModifier(sizing: modifiers.buttonSizing))
             .modifier(OptionalContentShapeModifier(shape: modifiers.contentShape))
+            .modifier(OptionalScrollEdgeEffectStyleModifier(style: modifiers.scrollEdgeEffectStyle, edge: modifiers.scrollEdgeEffectEdge))
             .modifier(OptionalSearchCompletionModifier(completion: modifiers.searchCompletion))
             .modifier(OptionalEditModeModifier(editMode: modifiers.editMode, event: modifiers.editModeEvent, onEvent: onEvent))
             .modifier(OptionalIdentityModifier(viewIdentity: modifiers.viewIdentity))
@@ -256,6 +258,44 @@ struct OptionalAccessibilityValueModifier: ViewModifier {
     }
 }
 
+struct OptionalAccessibilityTraitsModifier: ViewModifier {
+    let addTraits: [AccessibilityTraitKind]
+    let removeTraits: [AccessibilityTraitKind]
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        content
+            .modifier(OptionalAccessibilityAddTraitsModifier(traits: addTraits))
+            .modifier(OptionalAccessibilityRemoveTraitsModifier(traits: removeTraits))
+    }
+}
+
+struct OptionalAccessibilityAddTraitsModifier: ViewModifier {
+    let traits: [AccessibilityTraitKind]
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let swiftUITraits = AccessibilityTraits(traits) {
+            content.accessibilityAddTraits(swiftUITraits)
+        } else {
+            content
+        }
+    }
+}
+
+struct OptionalAccessibilityRemoveTraitsModifier: ViewModifier {
+    let traits: [AccessibilityTraitKind]
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let swiftUITraits = AccessibilityTraits(traits) {
+            content.accessibilityRemoveTraits(swiftUITraits)
+        } else {
+            content
+        }
+    }
+}
+
 struct OptionalTagModifier: ViewModifier {
     let tag: PickerSelectionValue?
 
@@ -290,14 +330,34 @@ struct OptionalContentShapeModifier: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        switch shape {
-        case .rectangle:
-            content.contentShape(Rectangle())
+        switch shape?.kind {
+        case .rectangle, .rect:
+            if let cornerRadius = shape?.cornerRadius {
+                content.contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            } else {
+                content.contentShape(Rectangle())
+            }
+        case .roundedRectangle:
+            content.contentShape(RoundedRectangle(cornerRadius: shape?.cornerRadius ?? 0, style: .continuous))
         case .circle:
             content.contentShape(Circle())
         case .capsule:
             content.contentShape(Capsule())
         case nil:
+            content
+        }
+    }
+}
+
+struct OptionalScrollEdgeEffectStyleModifier: ViewModifier {
+    let style: ScrollEdgeEffectStyleKind?
+    let edge: EdgeKind
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let style {
+            content.scrollEdgeEffectStyle(style.swiftUIScrollEdgeEffectStyle, for: edge.swiftUIEdgeSet)
+        } else {
             content
         }
     }
@@ -417,28 +477,106 @@ struct OptionalBackgroundModifier: ViewModifier {
 }
 
 struct OptionalClipModifier: ViewModifier {
+    let shape: ShapeValue?
     let cornerRadius: Double?
     let imageContentMode: ImageContentMode?
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if let cornerRadius {
+        switch shape?.kind {
+        case .rectangle:
+            content.clipShape(Rectangle())
+        case .rect:
+            content.clipShape(RoundedRectangle(cornerRadius: shape?.cornerRadius ?? 0, style: .continuous))
+        case .roundedRectangle:
+            content.clipShape(RoundedRectangle(cornerRadius: shape?.cornerRadius ?? 0, style: .continuous))
+        case .circle:
+            content.clipShape(Circle())
+        case .capsule:
+            content.clipShape(Capsule())
+        case nil:
+            if let cornerRadius {
             content.clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        } else if imageContentMode == .fill {
-            content.clipped()
-        } else {
-            content
+            } else if imageContentMode == .fill {
+                content.clipped()
+            } else {
+                content
+            }
         }
     }
 }
 
 struct OptionalGlassEffectModifier: ViewModifier {
     let modifiers: ViewModifiers
+    @Namespace private var namespace
 
     @ViewBuilder
     func body(content: Content) -> some View {
         if modifiers.glassEffect && !modifiers.usesGlassButtonStyle {
-            content.glassEffect(glassValue(for: modifiers))
+            let glass = glassValue(for: modifiers)
+            switch modifiers.glassShape?.kind {
+            case .circle:
+                content
+                    .glassEffect(glass, in: .circle)
+                    .modifier(OptionalGlassIdentityModifier(id: modifiers.glassID, unionID: modifiers.glassUnionID, namespace: namespace))
+            case .capsule:
+                content
+                    .glassEffect(glass, in: .capsule)
+                    .modifier(OptionalGlassIdentityModifier(id: modifiers.glassID, unionID: modifiers.glassUnionID, namespace: namespace))
+            case .rect, .rectangle:
+                content
+                    .glassEffect(glass, in: .rect(cornerRadius: modifiers.glassShape?.cornerRadius ?? 0))
+                    .modifier(OptionalGlassIdentityModifier(id: modifiers.glassID, unionID: modifiers.glassUnionID, namespace: namespace))
+            case .roundedRectangle:
+                content
+                    .glassEffect(glass, in: .rect(cornerRadius: modifiers.glassShape?.cornerRadius ?? 0))
+                    .modifier(OptionalGlassIdentityModifier(id: modifiers.glassID, unionID: modifiers.glassUnionID, namespace: namespace))
+            case nil:
+                content
+                    .glassEffect(glass)
+                    .modifier(OptionalGlassIdentityModifier(id: modifiers.glassID, unionID: modifiers.glassUnionID, namespace: namespace))
+            }
+        } else {
+            content
+        }
+    }
+}
+
+struct OptionalGlassIdentityModifier: ViewModifier {
+    let id: String?
+    let unionID: String?
+    let namespace: Namespace.ID
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        content
+            .modifier(OptionalGlassEffectIDModifier(id: id, namespace: namespace))
+            .modifier(OptionalGlassEffectUnionModifier(id: unionID, namespace: namespace))
+    }
+}
+
+struct OptionalGlassEffectIDModifier: ViewModifier {
+    let id: String?
+    let namespace: Namespace.ID
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let id {
+            content.glassEffectID(id, in: namespace)
+        } else {
+            content
+        }
+    }
+}
+
+struct OptionalGlassEffectUnionModifier: ViewModifier {
+    let id: String?
+    let namespace: Namespace.ID
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let id {
+            content.glassEffectUnion(id: id, namespace: namespace)
         } else {
             content
         }
@@ -601,8 +739,15 @@ struct OptionalSensoryFeedbackModifier: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if let value {
-            content.sensoryFeedback(value.feedback.swiftUISensoryFeedback, trigger: value.trigger)
+        if let value, value.isEnabled {
+            content.sensoryFeedback(
+                value.feedback.swiftUISensoryFeedback(
+                    weight: value.weight,
+                    flexibility: value.flexibility,
+                    intensity: value.intensity
+                ),
+                trigger: value.trigger
+            )
         } else {
             content
         }
@@ -634,12 +779,30 @@ struct OptionalSearchableModifier: ViewModifier {
                     placement: searchable.placement.swiftUISearchFieldPlacement,
                     prompt: searchable.prompt.map(Text.init)
                 )
+                .modifier(OptionalSearchSubmitModifier(event: searchable.submitEvent, onEvent: onEvent))
             } else {
                 content.searchable(
                     text: text,
                     placement: searchable.placement.swiftUISearchFieldPlacement,
                     prompt: searchable.prompt.map(Text.init)
                 )
+                .modifier(OptionalSearchSubmitModifier(event: searchable.submitEvent, onEvent: onEvent))
+            }
+        } else {
+            content
+        }
+    }
+}
+
+struct OptionalSearchSubmitModifier: ViewModifier {
+    let event: SurfaceEvent?
+    let onEvent: (SurfaceEvent) -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let event {
+            content.onSubmit(of: .search) {
+                onEvent(event)
             }
         } else {
             content

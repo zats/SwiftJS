@@ -322,6 +322,9 @@
         if (typeof props.onMove === "function") {
           node.moveEvent = registerHandler(props.onMove, id + ":move")
         }
+        if (typeof props.onDelete === "function") {
+          node.deleteEvent = registerHandler(props.onDelete, id + ":delete")
+        }
         node.children = hostChildren(children)
         return node
       case "Section":
@@ -377,11 +380,22 @@
         node.destinationURL = props.destination
         return node
       case "WebView":
-        if (typeof props.url !== "string" || props.url.length === 0) {
-          throw new Error("WebView requires a url string prop")
+        if (typeof props.url === "string" && props.url.length > 0) {
+          node.url = props.url
+        } else if (typeof props.html === "string") {
+          node.html = props.html
+          if (typeof props.baseURL === "string") {
+            node.baseURL = props.baseURL
+          }
+        } else {
+          throw new Error("WebView requires a url string prop or html string prop")
         }
-
-        node.url = props.url
+        if (typeof props.javaScriptEnabled === "boolean") {
+          node.webJavaScriptEnabled = props.javaScriptEnabled
+        }
+        if (typeof props.allowsBackForwardNavigationGestures === "boolean") {
+          node.webAllowsBackForwardNavigationGestures = props.allowsBackForwardNavigationGestures
+        }
         return node
       case "Sheet":
         if (typeof props.isPresented !== "boolean") {
@@ -453,7 +467,12 @@
       case "Spacer":
         return node
       case "Text":
-        node.value = textValue(props.children)
+        if (Array.isArray(props.segments)) {
+          node.textSegments = serializeTextSegments(props.segments, path + ".segments")
+          node.value = node.textSegments.map(function (segment) { return segment.text }).join("")
+        } else {
+          node.value = textValue(props.children)
+        }
         return node
       case "Label":
         if (typeof props.title !== "string") {
@@ -534,6 +553,35 @@
 
         node.url = props.url
         node.placeholder = serializeOptionalSlot(props.placeholder, path + ".placeholder")
+        node.empty = serializeOptionalSlot(props.empty, path + ".empty")
+        node.failure = serializeOptionalSlot(props.failure, path + ".failure")
+        return node
+      case "Map":
+        node.latitude = serializeFiniteNumber(props.latitude, "Map latitude")
+        node.longitude = serializeFiniteNumber(props.longitude, "Map longitude")
+        if (props.latitudeDelta !== undefined) {
+          node.latitudeDelta = serializeFiniteNumber(props.latitudeDelta, "Map latitudeDelta")
+        }
+        if (props.longitudeDelta !== undefined) {
+          node.longitudeDelta = serializeFiniteNumber(props.longitudeDelta, "Map longitudeDelta")
+        }
+        node.mapMarkers = serializeMapMarkers(props.markers, path + ".markers")
+        return node
+      case "Chart":
+        node.chartData = serializeChartData(props.data, path + ".data")
+        node.chartMark = serializeChartMark(props.mark, path + ".mark")
+        return node
+      case "VideoPlayer":
+        if (typeof props.url !== "string" || props.url.length === 0) {
+          throw new Error("VideoPlayer requires a url string prop")
+        }
+
+        node.url = props.url
+        return node
+      case "GlassEffectContainer":
+        if (props.spacing !== undefined) {
+          node.spacing = serializeFiniteNumber(props.spacing, "GlassEffectContainer spacing")
+        }
         return node
       case "Rectangle":
       case "Circle":
@@ -760,6 +808,9 @@
     if (typeof props.accessibilityValue === "string") {
       node.accessibilityValue = props.accessibilityValue
     }
+
+    node.accessibilityAddTraits = serializeAccessibilityTraits(props.accessibilityAddTraits, id + ".accessibilityAddTraits")
+    node.accessibilityRemoveTraits = serializeAccessibilityTraits(props.accessibilityRemoveTraits, id + ".accessibilityRemoveTraits")
 
     if (typeof props.alignment === "string") {
       node.alignment = props.alignment
@@ -1015,7 +1066,15 @@
     }
 
     if (typeof props.contentShape === "string") {
-      node.contentShape = serializeContentShape(props.contentShape, id + ".contentShape")
+      node.contentShape = serializeShape(props.contentShape, id + ".contentShape")
+    } else if (props.contentShape && typeof props.contentShape === "object") {
+      node.contentShape = serializeShape(props.contentShape, id + ".contentShape")
+    }
+
+    if (typeof props.clipShape === "string") {
+      node.clipShape = serializeShape(props.clipShape, id + ".clipShape")
+    } else if (props.clipShape && typeof props.clipShape === "object") {
+      node.clipShape = serializeShape(props.clipShape, id + ".clipShape")
     }
 
     if (props.disabled === true) {
@@ -1035,11 +1094,23 @@
     } else if (props.glassEffect && typeof props.glassEffect === "object") {
       node.glassEffect = true
       node.glassVariant = typeof props.glassEffect.variant === "string" ? props.glassEffect.variant : "regular"
+      if (props.glassEffect.interactive === true) {
+        node.glassInteractive = true
+      }
+      if (typeof props.glassEffect.id === "string") {
+        node.glassID = props.glassEffect.id
+      }
+      if (typeof props.glassEffect.unionID === "string") {
+        node.glassUnionID = props.glassEffect.unionID
+      }
+      node.glassShape = serializeShape(props.glassEffect.shape, id + ".glassEffect.shape")
 
       if (typeof props.glassEffect.tint === "string") {
         node.glassTint = props.glassEffect.tint
       }
     }
+
+    serializeScrollEdgeEffectStyle(node, props.scrollEdgeEffectStyle, id + ".scrollEdgeEffectStyle")
 
     if (props.editMode !== undefined) {
       node.editMode = serializeEditMode(props.editMode)
@@ -1346,12 +1417,121 @@
     throw new Error(path + " must be 'automatic' or 'flexible'")
   }
 
-  function serializeContentShape(value, path) {
+  function serializeShape(value, path) {
+    if (value === undefined || value === null) {
+      return undefined
+    }
+
     if (value === "rectangle" || value === "circle" || value === "capsule") {
+      return { kind: value }
+    }
+
+    if (value && typeof value === "object") {
+      if (value.rect && typeof value.rect === "object") {
+        const shape = { kind: "rect" }
+        if (typeof value.rect.cornerRadius === "number") {
+          shape.cornerRadius = value.rect.cornerRadius
+        }
+        return shape
+      }
+
+      if (value.roundedRectangle && typeof value.roundedRectangle === "object") {
+        if (typeof value.roundedRectangle.cornerRadius !== "number") {
+          throw new Error(path + ".roundedRectangle.cornerRadius must be a number")
+        }
+        return { kind: "roundedRectangle", cornerRadius: value.roundedRectangle.cornerRadius }
+      }
+    }
+
+    throw new Error(path + " must be a SwiftJS shape value")
+  }
+
+  function serializeAccessibilityTraits(value, path) {
+    if (value === undefined || value === null) {
+      return undefined
+    }
+
+    const traits = Array.isArray(value) ? value : [value]
+    const supported = [
+      "button",
+      "link",
+      "header",
+      "selected",
+      "image",
+      "staticText",
+      "summaryElement",
+      "updatesFrequently",
+      "searchField",
+      "isModal"
+    ]
+
+    traits.forEach(function (trait, index) {
+      if (!supported.includes(trait)) {
+        throw new Error(path + "." + index + " is unsupported")
+      }
+    })
+
+    return traits
+  }
+
+  function serializeScrollEdgeEffectStyle(node, value, path) {
+    if (value === undefined || value === null) {
+      return
+    }
+
+    if (typeof value === "string") {
+      node.scrollEdgeEffectStyle = serializeScrollEdgeStyle(value, path)
+      node.scrollEdgeEffectEdge = "top"
+      return
+    }
+
+    if (value && typeof value === "object") {
+      node.scrollEdgeEffectStyle = serializeScrollEdgeStyle(value.style, path + ".style")
+      node.scrollEdgeEffectEdge = typeof value.edge === "string" ? value.edge : "top"
+      return
+    }
+
+    throw new Error(path + " must be a scroll edge effect style")
+  }
+
+  function serializeScrollEdgeStyle(value, path) {
+    if (value === "automatic" || value === "hard" || value === "soft") {
       return value
     }
 
-    throw new Error(path + " must be 'rectangle', 'circle', or 'capsule'")
+    throw new Error(path + " must be 'automatic', 'hard', or 'soft'")
+  }
+
+  function serializeTextSegments(segments, path) {
+    if (segments.length === 0) {
+      throw new Error(path + " must not be empty")
+    }
+
+    return segments.map(function (segment, index) {
+      if (!segment || typeof segment !== "object" || typeof segment.text !== "string") {
+        throw new Error(path + "." + index + " must be { text, ... }")
+      }
+
+      const result = { text: segment.text }
+      const font = normalizeFont(segment.font)
+      if (font.fontName) {
+        result.fontName = font.fontName
+      }
+      if (typeof font.fontSize === "number") {
+        result.fontSize = font.fontSize
+      }
+      if (font.fontWeight) {
+        result.fontWeight = font.fontWeight
+      }
+      if (typeof segment.fontWeight === "string") {
+        result.fontWeight = segment.fontWeight
+      }
+      if (typeof segment.foregroundColor === "string") {
+        result.foregroundColor = segment.foregroundColor
+      }
+      result.foregroundStyle = serializeShapeStyle(segment.foregroundStyle, path + "." + index + ".foregroundStyle")
+      return result
+    })
   }
 
   function serializeTextContentType(value, path) {
@@ -1373,6 +1553,77 @@
     }
 
     throw new Error(path + " is unsupported")
+  }
+
+  function serializeFiniteNumber(value, name) {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new Error(name + " must be a finite number")
+    }
+
+    return value
+  }
+
+  function serializeMapMarkers(value, path) {
+    if (value === undefined || value === null) {
+      return []
+    }
+
+    if (!Array.isArray(value)) {
+      throw new Error(path + " must be an array")
+    }
+
+    return value.map(function (marker, index) {
+      if (!marker || typeof marker !== "object" || typeof marker.title !== "string") {
+        throw new Error(path + "." + index + " must be a marker object")
+      }
+
+      const result = {
+        title: marker.title,
+        latitude: serializeFiniteNumber(marker.latitude, path + "." + index + ".latitude"),
+        longitude: serializeFiniteNumber(marker.longitude, path + "." + index + ".longitude")
+      }
+
+      if (typeof marker.systemName === "string") {
+        result.systemName = marker.systemName
+      }
+
+      return result
+    })
+  }
+
+  function serializeChartData(value, path) {
+    if (!Array.isArray(value) || value.length === 0) {
+      throw new Error(path + " must be a non-empty array")
+    }
+
+    return value.map(function (point, index) {
+      if (!point || typeof point !== "object" || typeof point.label !== "string") {
+        throw new Error(path + "." + index + " must be a chart point")
+      }
+
+      const result = {
+        label: point.label,
+        value: serializeFiniteNumber(point.value, path + "." + index + ".value")
+      }
+
+      if (typeof point.series === "string") {
+        result.series = point.series
+      }
+
+      return result
+    })
+  }
+
+  function serializeChartMark(value, path) {
+    if (value === undefined || value === null) {
+      return "bar"
+    }
+
+    if (value === "bar" || value === "line" || value === "point" || value === "area") {
+      return value
+    }
+
+    throw new Error(path + " must be 'bar', 'line', 'point', or 'area'")
   }
 
   function serializeDateValue(value, label) {
@@ -1467,6 +1718,10 @@
     node.searchableEvent = registerHandler(value.onChange, path + ".onChange")
     serializeSearchFieldPlacement(node, value.placement, path + ".placement")
 
+    if (typeof value.onSubmit === "function") {
+      node.searchableSubmitEvent = registerHandler(value.onSubmit, path + ".onSubmit")
+    }
+
     if (typeof value.isPresented === "boolean") {
       node.searchableIsPresented = value.isPresented
       if (typeof value.onPresentationChange !== "function") {
@@ -1536,7 +1791,7 @@
       return
     }
 
-    if (!value || typeof value !== "object" || typeof value.feedback !== "string") {
+    if (!value || typeof value !== "object") {
       throw new Error("sensoryFeedback must be { feedback, trigger }")
     }
 
@@ -1554,12 +1809,38 @@
       "impact"
     ]
 
-    if (!supported.includes(value.feedback)) {
+    if (typeof value.feedback === "string") {
+      if (!supported.includes(value.feedback)) {
+        throw new Error(path + ".feedback is unsupported")
+      }
+
+      node.sensoryFeedback = value.feedback
+    } else if (value.feedback && typeof value.feedback === "object" && value.feedback.impact) {
+      const impact = value.feedback.impact
+      node.sensoryFeedback = "impact"
+      if (typeof impact.weight === "string") {
+        if (!["light", "medium", "heavy"].includes(impact.weight)) {
+          throw new Error(path + ".feedback.impact.weight is unsupported")
+        }
+        node.sensoryFeedbackWeight = impact.weight
+      }
+      if (typeof impact.flexibility === "string") {
+        if (!["soft", "solid", "rigid"].includes(impact.flexibility)) {
+          throw new Error(path + ".feedback.impact.flexibility is unsupported")
+        }
+        node.sensoryFeedbackFlexibility = impact.flexibility
+      }
+      if (typeof impact.intensity === "number") {
+        node.sensoryFeedbackIntensity = impact.intensity
+      }
+    } else {
       throw new Error(path + ".feedback is unsupported")
     }
 
-    node.sensoryFeedback = value.feedback
     node.sensoryFeedbackTrigger = serializeCustomValue(value.trigger)
+    if (typeof value.isEnabled === "boolean") {
+      node.sensoryFeedbackIsEnabled = value.isEnabled
+    }
   }
 
   function serializeSearchFieldPlacement(node, value, path) {
