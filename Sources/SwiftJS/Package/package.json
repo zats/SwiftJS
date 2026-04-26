@@ -1,6 +1,16 @@
 {
   "name": "swiftjs",
   "version": "0.1.0",
+  "description": "TypeScript/TSX facade for the SwiftJS SwiftUI host runtime.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zats/SwiftJS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zats/SwiftJS/issues"
+  },
+  "homepage": "https://github.com/zats/SwiftJS#readme",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",

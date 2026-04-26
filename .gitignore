@@ -8,4 +8,8 @@ DerivedData/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
 Examples/*/JS/node_modules/
-.vscode/settings.json
+.vscode/
+AGENTS.md
+plan.md
+to-dos.md
+documents-todo.md
