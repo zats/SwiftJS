@@ -95,7 +95,7 @@ export function VisualsTab() {
               <Text font="caption">systemName</Text>
             </VStack>
             <VStack spacing={space.xs}>
-              <Image name="CatalogMark" frame={{ width: 48, height: 48 }} interpolation="none" background="tertiarySystemBackground" cornerRadius={12} />
+              <Image name="CatalogMark" resizable frame={{ width: 48, height: 48 }} interpolation="none" background="tertiarySystemBackground" cornerRadius={12} />
               <Text font="caption">asset name</Text>
             </VStack>
             <VStack spacing={space.xs}>
@@ -111,6 +111,7 @@ export function VisualsTab() {
               <VStack key={interpolation} spacing={space.xs}>
                 <Image
                   name="CatalogMark"
+                  resizable
                   frame={{ width: 56, height: 56 }}
                   interpolation={interpolation}
                   imageContentMode="fill"

@@ -149,6 +149,17 @@ export type ImageContentMode = "fit" | "fill"
 /** Mirrors the image interpolation values SwiftJS supports. */
 export type ImageInterpolation = "none" | "low" | "medium" | "high"
 
+/** Mirrors `Image.ResizingMode`. */
+export type ImageResizingMode = "stretch" | "tile"
+
+/** Mirrors `Image.resizable(capInsets:resizingMode:)`. */
+export type ImageResizableValue =
+  | boolean
+  | {
+      capInsets?: EdgeInsetsValue
+      resizingMode?: ImageResizingMode
+    }
+
 /** Mirrors SwiftUI.Visibility for navigation and presentation chrome. */
 export type VisibilityKind = "automatic" | "visible" | "hidden"
 
@@ -225,6 +236,11 @@ export type EditMode = "inactive" | "transient" | "active"
 
 /** Selection values supported by `List(selection:)`. */
 export type ListSelectionValue = PickerValue
+
+export type IdentifiableItem = { id: string | number }
+export type DataIdentity<Item> = Item extends IdentifiableItem
+  ? { id?: keyof Item | ((item: Item, index: number) => string | number) }
+  : { id: keyof Item | ((item: Item, index: number) => string | number) }
 
 /** Mirrors the payload emitted by SwiftUI list reordering. */
 export type MoveAction = {
@@ -684,6 +700,7 @@ export type ViewProps = {
   buttonSizing?: ButtonSizing
   contentShape?: ContentShapeValue
   clipShape?: ShapeValue
+  clipped?: boolean
   disabled?: boolean
   moveDisabled?: boolean
   glassEffect?: GlassEffectValue
@@ -770,13 +787,17 @@ export type NavigationStackProps = ViewProps & {
 }
 
 /** Props for `ForEach`, used to carry row-level move handling. */
-export type ForEachProps<Item = unknown> = ViewProps & {
-  data?: readonly Item[]
-  id?: keyof Item | ((item: Item, index: number) => string | number)
-  children?: unknown | ((item: Item, index: number) => unknown)
+export type ForEachActionProps = {
   onMove?: (action: MoveAction) => void
   onDelete?: (action: DeleteAction) => void
 }
+
+export type ForEachProps<Item = unknown> =
+  | (Omit<ViewProps, "id"> &
+      ForEachActionProps &
+      { data: readonly Item[]; children: (item: Item, index: number) => unknown } &
+      DataIdentity<Item>)
+  | (ViewProps & ForEachActionProps & { data?: undefined; children?: unknown })
 
 /** Props for `NavigationLink`. */
 export type NavigationLinkProps = ViewProps &
@@ -1042,6 +1063,7 @@ export type ToggleProps = ViewProps & {
 export type ImageProps = ViewProps & {
   systemName?: string
   name?: string
+  resizable?: ImageResizableValue
   interpolation?: ImageInterpolation
   font?: FontValue
   fontWeight?: FontWeight
@@ -1050,6 +1072,7 @@ export type ImageProps = ViewProps & {
 /** Props for `AsyncImage`. */
 export type AsyncImageProps = ViewProps & {
   url: string
+  resizable?: ImageResizableValue
   placeholder?: unknown
   empty?: unknown
   failure?: unknown
@@ -1119,14 +1142,18 @@ export type DividerProps = ViewProps
 export type SpacerProps = ViewProps
 
 /** Props for `List`. */
-export type ListProps<Item = unknown> = ViewProps & {
+export type ListBaseProps = {
   searchable?: SearchableValue
   selection?: ReadonlySet<ListSelectionValue>
   onSelectionChange?: (nextValue: Set<ListSelectionValue>) => void
-  data?: readonly Item[]
-  id?: keyof Item | ((item: Item, index: number) => string | number)
-  children?: unknown | ((item: Item, index: number) => unknown)
 }
+
+export type ListProps<Item = unknown> =
+  | (Omit<ViewProps, "id"> &
+      ListBaseProps &
+      { data: readonly Item[]; children: (item: Item, index: number) => unknown } &
+      DataIdentity<Item>)
+  | (ViewProps & ListBaseProps & { data?: undefined; children?: unknown })
 
 /** Props for `EditButton`. */
 export type EditButtonProps = ViewProps

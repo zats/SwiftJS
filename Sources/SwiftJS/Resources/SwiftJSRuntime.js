@@ -181,7 +181,7 @@
     if (Array.isArray(element)) {
       return flatten(
         element.map(function (child, index) {
-          return resolveElement(child, path + "." + index)
+          return resolveElement(child, childPath(path, child, index))
         })
       ).filter(function (child) {
         return child !== null
@@ -212,13 +212,17 @@
       return resolveElement(props.children || [], path)
     }
 
+    if (type === "ForEach") {
+      assertForEachChildrenHaveIdentity(props.children)
+    }
+
     const children = flatten(
       flatten(props.children || []).map(function (child, index) {
         if (typeof child === "function") {
           return child
         }
 
-        return resolveElement(child, path + "." + index)
+        return resolveElement(child, childPath(path, child, index))
       })
     ).filter(function (child) {
       return child !== null
@@ -994,6 +998,30 @@
       node.imageContentMode = props.imageContentMode
     }
 
+    if (props.resizable === true) {
+      node.imageResizable = true
+    } else if (props.resizable && typeof props.resizable === "object") {
+      node.imageResizable = true
+      if (props.resizable.capInsets && typeof props.resizable.capInsets === "object") {
+        const capInsets = props.resizable.capInsets
+        if (typeof capInsets.top === "number") {
+          node.imageResizableCapInsetTop = capInsets.top
+        }
+        if (typeof capInsets.leading === "number") {
+          node.imageResizableCapInsetLeading = capInsets.leading
+        }
+        if (typeof capInsets.bottom === "number") {
+          node.imageResizableCapInsetBottom = capInsets.bottom
+        }
+        if (typeof capInsets.trailing === "number") {
+          node.imageResizableCapInsetTrailing = capInsets.trailing
+        }
+      }
+      if (props.resizable.resizingMode === "stretch" || props.resizable.resizingMode === "tile") {
+        node.imageResizingMode = props.resizable.resizingMode
+      }
+    }
+
     if (typeof props.interpolation === "string") {
       node.imageInterpolation = props.interpolation
     }
@@ -1075,6 +1103,10 @@
       node.clipShape = serializeShape(props.clipShape, id + ".clipShape")
     } else if (props.clipShape && typeof props.clipShape === "object") {
       node.clipShape = serializeShape(props.clipShape, id + ".clipShape")
+    }
+
+    if (typeof props.clipped === "boolean") {
+      node.clipped = props.clipped
     }
 
     if (props.disabled === true) {
@@ -2485,6 +2517,51 @@
 
   function numericProp(value, fallback) {
     return typeof value === "number" ? value : fallback
+  }
+
+  function childPath(parentPath, child, index) {
+    const key = elementIdentity(child)
+    if (key === undefined) {
+      return parentPath + "." + index
+    }
+
+    return parentPath + ".$" + encodeURIComponent(String(key))
+  }
+
+  function elementIdentity(element) {
+    if (!element || typeof element !== "object" || !element.props || typeof element.props !== "object") {
+      return undefined
+    }
+
+    if (typeof element.props.key === "string" || typeof element.props.key === "number") {
+      return element.props.key
+    }
+
+    if (typeof element.props.id === "string" || typeof element.props.id === "number") {
+      return element.props.id
+    }
+
+    return undefined
+  }
+
+  function assertForEachChildrenHaveIdentity(children) {
+    const seen = new Set()
+    flatten(children || []).forEach(function (child) {
+      if (child === null || child === undefined || child === false || child === true || typeof child === "function") {
+        return
+      }
+
+      const key = elementIdentity(child)
+      if (key === undefined) {
+        throw new Error("ForEach children require a key or id")
+      }
+
+      const stableKey = String(key)
+      if (seen.has(stableKey)) {
+        throw new Error("ForEach children require unique keys or ids")
+      }
+      seen.add(stableKey)
+    })
   }
 
   function autoID(path) {

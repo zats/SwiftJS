@@ -169,6 +169,7 @@ export function LayoutTab() {
           <HStack spacing={space.md} alignment="top">
             <Image
               name="CatalogMark"
+              resizable
               frame={{ width: 72, height: 72 }}
               aspectRatio={1}
               imageContentMode="fit"
@@ -178,6 +179,7 @@ export function LayoutTab() {
             />
             <Image
               name="CatalogMark"
+              resizable
               frame={{ width: 72, height: 72 }}
               aspectRatio={{ value: 1, contentMode: "fill" }}
               interpolation="high"

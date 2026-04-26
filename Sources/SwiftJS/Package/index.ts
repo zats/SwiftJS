@@ -368,7 +368,8 @@ function restoreDateValue<Value extends DateValue>(value: string, template: Valu
 function dataChildren<Item>(
   data: readonly Item[] | undefined,
   id: keyof Item | ((item: Item, index: number) => string | number) | undefined,
-  children: unknown
+  children: unknown,
+  owner: string
 ) {
   if (data === undefined) {
     return children
@@ -378,9 +379,17 @@ function dataChildren<Item>(
     throw new Error("data-driven List and ForEach require children to be a render function")
   }
 
+  const seenKeys = new Set<string>()
+
   return data.map((item, index) => {
     const rendered = (children as (item: Item, index: number) => unknown)(item, index)
-    const key = dataKey(item, index, id)
+    const key = dataKey(item, index, id, owner)
+    const stableKey = String(key)
+    if (seenKeys.has(stableKey)) {
+      throw new Error(`data-driven ${owner} items require unique ids`)
+    }
+    seenKeys.add(stableKey)
+
     if (rendered && typeof rendered === "object" && "props" in rendered) {
       const element = rendered as { props?: Record<string, unknown> }
       return {
@@ -388,32 +397,37 @@ function dataChildren<Item>(
         props: {
           ...(element.props ?? {}),
           key: element.props?.key ?? key,
+          id: typeof element.props?.id === "string" ? element.props.id : String(key),
           viewID: element.props?.viewID ?? key,
         },
       }
     }
 
-    return rendered
+    throw new Error(`data-driven ${owner} render function must return a SwiftJS element`)
   })
 }
 
 function dataKey<Item>(
   item: Item,
   index: number,
-  id: keyof Item | ((item: Item, index: number) => string | number) | undefined
+  id: keyof Item | ((item: Item, index: number) => string | number) | undefined,
+  owner: string
 ) {
+  let value: unknown
+
   if (typeof id === "function") {
-    return id(item, index)
+    value = id(item, index)
+  } else if (id !== undefined && item && typeof item === "object") {
+    value = (item as Record<string, unknown>)[String(id)]
+  } else if (item && typeof item === "object") {
+    value = (item as Record<string, unknown>).id
   }
 
-  if (id !== undefined && item && typeof item === "object") {
-    const value = (item as Record<string, unknown>)[String(id)]
-    if (typeof value === "string" || typeof value === "number") {
-      return value
-    }
+  if (typeof value === "string" || typeof value === "number") {
+    return value
   }
 
-  return index
+  throw new Error(`data-driven ${owner} items require an id property or id function`)
 }
 
 function presentationContent<Item>(props: SheetProps<Item> | FullScreenCoverProps<Item>) {
@@ -509,7 +523,7 @@ export const HStack = hostComponent<StackProps>("HStack")
  * Overlays children in the same bounds.
  *
  * <ZStack alignment="bottomTrailing">
- *   <Image name="mountains" frame={{ height: 180 }} imageContentMode="fill" />
+ *   <Image name="mountains" resizable frame={{ height: 180 }} imageContentMode="fill" />
  *   <Text background="black" foregroundColor="white" padding={8} cornerRadius={4}>
  *     Featured
  *   </Text>
@@ -645,10 +659,14 @@ export const GeometryReader = hostComponent<GeometryReaderProps>("GeometryReader
  */
 const ListBase = hostComponent<ListProps>("List")
 export function List<Item = unknown>(props: ListProps<Item>) {
+  if (props.data === undefined) {
+    return createElement(ListBase, props)
+  }
+
   const { data, id, children, ...rest } = props
   return createElement(ListBase, {
     ...rest,
-    children: dataChildren(data, id, children),
+    children: dataChildren(data, id, children, "List"),
   })
 }
 /**
@@ -675,10 +693,14 @@ export const Form = hostComponent<FormProps>("Form")
  */
 const ForEachBase = hostComponent<ForEachProps>("ForEach")
 export function ForEach<Item = unknown>(props: ForEachProps<Item>) {
+  if (props.data === undefined) {
+    return createElement(ForEachBase, props)
+  }
+
   const { data, id, children, ...rest } = props
   return createElement(ForEachBase, {
     ...rest,
-    children: dataChildren(data, id, children),
+    children: dataChildren(data, id, children, "ForEach"),
   })
 }
 /**
@@ -878,12 +900,14 @@ export const ProgressView = hostComponent<ProgressViewProps>("ProgressView")
  *   font={{ system: { size: 28, weight: "semibold" } }}
  *   tint="blue"
  * />
+ *
+ * <Image name="hero" resizable imageContentMode="fit" />
  */
 export const Image = hostComponent<ImageProps>("Image")
 /**
  * Loads and displays a remote image using native SwiftUI `AsyncImage`.
  *
- * <AsyncImage url={profile.photoURL} imageContentMode="fill" />
+ * <AsyncImage url={profile.photoURL} resizable imageContentMode="fill" />
  */
 export const AsyncImage = hostComponent<AsyncImageProps>("AsyncImage")
 /**

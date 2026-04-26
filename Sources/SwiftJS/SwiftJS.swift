@@ -380,6 +380,20 @@ public enum ImageInterpolation: String, Codable, Equatable, Sendable {
     case high
 }
 
+public enum ImageResizingModeKind: String, Codable, Equatable, Sendable {
+    case stretch
+    case tile
+
+    var swiftUIResizingMode: Image.ResizingMode {
+        switch self {
+        case .stretch:
+            return .stretch
+        case .tile:
+            return .tile
+        }
+    }
+}
+
 public enum ImageSource: Equatable, Sendable {
     case system(String)
     case asset(String)
@@ -1253,6 +1267,7 @@ public struct ViewModifiers: Equatable, Sendable {
     public var buttonSizing: ButtonSizingKind?
     public var contentShape: ContentShapeKind?
     public var clipShape: ShapeValue?
+    public var clipped: Bool
     public var isDisabled: Bool
     public var moveDisabled: Bool
     public var glassEffect: Bool
@@ -1300,6 +1315,9 @@ public struct ViewModifiers: Equatable, Sendable {
     public var swipeActions: [SwipeActionsValue]
     public var contentMargins: [ContentMarginsValue]
     public var imageContentMode: ImageContentMode?
+    public var imageResizable: Bool
+    public var imageResizableCapInsets: EdgeInsetsValue?
+    public var imageResizingMode: ImageResizingModeKind?
     public var imageInterpolation: ImageInterpolation?
     public var aspectRatio: Double?
     public var aspectRatioContentMode: ImageContentMode?
@@ -1358,6 +1376,7 @@ public struct ViewModifiers: Equatable, Sendable {
         buttonSizing: ButtonSizingKind? = nil,
         contentShape: ContentShapeKind? = nil,
         clipShape: ShapeValue? = nil,
+        clipped: Bool = false,
         isDisabled: Bool = false,
         moveDisabled: Bool = false,
         glassEffect: Bool = false,
@@ -1405,6 +1424,9 @@ public struct ViewModifiers: Equatable, Sendable {
         swipeActions: [SwipeActionsValue] = [],
         contentMargins: [ContentMarginsValue] = [],
         imageContentMode: ImageContentMode? = nil,
+        imageResizable: Bool = false,
+        imageResizableCapInsets: EdgeInsetsValue? = nil,
+        imageResizingMode: ImageResizingModeKind? = nil,
         imageInterpolation: ImageInterpolation? = nil,
         aspectRatio: Double? = nil,
         aspectRatioContentMode: ImageContentMode? = nil,
@@ -1462,6 +1484,7 @@ public struct ViewModifiers: Equatable, Sendable {
         self.buttonSizing = buttonSizing
         self.contentShape = contentShape
         self.clipShape = clipShape
+        self.clipped = clipped
         self.isDisabled = isDisabled
         self.moveDisabled = moveDisabled
         self.glassEffect = glassEffect
@@ -1509,6 +1532,9 @@ public struct ViewModifiers: Equatable, Sendable {
         self.swipeActions = swipeActions
         self.contentMargins = contentMargins
         self.imageContentMode = imageContentMode
+        self.imageResizable = imageResizable
+        self.imageResizableCapInsets = imageResizableCapInsets
+        self.imageResizingMode = imageResizingMode
         self.imageInterpolation = imageInterpolation
         self.aspectRatio = aspectRatio
         self.aspectRatioContentMode = aspectRatioContentMode
@@ -3539,21 +3565,9 @@ struct RenderNodeView: View {
     private func imageView(_ source: ImageSource, modifiers: ViewModifiers) -> some View {
         switch source {
         case let .system(systemName):
-            interpolationStyled(Image(systemName: systemName), interpolation: modifiers.imageInterpolation?.swiftUIImageInterpolation)
-                .modifier(NodeAppearanceModifier(modifiers: modifiers))
+            imageContent(Image(systemName: systemName), modifiers: modifiers)
         case let .asset(name):
-            let image = interpolationStyled(Image(name).resizable(), interpolation: modifiers.imageInterpolation?.swiftUIImageInterpolation)
-
-            switch modifiers.imageContentMode ?? .fit {
-            case .fit:
-                image
-                    .scaledToFit()
-                    .modifier(NodeAppearanceModifier(modifiers: modifiers))
-            case .fill:
-                image
-                    .scaledToFill()
-                    .modifier(NodeAppearanceModifier(modifiers: modifiers))
-            }
+            imageContent(Image(name), modifiers: modifiers)
         }
     }
 
@@ -3562,14 +3576,7 @@ struct RenderNodeView: View {
         AsyncImage(url: url) { phase in
             switch phase {
             case let .success(image):
-                let image = interpolationStyled(image.resizable(), interpolation: modifiers.imageInterpolation?.swiftUIImageInterpolation)
-
-                switch modifiers.imageContentMode ?? .fit {
-                case .fit:
-                    image.scaledToFit()
-                case .fill:
-                    image.scaledToFill()
-                }
+                imageContent(image, modifiers: modifiers, appliesAppearance: false)
             case .failure:
                 if let failure {
                     RenderNodeView(node: failure, onEvent: onEvent, customHostRegistry: customHostRegistry)
@@ -3662,6 +3669,56 @@ struct RenderNodeView: View {
     private func videoPlayerView(url: URL, modifiers: ViewModifiers) -> some View {
         VideoPlayer(player: AVPlayer(url: url))
             .modifier(NodeAppearanceModifier(modifiers: modifiers))
+    }
+
+    @ViewBuilder
+    private func imageContent(_ image: Image, modifiers: ViewModifiers, appliesAppearance: Bool = true) -> some View {
+        if modifiers.imageResizable {
+            let image = interpolationStyled(
+                image.resizable(
+                    capInsets: swiftUIEdgeInsets(modifiers.imageResizableCapInsets),
+                    resizingMode: modifiers.imageResizingMode?.swiftUIResizingMode ?? .stretch
+                ),
+                interpolation: modifiers.imageInterpolation?.swiftUIImageInterpolation
+            )
+
+            switch modifiers.imageContentMode ?? .fit {
+            case .fit:
+                if appliesAppearance {
+                    image.scaledToFit()
+                        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+                } else {
+                    image.scaledToFit()
+                }
+            case .fill:
+                if appliesAppearance {
+                    image.scaledToFill()
+                        .modifier(NodeAppearanceModifier(modifiers: modifiers))
+                } else {
+                    image.scaledToFill()
+                }
+            }
+        } else {
+            if appliesAppearance {
+                interpolationStyled(image, interpolation: modifiers.imageInterpolation?.swiftUIImageInterpolation)
+                    .modifier(NodeAppearanceModifier(modifiers: modifiers))
+            } else {
+                interpolationStyled(image, interpolation: modifiers.imageInterpolation?.swiftUIImageInterpolation)
+            }
+        }
+    }
+
+    private func swiftUIEdgeInsets(_ value: EdgeInsetsValue?) -> EdgeInsets {
+        guard let value else {
+            return EdgeInsets()
+        }
+
+        return EdgeInsets(
+            top: CGFloat(value.top ?? 0),
+            leading: CGFloat(value.leading ?? 0),
+            bottom: CGFloat(value.bottom ?? 0),
+            trailing: CGFloat(value.trailing ?? 0)
+        )
     }
 
     @ViewBuilder
@@ -4923,6 +4980,7 @@ final class HostNode: Decodable {
     let buttonSizing: ButtonSizingKind?
     let contentShape: ContentShapeKind?
     let clipShape: ShapeValue?
+    let clipped: Bool?
     let isDisabled: Bool?
     let moveDisabled: Bool?
     let glassEffect: Bool?
@@ -4990,6 +5048,12 @@ final class HostNode: Decodable {
     let swipeActions: [HostSwipeActions]?
     let contentMargins: [ContentMarginsValue]?
     let imageContentMode: ImageContentMode?
+    let imageResizable: Bool?
+    let imageResizableCapInsetTop: Double?
+    let imageResizableCapInsetLeading: Double?
+    let imageResizableCapInsetBottom: Double?
+    let imageResizableCapInsetTrailing: Double?
+    let imageResizingMode: ImageResizingModeKind?
     let imageInterpolation: ImageInterpolation?
     let aspectRatio: Double?
     let aspectRatioContentMode: ImageContentMode?
@@ -5845,6 +5909,7 @@ final class HostNode: Decodable {
             buttonSizing: buttonSizing,
             contentShape: contentShape,
             clipShape: clipShape,
+            clipped: clipped ?? false,
             isDisabled: isDisabled ?? false,
             moveDisabled: moveDisabled ?? false,
             glassEffect: glassEffect ?? false,
@@ -5892,6 +5957,9 @@ final class HostNode: Decodable {
             swipeActions: try mapSwipeActions(),
             contentMargins: contentMargins ?? [],
             imageContentMode: imageContentMode,
+            imageResizable: imageResizable ?? false,
+            imageResizableCapInsets: makeImageResizableCapInsets(),
+            imageResizingMode: imageResizingMode,
             imageInterpolation: imageInterpolation,
             aspectRatio: aspectRatio,
             aspectRatioContentMode: aspectRatioContentMode,
@@ -6067,6 +6135,22 @@ final class HostNode: Decodable {
             leading: listRowInsetLeading,
             bottom: listRowInsetBottom,
             trailing: listRowInsetTrailing
+        )
+    }
+
+    private func makeImageResizableCapInsets() -> EdgeInsetsValue? {
+        if imageResizableCapInsetTop == nil,
+           imageResizableCapInsetLeading == nil,
+           imageResizableCapInsetBottom == nil,
+           imageResizableCapInsetTrailing == nil {
+            return nil
+        }
+
+        return EdgeInsetsValue(
+            top: imageResizableCapInsetTop,
+            leading: imageResizableCapInsetLeading,
+            bottom: imageResizableCapInsetBottom,
+            trailing: imageResizableCapInsetTrailing
         )
     }
 

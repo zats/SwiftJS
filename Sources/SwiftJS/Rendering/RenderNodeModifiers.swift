@@ -123,7 +123,7 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(OptionalSafeAreaPaddingModifier(length: modifiers.safeAreaPaddingLength, edges: modifiers.safeAreaPaddingEdges.swiftUIEdgeSet))
             .modifier(OptionalIgnoresSafeAreaModifier(isEnabled: modifiers.ignoresSafeArea, edges: modifiers.ignoresSafeAreaEdges.swiftUIEdgeSet))
             .modifier(OptionalBackgroundModifier(style: modifiers.backgroundShapeStyle))
-            .modifier(OptionalClipModifier(shape: modifiers.clipShape, cornerRadius: modifiers.cornerRadius, imageContentMode: modifiers.imageContentMode))
+            .modifier(OptionalClipModifier(shape: modifiers.clipShape, cornerRadius: modifiers.cornerRadius, clipped: modifiers.clipped, imageContentMode: modifiers.imageContentMode))
             .modifier(OptionalGlassEffectModifier(modifiers: modifiers))
             .modifier(OptionalTintModifier(tint: modifiers.tint.flatMap(Color.named(_:))))
             .modifier(OptionalBadgeModifier(badge: modifiers.badge))
@@ -479,6 +479,7 @@ struct OptionalBackgroundModifier: ViewModifier {
 struct OptionalClipModifier: ViewModifier {
     let shape: ShapeValue?
     let cornerRadius: Double?
+    let clipped: Bool
     let imageContentMode: ImageContentMode?
 
     @ViewBuilder
@@ -497,6 +498,8 @@ struct OptionalClipModifier: ViewModifier {
         case nil:
             if let cornerRadius {
             content.clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            } else if clipped {
+                content.clipped()
             } else if imageContentMode == .fill {
                 content.clipped()
             } else {
