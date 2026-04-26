@@ -50,6 +50,8 @@ public struct JSSurfaceRuntimeMetrics: Equatable, Sendable {
     public fileprivate(set) var dispatchTotalMS = 0.0
     public fileprivate(set) var applyCount = 0
     public fileprivate(set) var skippedApplyCount = 0
+    public fileprivate(set) var enqueuedApplyCount = 0
+    public fileprivate(set) var coalescedApplyCount = 0
     public fileprivate(set) var applyTotalMS = 0.0
     public fileprivate(set) var decodeHostTotalMS = 0.0
     public fileprivate(set) var makeViewNodeTotalMS = 0.0
@@ -62,6 +64,8 @@ public struct JSSurfaceRuntimeMetrics: Equatable, Sendable {
             "dispatchTotalMS=\(Self.format(dispatchTotalMS))",
             "applyCount=\(applyCount)",
             "skippedApplyCount=\(skippedApplyCount)",
+            "enqueuedApplyCount=\(enqueuedApplyCount)",
+            "coalescedApplyCount=\(coalescedApplyCount)",
             "applyTotalMS=\(Self.format(applyTotalMS))",
             "decodeHostTotalMS=\(Self.format(decodeHostTotalMS))",
             "makeViewNodeTotalMS=\(Self.format(makeViewNodeTotalMS))",
@@ -175,6 +179,8 @@ public final class JSSurfaceRuntime {
     @ObservationIgnored private var currentRootNode: ViewNode?
     @ObservationIgnored private var lastTreePayload: String?
     @ObservationIgnored public private(set) var metrics = JSSurfaceRuntimeMetrics()
+    @ObservationIgnored private var pendingTreePayload: String?
+    @ObservationIgnored private var pendingTreeFlushScheduled = false
     public private(set) var rootVersion = 0
     public private(set) var errorMessage: String?
     public private(set) var customHostRegistry: CustomHostRegistry
@@ -293,6 +299,8 @@ public final class JSSurfaceRuntime {
     public func reload() {
         currentRootNode = nil
         lastTreePayload = nil
+        pendingTreePayload = nil
+        pendingTreeFlushScheduled = false
         errorMessage = nil
         didStart = false
         context = Self.makeContext()
@@ -511,6 +519,49 @@ public final class JSSurfaceRuntime {
     }
 
     private func applyTreeJSON(_ payload: String) {
+        guard currentRootNode != nil else {
+            applyTreeJSONNow(payload)
+            return
+        }
+
+        if lastTreePayload == payload {
+            if collectMetrics {
+                metrics.skippedApplyCount += 1
+            }
+            return
+        }
+
+        if collectMetrics {
+            metrics.enqueuedApplyCount += 1
+            if pendingTreePayload != nil {
+                metrics.coalescedApplyCount += 1
+            }
+        }
+
+        pendingTreePayload = payload
+
+        guard !pendingTreeFlushScheduled else {
+            return
+        }
+
+        pendingTreeFlushScheduled = true
+        Task { @MainActor [weak self] in
+            self?.flushPendingTreePayload()
+        }
+    }
+
+    private func flushPendingTreePayload() {
+        pendingTreeFlushScheduled = false
+
+        guard let payload = pendingTreePayload else {
+            return
+        }
+
+        pendingTreePayload = nil
+        applyTreeJSONNow(payload)
+    }
+
+    private func applyTreeJSONNow(_ payload: String) {
         if lastTreePayload == payload {
             if collectMetrics {
                 metrics.skippedApplyCount += 1
@@ -519,7 +570,7 @@ public final class JSSurfaceRuntime {
         }
 
         guard collectMetrics else {
-            applyTreeJSONNow(payload)
+            applyTreeJSONWithoutMetrics(payload)
             return
         }
 
@@ -555,7 +606,7 @@ public final class JSSurfaceRuntime {
         }
     }
 
-    private func applyTreeJSONNow(_ payload: String) {
+    private func applyTreeJSONWithoutMetrics(_ payload: String) {
         do {
             let data = Data(payload.utf8)
             let hostNode = try decoder.decode(HostNode.self, from: data)
