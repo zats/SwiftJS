@@ -136,13 +136,15 @@
 			name = "Build Catalog Bundle";
 			outputFileListPaths = (
 			);
-			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/catalog.bundle.js",
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/catalog.bundle.js.map",
-			);
+				outputPaths = (
+					"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/catalog.bundle.js",
+					"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/catalog.bundle.js.map",
+					"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/benchmark.bundle.js",
+					"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/benchmark.bundle.js.map",
+				);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\ntemp_dir=\"$(mktemp -d)\"\ntrap 'trash \"$temp_dir\"' EXIT\ncd \"$SRCROOT/JS\"\npnpm install --frozen-lockfile\nexport SWIFTJS_BUNDLE_OUTFILE=\"$temp_dir/catalog.bundle.js\"\npnpm build\nditto \"$temp_dir/catalog.bundle.js\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/catalog.bundle.js\"\nditto \"$temp_dir/catalog.bundle.js.map\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/catalog.bundle.js.map\"\n";
+			shellScript = "export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\ntemp_dir=\"$(mktemp -d)\"\ntrap 'trash \"$temp_dir\"' EXIT\ncd \"$SRCROOT/JS\"\npnpm install --frozen-lockfile\nexport SWIFTJS_BUNDLE_OUTFILE=\"$temp_dir/catalog.bundle.js\"\nexport SWIFTJS_BENCHMARK_BUNDLE_OUTFILE=\"$temp_dir/benchmark.bundle.js\"\npnpm build\nditto \"$temp_dir/catalog.bundle.js\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/catalog.bundle.js\"\nditto \"$temp_dir/catalog.bundle.js.map\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/catalog.bundle.js.map\"\nditto \"$temp_dir/benchmark.bundle.js\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/benchmark.bundle.js\"\nditto \"$temp_dir/benchmark.bundle.js.map\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/benchmark.bundle.js.map\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

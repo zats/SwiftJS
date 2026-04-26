@@ -24,12 +24,17 @@ targets:
           cd "$SRCROOT/JS"
           pnpm install --frozen-lockfile
           export SWIFTJS_BUNDLE_OUTFILE="$temp_dir/catalog.bundle.js"
+          export SWIFTJS_BENCHMARK_BUNDLE_OUTFILE="$temp_dir/benchmark.bundle.js"
           pnpm build
           ditto "$temp_dir/catalog.bundle.js" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/catalog.bundle.js"
           ditto "$temp_dir/catalog.bundle.js.map" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/catalog.bundle.js.map"
+          ditto "$temp_dir/benchmark.bundle.js" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/benchmark.bundle.js"
+          ditto "$temp_dir/benchmark.bundle.js.map" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/benchmark.bundle.js.map"
         outputFiles:
           - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/catalog.bundle.js
           - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/catalog.bundle.js.map
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/benchmark.bundle.js
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/benchmark.bundle.js.map
     sources:
       - path: App
         type: syncedFolder

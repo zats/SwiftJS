@@ -11,6 +11,7 @@
   let layoutHandlers = Object.create(null)
   let geometryReaderHandlers = Object.create(null)
   let navigationDestinationHandlers = Object.create(null)
+  let runtimeMetrics = null
 
   function createElement(type, props) {
     const extraChildren = Array.prototype.slice.call(arguments, 2)
@@ -167,9 +168,31 @@
     pendingEffects = []
     seenComponents = new Set()
 
+    if (runtimeMetrics === null) {
+      const tree = resolveElement(createElement(mountedComponent, null), "0")
+      const payload = JSON.stringify(tree)
+      cleanupUnmountedComponents()
+      __swiftjs_commit(payload)
+      flushEffects()
+      return
+    }
+
+    const resolveStarted = Date.now()
     const tree = resolveElement(createElement(mountedComponent, null), "0")
+    const stringifyStarted = Date.now()
+    const payload = JSON.stringify(tree)
+    const commitStarted = Date.now()
     cleanupUnmountedComponents()
-    __swiftjs_commit(JSON.stringify(tree))
+    __swiftjs_commit(payload)
+    const finished = Date.now()
+
+    runtimeMetrics.renderCount += 1
+    runtimeMetrics.resolveTotalMs += stringifyStarted - resolveStarted
+    runtimeMetrics.stringifyTotalMs += commitStarted - stringifyStarted
+    runtimeMetrics.commitTotalMs += finished - commitStarted
+    runtimeMetrics.payloadBytesTotal += payload.length
+    runtimeMetrics.payloadBytesMax = Math.max(runtimeMetrics.payloadBytesMax, payload.length)
+
     flushEffects()
   }
 
@@ -2722,13 +2745,48 @@
 
   const Fragment = Symbol("SwiftJS.Fragment")
 
+  function benchmarkMetrics() {
+    if (runtimeMetrics === null) {
+      return {
+        renderCount: 0,
+        resolveTotalMs: 0,
+        stringifyTotalMs: 0,
+        commitTotalMs: 0,
+        payloadBytesTotal: 0,
+        payloadBytesMax: 0
+      }
+    }
+
+    return {
+      renderCount: runtimeMetrics.renderCount,
+      resolveTotalMs: runtimeMetrics.resolveTotalMs,
+      stringifyTotalMs: runtimeMetrics.stringifyTotalMs,
+      commitTotalMs: runtimeMetrics.commitTotalMs,
+      payloadBytesTotal: runtimeMetrics.payloadBytesTotal,
+      payloadBytesMax: runtimeMetrics.payloadBytesMax
+    }
+  }
+
+  function enableBenchmarkMetrics() {
+    runtimeMetrics = {
+      renderCount: 0,
+      resolveTotalMs: 0,
+      stringifyTotalMs: 0,
+      commitTotalMs: 0,
+      payloadBytesTotal: 0,
+      payloadBytesMax: 0
+    }
+  }
+
   globalThis.__swiftjsRuntime = {
     Fragment: Fragment,
     createElement: createElement,
     dispatchEvent: dispatchEvent,
+    enableBenchmarkMetrics: enableBenchmarkMetrics,
     hasGeometryReaderHandler: hasGeometryReaderHandler,
     hasLayoutHandler: hasLayoutHandler,
     hasNavigationDestinationHandler: hasNavigationDestinationHandler,
+    benchmarkMetrics: benchmarkMetrics,
     measureLayout: measureLayout,
     mount: mount,
     placeLayoutSubviews: placeLayoutSubviews,
