@@ -2769,7 +2769,8 @@ struct RenderNodeView: View {
             )
         case let .navigationStack(id, path, pathEvent, modifiers, children):
             applyCommonModifiers(
-                navigationStackView(id: id, path: path, pathEvent: pathEvent, children: children, modifiers: modifiers)
+                navigationStackView(id: id, path: path, pathEvent: pathEvent, children: children, modifiers: modifiers),
+                appliesNavigationChrome: false
             )
         case let .navigationLink(_, modifiers, destination, value, children):
             applyCommonModifiers(
@@ -4439,8 +4440,15 @@ struct RenderNodeView: View {
         }
     }
 
-    private func applyCommonModifiers<Content: View>(_ content: Content) -> some View {
-        content.modifier(CommonNodeModifier(modifiers: node.modifiers, onEvent: onEvent, customHostRegistry: customHostRegistry))
+    private func applyCommonModifiers<Content: View>(_ content: Content, appliesNavigationChrome: Bool = true) -> some View {
+        content.modifier(
+            CommonNodeModifier(
+                modifiers: node.modifiers,
+                onEvent: onEvent,
+                customHostRegistry: customHostRegistry,
+                appliesNavigationChrome: appliesNavigationChrome
+            )
+        )
     }
 
     @ViewBuilder
@@ -4782,15 +4790,9 @@ private struct NavigationStackHost: View {
     }
 
     var body: some View {
-        searchableStyled(
-            NavigationStack(path: pathBinding) {
-                ForEach(children) { child in
-                    RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
-                }
-                .modifier(NavigationDestinationModifier(id: id, onEvent: onEvent, customHostRegistry: customHostRegistry))
-            },
-            modifiers: modifiers
-        )
+        NavigationStack(path: pathBinding) {
+            navigationContent
+        }
         .onChange(of: path ?? []) { _, nextPath in
             guard localPath != nextPath else {
                 return
@@ -4798,6 +4800,18 @@ private struct NavigationStackHost: View {
 
             localPath = nextPath
         }
+    }
+
+    @ViewBuilder
+    private var navigationContent: some View {
+        searchableStyled(
+            ForEach(children) { child in
+                RenderNodeView(node: child, onEvent: onEvent, customHostRegistry: customHostRegistry)
+            }
+            .modifier(NavigationDestinationModifier(id: id, onEvent: onEvent, customHostRegistry: customHostRegistry))
+            .modifier(NavigationChromeModifier(isEnabled: true, modifiers: modifiers, onEvent: onEvent, customHostRegistry: customHostRegistry)),
+            modifiers: modifiers
+        )
     }
 
     private var pathBinding: Binding<[CustomHostValue]> {

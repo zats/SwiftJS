@@ -102,6 +102,7 @@ struct CommonNodeModifier: ViewModifier {
     let modifiers: ViewModifiers
     let onEvent: (SurfaceEvent) -> Void
     let customHostRegistry: CustomHostRegistry
+    let appliesNavigationChrome: Bool
 
     func body(content: Content) -> some View {
         let minWidth = modifiers.frameMinWidth.map { CGFloat($0) }
@@ -127,15 +128,9 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(OptionalGlassEffectModifier(modifiers: modifiers))
             .modifier(OptionalTintModifier(tint: modifiers.tint.flatMap(Color.named(_:))))
             .modifier(OptionalBadgeModifier(badge: modifiers.badge))
-            .modifier(OptionalNavigationTitleModifier(title: modifiers.navigationTitle))
-            .modifier(OptionalNavigationBarTitleDisplayModeModifier(mode: modifiers.swiftUINavigationBarTitleDisplayMode))
+            .modifier(NavigationChromeModifier(isEnabled: appliesNavigationChrome, modifiers: modifiers, onEvent: onEvent, customHostRegistry: customHostRegistry))
             .modifier(OptionalTabBarMinimizeBehaviorModifier(modifiers: modifiers))
             .modifier(OptionalTabViewBottomAccessoryModifier(accessory: modifiers.tabViewBottomAccessory, onEvent: onEvent, customHostRegistry: customHostRegistry))
-            .modifier(OptionalToolbarRoleModifier(role: modifiers.swiftUIToolbarRole))
-            .modifier(OptionalSearchPresentationToolbarBehaviorModifier(behavior: modifiers.swiftUISearchPresentationToolbarBehavior))
-            .modifier(OptionalSearchToolbarBehaviorModifier(behavior: modifiers.searchToolbarBehavior))
-            .modifier(OptionalToolbarBackgroundModifier(visibility: modifiers.swiftUIToolbarBackgroundVisibility))
-            .modifier(OptionalToolbarColorSchemeModifier(scheme: modifiers.swiftUIColorScheme))
             .modifier(OptionalKeyboardTypeModifier(keyboardType: modifiers.keyboardType))
             .modifier(OptionalTextInputAutocapitalizationModifier(autocapitalization: modifiers.textInputAutocapitalization))
             .modifier(OptionalAutocorrectionDisabledModifier(isDisabled: modifiers.autocorrectionDisabled))
@@ -153,7 +148,6 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(ContentMarginsModifier(margins: modifiers.contentMargins))
             .modifier(SafeAreaInsetsModifier(insets: modifiers.safeAreaInsets, onEvent: onEvent, customHostRegistry: customHostRegistry))
             .modifier(OptionalNavigationLinkIndicatorModifier(visibility: modifiers.swiftUINavigationLinkIndicatorVisibility))
-            .modifier(ToolbarItemsModifier(items: modifiers.toolbarItems, onEvent: onEvent, customHostRegistry: customHostRegistry))
             .modifier(OptionalAlertModifier(alert: modifiers.alert, onEvent: onEvent, customHostRegistry: customHostRegistry))
             .modifier(OptionalConfirmationDialogModifier(dialog: modifiers.confirmationDialog, onEvent: onEvent, customHostRegistry: customHostRegistry))
             .modifier(OptionalContextMenuModifier(contextMenu: modifiers.contextMenu, onEvent: onEvent, customHostRegistry: customHostRegistry))
@@ -170,6 +164,30 @@ struct CommonNodeModifier: ViewModifier {
             .modifier(OptionalIdentityModifier(viewIdentity: modifiers.viewIdentity))
             .modifier(OptionalOnAppearModifier(event: modifiers.onAppearEvent, onEvent: onEvent))
             .moveDisabled(modifiers.moveDisabled)
+    }
+}
+
+struct NavigationChromeModifier: ViewModifier {
+    let isEnabled: Bool
+    let modifiers: ViewModifiers
+    let onEvent: (SurfaceEvent) -> Void
+    let customHostRegistry: CustomHostRegistry
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content
+                .modifier(OptionalNavigationTitleModifier(title: modifiers.navigationTitle))
+                .modifier(OptionalNavigationBarTitleDisplayModeModifier(mode: modifiers.swiftUINavigationBarTitleDisplayMode))
+                .modifier(OptionalToolbarRoleModifier(role: modifiers.swiftUIToolbarRole))
+                .modifier(OptionalSearchPresentationToolbarBehaviorModifier(behavior: modifiers.swiftUISearchPresentationToolbarBehavior))
+                .modifier(OptionalSearchToolbarBehaviorModifier(behavior: modifiers.searchToolbarBehavior))
+                .modifier(OptionalToolbarBackgroundModifier(visibility: modifiers.swiftUIToolbarBackgroundVisibility))
+                .modifier(OptionalToolbarColorSchemeModifier(scheme: modifiers.swiftUIColorScheme))
+                .modifier(ToolbarItemsModifier(items: modifiers.toolbarItems, onEvent: onEvent, customHostRegistry: customHostRegistry))
+        } else {
+            content
+        }
     }
 }
 
